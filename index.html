@@ -4,43 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تطبيق مشاركة</title>
-    <!-- كود الخرائط المجاني Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { font-family: sans-serif; text-align: center; background-color: #f4f4f9; padding: 10px; margin: 0; }
         .header { background-color: #007bff; color: white; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 8px; margin-bottom: 15px; }
-        h2 { color: #333; }
-        /* تنسيق الخريطة */
-        #map { height: 400px; width: 100%; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .btn { background-color: #28a745; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; }
+        h2 { color: #333; font-size: 18px; margin: 10px 0; }
+        #map { height: 350px; width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 1; }
+        
+        /* صندوق عرض السعر */
+        #ride-info { display: none; background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        #ride-info h3 { margin: 5px 0; color: #28a745; font-size: 22px; }
+        #ride-info p { margin: 5px 0; color: #555; font-size: 16px; }
+
+        .btn { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; }
+        .instructions { font-size: 14px; color: #666; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div class="header">تطبيق مشاركة</div>
+    
+    <p class="instructions">اضغط على أي مكان في الخريطة لتحديد وجهتك وحساب السعر فوراً</p>
 
-    <h2>أهلاً بك في تطبيق التوصيل</h2>
-
-    <!-- هنا هيظهر مكان الخريطة -->
     <div id="map"></div>
 
-    <button class="btn">اطلب توصيل الان</button>
+    <!-- صندوق السعر (مخفي في البداية) -->
+    <div id="ride-info">
+        <p>المسافة: <span id="distance-text">0</span> كم</p>
+        <h3>السعر التلقائي: <span id="price-text">0</span> جنيه</h3>
+    </div>
+
+    <button class="btn">اطلب التوصيل الآن</button>
 
     <script>
-        // إعداد الخريطة وتوجيهها لمدينة القاهرة (أو أي مكان)
-        var map = L.map('map').setView([30.0444, 31.2357], 12);
+        // 1. إعداد الخريطة (الموقع الحالي: القاهرة)
+        var startPoint = [30.0444, 31.2357];
+        var map = L.map('map').setView(startPoint, 12);
 
-        // تحميل شكل الخريطة المجاني
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // إضافة علامة (دبوس) على الخريطة
-        L.marker([30.0444, 31.2357]).addTo(map)
-            .bindPopup('موقعك الحالي')
-            .openPopup();
+        // علامة موقعك الحالي
+        L.marker(startPoint).addTo(map).bindPopup('موقعك الحالي').openPopup();
+
+        // 2. عقل حساب السعر (لما تدوس على الخريطة)
+        var destMarker = null;
+        var routeLine = null;
+
+        map.on('click', function(e) {
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+
+            // مسح الوجهة القديمة لو موجودة
+            if (destMarker) { map.removeLayer(destMarker); }
+            if (routeLine) { map.removeLayer(routeLine); }
+
+            // وضع علامة جديدة (الوجهة)
+            destMarker = L.marker([lat, lng]).addTo(map).bindPopup('وجهتك').openPopup();
+
+            // رسم خط بين موقعك والوجهة
+            routeLine = L.polyline([startPoint, [lat, lng]], {color: 'blue', weight: 4}).addTo(map);
+
+            // حساب المسافة بالكيلومتر
+            var distanceInMeters = map.distance(startPoint, [lat, lng]);
+            var distanceInKm = distanceInMeters / 1000;
+
+            // معادلة التسعير (مثلاً: 10 جنيه أساس + 5 جنيه لكل كيلو)
+            var basePrice = 10;
+            var pricePerKm = 5;
+            var totalPrice = basePrice + (distanceInKm * pricePerKm);
+
+            // إظهار السعر على الشاشة
+            document.getElementById('ride-info').style.display = 'block';
+            document.getElementById('distance-text').innerText = distanceInKm.toFixed(2);
+            document.getElementById('price-text').innerText = Math.round(totalPrice);
+        });
     </script>
 
 </body>
