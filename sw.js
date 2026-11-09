@@ -5,7 +5,6 @@ const urlsToCache = [
   './manifest.json'
 ];
 
-// تثبيت الكاش
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -13,7 +12,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// جلب الملفات من الكاش لو مفيش نت
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
