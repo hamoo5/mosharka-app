@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تطبيق مشاركة - الكابتن</title>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest-driver.json">
     <meta name="theme-color" content="#1A237E">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; text-align: center; }
-        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 22px; font-weight: bold; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 22px; font-weight: bold; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
         .profile-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: none; }
         .ride-card { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-bottom: 15px; text-align: right; border-right: 6px solid #FFC107; transition: 0.3s; }
         .ride-card.accepted { border-right-color: #28a745; background-color: #f0fff4; }
@@ -20,12 +20,11 @@
         .btn-accept { background-color: #28a745; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
         .btn-finish { background-color: #dc3545; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
         .map-links a { display: block; margin: 5px 0; background: #e3f2fd; padding: 10px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold;}
-        .logout-btn { background-color: #dc3545; color: white; padding: 10px; border-radius: 8px; text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 15px;}
+        .logout-btn { position: absolute; left: 15px; top: 18px; background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <!-- كود الحماية: لو مش مسجل دخول ككابتن هيطرده -->
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'driver') {
@@ -33,10 +32,11 @@
         }
     </script>
 
-    <div class="header">لوحة الكابتن</div>
-    <a href="#" onclick="logout()" class="logout-btn">تسجيل خروج</a>
+    <div class="header">
+        لوحة الكابتن
+        <a href="#" onclick="logout()" class="logout-btn">خروج</a>
+    </div>
     
-    <!-- هنخفي الخانات دي لأن الاسم والرقم جايين من الحساب -->
     <div class="profile-box" id="profileBox">
         <input type="hidden" id="driverName">
         <input type="hidden" id="driverPhone">
@@ -51,7 +51,6 @@
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // تعبئة بيانات الكابتن تلقائياً
         document.getElementById('driverName').value = user.name;
         document.getElementById('driverPhone').value = user.phone;
 
