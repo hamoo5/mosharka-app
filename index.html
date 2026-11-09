@@ -29,7 +29,7 @@
     
     <button id="installBtn" class="btn" style="display: none; background-color: #1A237E; margin-bottom: 15px;">📥 تثبيت التطبيق على هاتفك</button>
 
-    <p style="font-size: 14px; color: #666;">جاري تحديد موقعك... (اسمح بالوصول للموقع)</p>
+    <p style="font-size: 14px; color: #666;">اضغط على الخريطة لتحديد وجهتك</p>
 
     <div id="map"></div>
 
@@ -51,34 +51,24 @@
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // إعداد الخريطة
-        var map = L.map('map').setView([30.0444, 31.2357], 12); // موقع افتراضي مبدئي
+        var map = L.map('map').setView([30.0444, 31.2357], 12); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        var startPoint = [30.0444, 31.2357]; // هيتم تحديثه بالموقع الحقيقي
+        var startPoint = [30.0444, 31.2357]; 
         var startMarker = null;
 
-        // دالة جلب الموقع الحقيقي (GPS)
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(function(position) {
                 startPoint = [position.coords.latitude, position.coords.longitude];
-                
-                // تحديث الخريطة
                 map.setView(startPoint, 15);
-                
-                if (startMarker) {
-                    map.removeLayer(startMarker);
-                }
+                if (startMarker) { map.removeLayer(startMarker); }
                 startMarker = L.marker(startPoint).addTo(map).bindPopup('موقعك الحقيقي').openPopup();
-
             }, function(error) {
                 alert('برجاء السماح بالوصول للموقع عشان التطبيق يشتغل صح.');
             }, { enableHighAccuracy: true });
-        } else {
-            alert('متصفحك لا يدعم تحديد الموقع.');
         }
 
         var destMarker = null, routeLine = null;
@@ -94,7 +84,6 @@
             destMarker = L.marker([currentDestLat, currentDestLng]).addTo(map).bindPopup('وجهتك').openPopup();
             routeLine = L.polyline([startPoint, [currentDestLat, currentDestLng]], {color: '#1A237E', weight: 5}).addTo(map);
 
-            // حساب المسافة بناءً على موقعك الحقيقي
             var distanceInMeters = map.distance(startPoint, [currentDestLat, currentDestLng]);
             currentDistance = (distanceInMeters / 1000).toFixed(2);
             currentPrice = Math.round(10 + (currentDistance * 5));
@@ -117,7 +106,15 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('rides')
-                    .insert([{ distance: currentDistance, price: currentPrice, dest_lat: currentDestLat, dest_lng: currentDestLng, status: 'pending' }])
+                    .insert([{ 
+                        distance: currentDistance, 
+                        price: currentPrice, 
+                        dest_lat: currentDestLat, 
+                        dest_lng: currentDestLng, 
+                        pickup_lat: startPoint[0], // بنبعت مكان الراكب
+                        pickup_lng: startPoint[1], // بنبعت مكان الراكب
+                        status: 'pending' 
+                    }])
                     .select();
 
                 if (error) throw error;
@@ -150,14 +147,10 @@
             })
             .subscribe();
 
-        // تشغيل الـ PWA 
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
         }
 
-        // كود زرار التثبيت
         let deferredPrompt;
         const installBtn = document.getElementById('installBtn');
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -169,9 +162,7 @@
             if (deferredPrompt) {
                 deferredPrompt.prompt(); 
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBtn.style.display = 'none'; 
-                }
+                if (outcome === 'accepted') { installBtn.style.display = 'none'; }
                 deferredPrompt = null;
             }
         });
