@@ -16,6 +16,8 @@
         #ride-info h3 { margin: 5px 0; color: #28a745; font-size: 22px; }
         #ride-info p { margin: 5px 0; color: #555; font-size: 16px; }
         .btn { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; }
+        .btn-waiting { background-color: #ffc107; color: #333; }
+        .btn-accepted { background-color: #17a2b8; color: white; }
     </style>
 </head>
 <body>
@@ -33,12 +35,10 @@
     <button id="request-btn" class="btn" style="display: none;">اطلب التوصيل الآن</button>
 
     <script>
-        // إعداد قاعدة البيانات
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // إعداد الخريطة
         var startPoint = [30.0444, 31.2357];
         var map = L.map('map').setView(startPoint, 12);
 
@@ -55,6 +55,7 @@
         var currentDestLng = 0;
         var currentDistance = 0;
         var currentPrice = 0;
+        var currentRideId = null; // متغير عشان نحفظ رقم الطلب
 
         map.on('click', function(e) {
             currentDestLat = e.latlng.lat;
@@ -78,6 +79,8 @@
             document.getElementById('price-text').innerText = currentPrice;
             
             document.getElementById('request-btn').style.display = 'block';
+            document.getElementById('request-btn').innerText = 'اطلب التوصيل الآن';
+            document.getElementById('request-btn').className = 'btn';
         });
 
         // إرسال الطلب
@@ -88,27 +91,50 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('rides')
-                    .insert([
-                        { 
-                            distance: currentDistance, 
-                            price: currentPrice, 
-                            dest_lat: currentDestLat, 
-                            dest_lng: currentDestLng,
-                            status: 'pending'
-                        }
-                    ]);
+                    .insert([{ 
+                        distance: currentDistance, 
+                        price: currentPrice, 
+                        dest_lat: currentDestLat, 
+                        dest_lng: currentDestLng,
+                        status: 'pending'
+                    }])
+                    .select(); // عشان نرجع بيانات الطلب اللي اتعمل
 
                 if (error) throw error;
 
-                alert('تم إرسال طلبك بنجاح! الكابتن هيوصلك قريب.');
-                this.innerText = 'تم الطلب بنجاح';
-                this.style.backgroundColor = '#6c757d';
+                // بنحفظ رقم الطلب
+                currentRideId = data[0].id; 
+                
+                this.innerText = 'في انتظار قبول الكابتن...';
+                this.className = 'btn btn-waiting';
+                
             } catch (error) {
                 alert('حدث خطأ في إرسال الطلب: ' + error.message);
                 this.innerText = 'اطلب التوصيل الآن';
                 this.disabled = false;
             }
         });
+
+        // الكود السحري: الراكب بيسمع هل الكابتن قبل الطلب ولا لأ
+        supabaseClient
+            .channel('rider-channel')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'rides' },
+                (payload) => {
+                    // لو التحديث ده على طلبنا، وحالته بقت accepted
+                    if (currentRideId && payload.new.id === currentRideId && payload.new.status === 'accepted') {
+                        const btn = document.getElementById('request-btn');
+                        btn.innerText = 'الكابتن قبل طلبك وهو في الطريق! 🚗';
+                        btn.className = 'btn btn-accepted';
+                        btn.disabled = true;
+                        
+                        // تنبيه للراكب (اختياري)
+                        alert('خبر سعيد! الكابتن وافق على مشوارك وهو في الطريق إليك.');
+                    }
+                }
+            )
+            .subscribe();
     </script>
 
 </body>
