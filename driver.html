@@ -21,13 +21,13 @@
         .btn-accept { background-color: #28a745; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
         .btn-accept:disabled { background-color: #6c757d; cursor: not-allowed; }
         .nav-link { margin-top: 30px; display: block; color: #666; text-decoration: none; font-size: 14px; }
+        .map-links a { display: block; margin: 5px 0; background: #e3f2fd; padding: 10px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold;}
     </style>
 </head>
 <body>
 
     <div class="header">لوحة الكابتن</div>
     
-    <!-- زرار تثبيت التطبيق للكابتن -->
     <button id="installBtn" class="btn-accept" style="display: none; background-color: #1A237E; margin-bottom: 15px; margin-top: 0;">📥 تثبيت تطبيق الكابتن</button>
 
     <div class="profile-box">
@@ -40,7 +40,6 @@
         <p>جاري تحميل الطلبات...</p>
     </div>
 
-    <!-- لينك عشان الكابتن يرجع لصفحة الراكب لو حب -->
     <a href="index.html" class="nav-link">الذهاب لصفحة الراكب 🚗</a>
 
     <script>
@@ -69,12 +68,21 @@
 
             container.innerHTML = '';
             data.forEach(ride => {
+                // لو المكان مش متسجل (طلبات قديمة) بنحط 0
+                const pLat = ride.pickup_lat || 0;
+                const pLng = ride.pickup_lng || 0;
+
                 container.innerHTML += `
                     <div class="ride-card" id="card-${ride.id}">
                         <h3>طلب مشوار جديد</h3>
                         <p>المسافة: <b>${ride.distance} كم</b></p>
                         <p class="price">السعر: ${ride.price} جنيه</p>
-                        <p><a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">📍 عرض موقع الوجهة</a></p>
+                        
+                        <div class="map-links">
+                            <a href="https://www.google.com/maps?q=${pLat},${pLng}" target="_blank">📍 مكان الراكب (عشان تروحله)</a>
+                            <a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">🏁 مكان الوجهة (عشان تعرف هو رايح فين)</a>
+                        </div>
+
                         <button class="btn-accept" id="btn-${ride.id}" onclick="acceptRide(${ride.id})">قبول المشوار</button>
                     </div>
                 `;
@@ -123,30 +131,22 @@
             })
             .subscribe();
 
-        // تشغيل الـ PWA (Service Worker)
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
         }
 
-        // كود زرار التثبيت للكابتن
         let deferredPrompt;
         const installBtn = document.getElementById('installBtn');
-
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
             installBtn.style.display = 'block';
         });
-
         installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBtn.style.display = 'none';
-                }
+                if (outcome === 'accepted') { installBtn.style.display = 'none'; }
                 deferredPrompt = null;
             }
         });
