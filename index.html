@@ -3,63 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشاركة - تطبيق التوصيل</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#007bff">
+    <title>تطبيق مشاركة</title>
+    <!-- كود الخرائط المجاني Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 0; text-align: center; }
-        header { background-color: #007bff; color: white; padding: 20px; font-size: 24px; font-weight: bold; }
-        .container { padding: 20px; margin-top: 30px; }
-        .btn { background-color: #28a745; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; margin-top: 20px; width: 80%; max-width: 300px; display: block; margin-left: auto; margin-right: auto; }
-        .btn:active { background-color: #218838; }
-        .map-placeholder { background-color: #ddd; height: 200px; border-radius: 10px; margin: 20px auto; display: flex; align-items: center; justify-content: center; color: #666; max-width: 400px; }
-        #install-btn { background-color: #ff9800; display: none; } /* مخفي لحد ما المتصفح يجهز */
+        body { font-family: sans-serif; text-align: center; background-color: #f4f4f9; padding: 10px; margin: 0; }
+        .header { background-color: #007bff; color: white; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 8px; margin-bottom: 15px; }
+        h2 { color: #333; }
+        /* تنسيق الخريطة */
+        #map { height: 400px; width: 100%; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .btn { background-color: #28a745; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <header>تطبيق مشاركة</header>
+    <div class="header">تطبيق مشاركة</div>
 
-    <div class="container">
-        <h2>أهلاً بك في تطبيق التوصيل</h2>
-        <p>اطلب مشوارك الآن بضغطة زر</p>
-        
-        <div class="map-placeholder">(هنا سيتم عرض الخريطة لاحقاً)</div>
+    <h2>أهلاً بك في تطبيق التوصيل</h2>
 
-        <button class="btn" onclick="alert('تم طلب التوصيل بنجاح! جاري البحث عن كابتن...')">اطلب توصيل الآن</button>
-        
-        <!-- الزرار الجديد اللي هيظهر لما التطبيق يكون جاهز للتثبيت -->
-        <button id="install-btn" class="btn">اضغط هنا لتثبيت التطبيق</button>
-    </div>
+    <!-- هنا هيظهر مكان الخريطة -->
+    <div id="map"></div>
+
+    <button class="btn">اطلب توصيل الان</button>
 
     <script>
-        // 1. تشغيل ملف الخدمة (Service Worker)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
-        }
+        // إعداد الخريطة وتوجيهها لمدينة القاهرة (أو أي مكان)
+        var map = L.map('map').setView([30.0444, 31.2357], 12);
 
-        // 2. كود إظهار زرار التثبيت
-        let deferredPrompt;
-        const installBtn = document.getElementById('install-btn');
+        // تحميل شكل الخريطة المجاني
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
 
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = 'block'; // إظهار الزرار البرتقالي
-        });
-
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt(); // فتح شاشة التثبيت
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBtn.style.display = 'none'; // إخفاء الزرار بعد التثبيت
-                }
-                deferredPrompt = null;
-            }
-        });
+        // إضافة علامة (دبوس) على الخريطة
+        L.marker([30.0444, 31.2357]).addTo(map)
+            .bindPopup('موقعك الحالي')
+            .openPopup();
     </script>
+
 </body>
 </html>
