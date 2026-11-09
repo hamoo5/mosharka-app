@@ -11,8 +11,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; text-align: center; }
         .header { background-color: #1A237E; color: white; padding: 15px; font-size: 22px; font-weight: bold; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .profile-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .profile-box input { width: 90%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 8px; font-family: 'Cairo', sans-serif; }
+        .profile-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: none; }
         .ride-card { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-bottom: 15px; text-align: right; border-right: 6px solid #FFC107; transition: 0.3s; }
         .ride-card.accepted { border-right-color: #28a745; background-color: #f0fff4; }
         .ride-card h3 { margin: 0 0 10px 0; color: #1A237E; }
@@ -21,18 +20,26 @@
         .btn-accept { background-color: #28a745; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
         .btn-finish { background-color: #dc3545; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
         .map-links a { display: block; margin: 5px 0; background: #e3f2fd; padding: 10px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold;}
+        .logout-btn { background-color: #dc3545; color: white; padding: 10px; border-radius: 8px; text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 15px;}
     </style>
 </head>
 <body>
 
-    <div class="header">لوحة الكابتن</div>
-    
-    <button id="installBtn" class="btn-accept" style="display: none; background-color: #1A237E; margin-bottom: 15px; margin-top: 0;">📥 تثبيت تطبيق الكابتن</button>
+    <!-- كود الحماية: لو مش مسجل دخول ككابتن هيطرده -->
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || user.role !== 'driver') {
+            window.location.href = 'login.html';
+        }
+    </script>
 
-    <div class="profile-box">
-        <h3>بياناتك ككابتن</h3>
-        <input type="text" id="driverName" placeholder="اكتب اسمك (مثال: أحمد محمد)">
-        <input type="tel" id="driverPhone" placeholder="اكتب رقم تليفونك">
+    <div class="header">لوحة الكابتن</div>
+    <a href="#" onclick="logout()" class="logout-btn">تسجيل خروج</a>
+    
+    <!-- هنخفي الخانات دي لأن الاسم والرقم جايين من الحساب -->
+    <div class="profile-box" id="profileBox">
+        <input type="hidden" id="driverName">
+        <input type="hidden" id="driverPhone">
     </div>
 
     <div id="orders-container">
@@ -44,25 +51,26 @@
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+        // تعبئة بيانات الكابتن تلقائياً
+        document.getElementById('driverName').value = user.name;
+        document.getElementById('driverPhone').value = user.phone;
+
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+
         async function fetchOrders() {
-            // بنجيب الطلبات اللي حالتها pending أو accepted
             const { data, error } = await supabaseClient
                 .from('rides')
                 .select('*')
-                .in('status', ['pending', 'accepted']) // بنجيب الحالتين
+                .in('status', ['pending', 'accepted'])
                 .order('created_at', { ascending: false });
 
             const container = document.getElementById('orders-container');
             
-            if (error) {
-                container.innerHTML = '<p>حدث خطأ في جلب البيانات</p>';
-                return;
-            }
-
-            if (data.length === 0) {
-                container.innerHTML = '<p style="color:#777;">لا توجد طلبات جديدة حالياً.</p>';
-                return;
-            }
+            if (error) { container.innerHTML = '<p>حدث خطأ في جلب البيانات</p>'; return; }
+            if (data.length === 0) { container.innerHTML = '<p style="color:#777;">لا توجد طلبات جديدة حالياً.</p>'; return; }
 
             container.innerHTML = '';
             data.forEach(ride => {
@@ -94,64 +102,24 @@
             const dName = document.getElementById('driverName').value;
             const dPhone = document.getElementById('driverPhone').value;
 
-            if(!dName || !dPhone) {
-                alert('برجاء كتابة اسمك ورقم تليفونك أولاً في الأعلى.');
-                return;
-            }
-
             const { error } = await supabaseClient
                 .from('rides')
                 .update({ status: 'accepted', driver_name: dName, driver_phone: dPhone })
                 .eq('id', rideId);
 
-            if (error) {
-                alert('حدث خطأ، حاول مرة أخرى.');
-            }
-            fetchOrders(); // تحديث الشاشة
+            if (error) { alert('حدث خطأ، حاول مرة أخرى.'); }
+            fetchOrders(); 
         }
 
         async function finishRide(rideId) {
             if(!confirm('هل أنت متأكد من إنهاء الرحلة؟')) return;
-
-            const { error } = await supabaseClient
-                .from('rides')
-                .update({ status: 'completed' })
-                .eq('id', rideId);
-
-            if (error) {
-                alert('حدث خطأ، حاول مرة أخرى.');
-            }
-            fetchOrders(); // تحديث الشاشة
+            const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', rideId);
+            if (error) { alert('حدث خطأ.'); }
+            fetchOrders();
         }
 
         fetchOrders();
-
-        supabaseClient
-            .channel('driver-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
-                fetchOrders(); 
-            })
-            .subscribe();
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
-        }
-
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = 'block';
-        });
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') { installBtn.style.display = 'none'; }
-                deferredPrompt = null;
-            }
-        });
+        supabaseClient.channel('driver-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, () => { fetchOrders(); }).subscribe();
     </script>
 </body>
 </html>
