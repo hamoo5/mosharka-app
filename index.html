@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تطبيق مشاركة - الراكب</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1A237E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -16,7 +18,6 @@
         #ride-info h3 { margin: 5px 0; color: #28a745; font-size: 22px; }
         .btn { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; }
         
-        /* كارت بيانات الكابتن */
         #driver-details { display: none; background-color: #e3f2fd; padding: 15px; border-radius: 12px; border: 2px solid #2196f3; margin-bottom: 15px; }
         #driver-details h3 { color: #1A237E; margin-top: 0; }
         .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px; }
@@ -34,7 +35,6 @@
         <h3>السعر: <span id="price-text">0</span> جنيه</h3>
     </div>
 
-    <!-- كارت هيظهر فيه بيانات الكابتن بعد القبول -->
     <div id="driver-details">
         <h3>الكابتن في الطريق إليك 🚗</h3>
         <p>اسم الكابتن: <span id="d-name"></span></p>
@@ -83,7 +83,7 @@
             document.getElementById('request-btn').innerText = 'اطلب التوصيل الآن';
             document.getElementById('request-btn').style.backgroundColor = '#28a745';
             document.getElementById('request-btn').disabled = false;
-            document.getElementById('driver-details').style.display = 'none'; // نخفي بيانات الكابتن لو طلب جديد
+            document.getElementById('driver-details').style.display = 'none'; 
         });
 
         document.getElementById('request-btn').addEventListener('click', async function() {
@@ -109,7 +109,6 @@
             }
         });
 
-        // السحر: استقبال بيانات الكابتن لما يقبل
         supabaseClient
             .channel('rider-channel')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
@@ -118,16 +117,21 @@
                     btn.innerText = 'تم قبول الطلب';
                     btn.style.backgroundColor = '#6c757d';
                     
-                    // إظهار بيانات الكابتن
                     document.getElementById('driver-details').style.display = 'block';
                     document.getElementById('d-name').innerText = payload.new.driver_name;
                     
-                    // تجهيز زرار الاتصال
                     const callBtn = document.getElementById('d-call');
                     callBtn.href = 'tel:' + payload.new.driver_phone;
                 }
             })
             .subscribe();
+
+        // تشغيل الـ PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js');
+            });
+        }
     </script>
 </body>
 </html>
