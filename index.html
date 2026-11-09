@@ -66,9 +66,7 @@
                 map.setView(startPoint, 15);
                 if (startMarker) { map.removeLayer(startMarker); }
                 startMarker = L.marker(startPoint).addTo(map).bindPopup('موقعك الحقيقي').openPopup();
-            }, function(error) {
-                alert('برجاء السماح بالوصول للموقع عشان التطبيق يشتغل صح.');
-            }, { enableHighAccuracy: true });
+            }, function(error) {}, { enableHighAccuracy: true });
         }
 
         var destMarker = null, routeLine = null;
@@ -111,8 +109,8 @@
                         price: currentPrice, 
                         dest_lat: currentDestLat, 
                         dest_lng: currentDestLng, 
-                        pickup_lat: startPoint[0], // بنبعت مكان الراكب
-                        pickup_lng: startPoint[1], // بنبعت مكان الراكب
+                        pickup_lat: startPoint[0], 
+                        pickup_lng: startPoint[1], 
                         status: 'pending' 
                     }])
                     .select();
@@ -130,19 +128,39 @@
             }
         });
 
+        // السحر: متابعة حالة الطلب (قبول -> إنهاء)
         supabaseClient
             .channel('rider-channel')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
-                if (currentRideId && payload.new.id === currentRideId && payload.new.status === 'accepted') {
-                    const btn = document.getElementById('request-btn');
-                    btn.innerText = 'تم قبول الطلب';
-                    btn.style.backgroundColor = '#6c757d';
+                if (currentRideId && payload.new.id === currentRideId) {
                     
-                    document.getElementById('driver-details').style.display = 'block';
-                    document.getElementById('d-name').innerText = payload.new.driver_name;
-                    
-                    const callBtn = document.getElementById('d-call');
-                    callBtn.href = 'tel:' + payload.new.driver_phone;
+                    // لو الكابتن قبل
+                    if (payload.new.status === 'accepted') {
+                        const btn = document.getElementById('request-btn');
+                        btn.innerText = 'تم قبول الطلب';
+                        btn.style.backgroundColor = '#6c757d';
+                        
+                        document.getElementById('driver-details').style.display = 'block';
+                        document.getElementById('d-name').innerText = payload.new.driver_name;
+                        
+                        const callBtn = document.getElementById('d-call');
+                        callBtn.href = 'tel:' + payload.new.driver_phone;
+                    }
+
+                    // لو الكابتن أنهى الرحلة
+                    if (payload.new.status === 'completed') {
+                        document.getElementById('driver-details').style.display = 'none';
+                        
+                        const btn = document.getElementById('request-btn');
+                        btn.innerText = 'وصلت بالسلامة! شكراً لاستخدامك التطبيق.';
+                        btn.style.backgroundColor = '#1A237E';
+                        btn.disabled = true;
+                        
+                        alert('الحمد لله على السلامة! تم إنهاء الرحلة.');
+                        
+                        // تصفير المتغيرات عشان يقدر يطلب تاني
+                        currentRideId = null; 
+                    }
                 }
             })
             .subscribe();
@@ -159,7 +177,7 @@
             installBtn.style.display = 'block'; 
         });
         installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
+            if (deprompt) {
                 deferredPrompt.prompt(); 
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') { installBtn.style.display = 'none'; }
