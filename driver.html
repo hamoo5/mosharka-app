@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق مشاركة - الكابتن</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f9; padding: 15px; margin: 0; text-align: center; }
+        .header { background-color: #343a40; color: white; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 8px; margin-bottom: 20px; }
+        .ride-card { background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 15px; text-align: right; border-right: 5px solid #28a745; }
+        .ride-card h3 { margin: 0 0 10px 0; color: #333; }
+        .ride-card p { margin: 5px 0; color: #555; }
+        .price { color: #28a745; font-weight: bold; font-size: 18px; }
+        .btn-accept { background-color: #007bff; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="header">لوحة الكابتن - الطلبات المتاحة</div>
+    
+    <div id="orders-container">
+        <p>جاري تحميل الطلبات...</p>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
+        const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function fetchOrders() {
+            const { data, error } = await supabase
+                .from('rides')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            const container = document.getElementById('orders-container');
+            
+            if (error) {
+                container.innerHTML = '<p>حدث خطأ في جلب البيانات</p>';
+                return;
+            }
+
+            if (data.length === 0) {
+                container.innerHTML = '<p>لا توجد طلبات حالياً.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            data.forEach(ride => {
+                container.innerHTML += `
+                    <div class="ride-card">
+                        <h3>طلب مشوار جديد</h3>
+                        <p>المسافة: ${ride.distance} كم</p>
+                        <p class="price">السعر: ${ride.price} جنيه</p>
+                        <p><a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">عرض موقع الوجهة على الخريطة</a></p>
+                        <button class="btn-accept">قبول المشوار</button>
+                    </div>
+                `;
+            });
+        }
+
+        // تشغيل الدالة أول ما الصفحة تفتح
+        fetchOrders();
+    </script>
+</body>
+</html>
