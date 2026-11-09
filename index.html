@@ -26,6 +26,10 @@
 <body>
 
     <div class="header">تطبيق مشاركة</div>
+    
+    <!-- زرار تثبيت التطبيق -->
+    <button id="installBtn" class="btn" style="display: none; background-color: #1A237E; margin-bottom: 15px;">📥 تثبيت التطبيق على هاتفك</button>
+
     <p style="font-size: 14px; color: #666;">اضغط على الخريطة لتحديد وجهتك</p>
 
     <div id="map"></div>
@@ -126,12 +130,33 @@
             })
             .subscribe();
 
-        // تشغيل الـ PWA
+        // تشغيل الـ PWA (Service Worker)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js');
             });
         }
+
+        // كود زرار التثبيت
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block'; // إظهار الزرار لما المتصفح يسمح
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt(); // إظهار رسالة التثبيت
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.style.display = 'none'; // إخفاء الزرار لو وافق
+                }
+                deferredPrompt = null;
+            }
+        });
     </script>
 </body>
 </html>
