@@ -20,12 +20,16 @@
         .price { color: #28a745; font-weight: bold; font-size: 20px; }
         .btn-accept { background-color: #28a745; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
         .btn-accept:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .nav-link { margin-top: 30px; display: block; color: #666; text-decoration: none; font-size: 14px; }
     </style>
 </head>
 <body>
 
     <div class="header">لوحة الكابتن</div>
     
+    <!-- زرار تثبيت التطبيق للكابتن -->
+    <button id="installBtn" class="btn-accept" style="display: none; background-color: #1A237E; margin-bottom: 15px; margin-top: 0;">📥 تثبيت تطبيق الكابتن</button>
+
     <div class="profile-box">
         <h3>بياناتك ككابتن</h3>
         <input type="text" id="driverName" placeholder="اكتب اسمك (مثال: أحمد محمد)">
@@ -35,6 +39,9 @@
     <div id="orders-container">
         <p>جاري تحميل الطلبات...</p>
     </div>
+
+    <!-- لينك عشان الكابتن يرجع لصفحة الراكب لو حب -->
+    <a href="index.html" class="nav-link">الذهاب لصفحة الراكب 🚗</a>
 
     <script>
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
@@ -116,12 +123,33 @@
             })
             .subscribe();
 
-        // تشغيل الـ PWA
+        // تشغيل الـ PWA (Service Worker)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js');
             });
         }
+
+        // كود زرار التثبيت للكابتن
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        });
     </script>
 </body>
 </html>
