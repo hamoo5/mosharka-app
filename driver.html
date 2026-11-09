@@ -28,11 +28,12 @@
     <script>
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // غيرنا اسم المتغير هنا عشان ميعملش كونفليكت
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         async function fetchOrders() {
-            // بنجيب الطلبات اللي لسه متقبلتش (pending) بس
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('rides')
                 .select('*')
                 .eq('status', 'pending')
@@ -41,7 +42,7 @@
             const container = document.getElementById('orders-container');
             
             if (error) {
-                container.innerHTML = '<p>حدث خطأ في جلب البيانات</p>';
+                container.innerHTML = '<p>حدث خطأ في جلب البيانات: ' + error.message + '</p>';
                 return;
             }
 
@@ -64,31 +65,27 @@
             });
         }
 
-        // دالة قبول المشوار
         async function acceptRide(rideId) {
             const btn = document.getElementById(`btn-${rideId}`);
             btn.innerText = 'جاري القبول...';
             btn.disabled = true;
 
-            // تحديث حالة الطلب في قاعدة البيانات لتصبح accepted
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('rides')
                 .update({ status: 'accepted' })
                 .eq('id', rideId);
 
             if (error) {
-                alert('حدث خطأ، حاول مرة أخرى.');
+                alert('حدث خطأ، حاول مرة أخرى: ' + error.message);
                 btn.innerText = 'قبول المشوار';
                 btn.disabled = false;
             } else {
-                // تغيير شكل الكارت عشان يبان إنه اتقبل
                 const card = document.getElementById(`card-${rideId}`);
                 card.classList.add('accepted');
                 btn.innerText = 'تم قبول المشوار بنجاح ✓';
             }
         }
 
-        // تشغيل الدالة أول ما الصفحة تفتح
         fetchOrders();
     </script>
 </body>
