@@ -12,7 +12,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         body { font-family: 'Cairo', sans-serif; text-align: center; background-color: #f0f2f5; padding: 10px; margin: 0; }
-        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 22px; font-weight: bold; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 22px; font-weight: bold; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
         #map { height: 350px; width: 100%; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 1; }
         #ride-info { display: none; background-color: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
         #ride-info h3 { margin: 5px 0; color: #28a745; font-size: 22px; }
@@ -21,13 +21,23 @@
         #driver-details { display: none; background-color: #e3f2fd; padding: 15px; border-radius: 12px; border: 2px solid #2196f3; margin-bottom: 15px; }
         #driver-details h3 { color: #1A237E; margin-top: 0; }
         .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px; }
+        .logout-btn { position: absolute; left: 15px; top: 18px; background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <div class="header">تطبيق مشاركة</div>
-    
-    <button id="installBtn" class="btn" style="display: none; background-color: #1A237E; margin-bottom: 15px;">📥 تثبيت التطبيق على هاتفك</button>
+    <!-- كود الحماية للراكب -->
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user || user.role !== 'rider') {
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <div class="header">
+        تطبيق مشاركة
+        <a href="#" onclick="logout()" class="logout-btn">خروج</a>
+    </div>
 
     <p style="font-size: 14px; color: #666;">اضغط على الخريطة لتحديد وجهتك</p>
 
@@ -51,11 +61,13 @@
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+
         var map = L.map('map').setView([30.0444, 31.2357], 12); 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
         var startPoint = [30.0444, 31.2357]; 
         var startMarker = null;
@@ -104,15 +116,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('rides')
-                    .insert([{ 
-                        distance: currentDistance, 
-                        price: currentPrice, 
-                        dest_lat: currentDestLat, 
-                        dest_lng: currentDestLng, 
-                        pickup_lat: startPoint[0], 
-                        pickup_lng: startPoint[1], 
-                        status: 'pending' 
-                    }])
+                    .insert([{ distance: currentDistance, price: currentPrice, dest_lat: currentDestLat, dest_lng: currentDestLng, pickup_lat: startPoint[0], pickup_lng: startPoint[1], status: 'pending' }])
                     .select();
 
                 if (error) throw error;
@@ -128,62 +132,24 @@
             }
         });
 
-        // السحر: متابعة حالة الطلب (قبول -> إنهاء)
-        supabaseClient
-            .channel('rider-channel')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
-                if (currentRideId && payload.new.id === currentRideId) {
-                    
-                    // لو الكابتن قبل
-                    if (payload.new.status === 'accepted') {
-                        const btn = document.getElementById('request-btn');
-                        btn.innerText = 'تم قبول الطلب';
-                        btn.style.backgroundColor = '#6c757d';
-                        
-                        document.getElementById('driver-details').style.display = 'block';
-                        document.getElementById('d-name').innerText = payload.new.driver_name;
-                        
-                        const callBtn = document.getElementById('d-call');
-                        callBtn.href = 'tel:' + payload.new.driver_phone;
-                    }
-
-                    // لو الكابتن أنهى الرحلة
-                    if (payload.new.status === 'completed') {
-                        document.getElementById('driver-details').style.display = 'none';
-                        
-                        const btn = document.getElementById('request-btn');
-                        btn.innerText = 'وصلت بالسلامة! شكراً لاستخدامك التطبيق.';
-                        btn.style.backgroundColor = '#1A237E';
-                        btn.disabled = true;
-                        
-                        alert('الحمد لله على السلامة! تم إنهاء الرحلة.');
-                        
-                        // تصفير المتغيرات عشان يقدر يطلب تاني
-                        currentRideId = null; 
-                    }
+        supabaseClient.channel('rider-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
+            if (currentRideId && payload.new.id === currentRideId) {
+                if (payload.new.status === 'accepted') {
+                    const btn = document.getElementById('request-btn');
+                    btn.innerText = 'تم قبول الطلب'; btn.style.backgroundColor = '#6c757d';
+                    document.getElementById('driver-details').style.display = 'block';
+                    document.getElementById('d-name').innerText = payload.new.driver_name;
+                    document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
                 }
-            })
-            .subscribe();
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
-        }
-
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = 'block'; 
-        });
-        installBtn.addEventListener('click', async () => {
-            if (deprompt) {
-                deferredPrompt.prompt(); 
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') { installBtn.style.display = 'none'; }
-                deferredPrompt = null;
+                if (payload.new.status === 'completed') {
+                    document.getElementById('driver-details').style.display = 'none';
+                    const btn = document.getElementById('request-btn');
+                    btn.innerText = 'وصلت بالسلامة!'; btn.style.backgroundColor = '#1A237E'; btn.disabled = true;
+                    alert('تم إنهاء الرحلة.');
+                    currentRideId = null; 
+                }
             }
-        });
+        }).subscribe();
     </script>
 </body>
 </html>
