@@ -3,28 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق مشاركة</title>
+    <title>تطبيق مشاركة - الراكب</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- مكتبة Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; text-align: center; background-color: #f4f4f9; padding: 10px; margin: 0; }
         .header { background-color: #007bff; color: white; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 8px; margin-bottom: 15px; }
         h2 { color: #333; font-size: 18px; margin: 10px 0; }
         #map { height: 350px; width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 1; }
-        
         #ride-info { display: none; background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
         #ride-info h3 { margin: 5px 0; color: #28a745; font-size: 22px; }
         #ride-info p { margin: 5px 0; color: #555; font-size: 16px; }
-
         .btn { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="header">تطبيق مشاركة</div>
-    
+    <div class="header">تطبيق مشاركة - الراكب</div>
     <p style="font-size: 14px; color: #666;">اضغط على الخريطة لتحديد وجهتك</p>
 
     <div id="map"></div>
@@ -37,18 +33,12 @@
     <button id="request-btn" class="btn" style="display: none;">اطلب التوصيل الآن</button>
 
     <script>
-        // 1. إعداد الاتصال بقاعدة البيانات
+        // إعداد قاعدة البيانات
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
-        
-        let supabaseClient = null;
-        try {
-            supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-        } catch (e) {
-            console.log("Supabase connection failed: ", e);
-        }
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // 2. إعداد الخريطة
+        // إعداد الخريطة
         var startPoint = [30.0444, 31.2357];
         var map = L.map('map').setView(startPoint, 12);
 
@@ -90,17 +80,10 @@
             document.getElementById('request-btn').style.display = 'block';
         });
 
-        // 3. كود إرسال الطلب لقاعدة البيانات
+        // إرسال الطلب
         document.getElementById('request-btn').addEventListener('click', async function() {
             this.innerText = 'جاري إرسال الطلب...';
             this.disabled = true;
-
-            if (!supabaseClient) {
-                alert('خطأ: لم يتم الاتصال بقاعدة البيانات.');
-                this.innerText = 'اطلب التوصيل الآن';
-                this.disabled = false;
-                return;
-            }
 
             try {
                 const { data, error } = await supabaseClient
@@ -110,7 +93,8 @@
                             distance: currentDistance, 
                             price: currentPrice, 
                             dest_lat: currentDestLat, 
-                            dest_lng: currentDestLng 
+                            dest_lng: currentDestLng,
+                            status: 'pending'
                         }
                     ]);
 
