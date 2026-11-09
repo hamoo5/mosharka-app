@@ -1,9 +1,10 @@
 self.addEventListener('install', (e) => {
-  self.skipWaiting(); // إجبار التحديث الجديد إنه يشتغل فوراً
+  self.skipWaiting(); // إجبار المتصفح إنه يجيب التحديث الجديد فوراً
   e.waitUntil(
-    caches.open('mosharka-store-v2').then((cache) => cache.addAll([
+    caches.open('mosharka-store-v3').then((cache) => cache.addAll([
       './index.html',
-      './driver.html'
+      './driver.html',
+      './login.html'
     ])),
   );
 });
@@ -13,8 +14,8 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== 'mosharka-store-v2') {
-            return caches.delete(cacheName);
+          if (cacheName !== 'mosharka-store-v3') {
+            return caches.delete(cacheName); // مسح أي كاش قديم
           }
         })
       );
