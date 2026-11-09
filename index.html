@@ -6,6 +6,8 @@
     <title>تطبيق مشاركة</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- مكتبة Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; text-align: center; background-color: #f4f4f9; padding: 10px; margin: 0; }
         .header { background-color: #007bff; color: white; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 8px; margin-bottom: 15px; }
@@ -35,6 +37,18 @@
     <button id="request-btn" class="btn" style="display: none;">اطلب التوصيل الآن</button>
 
     <script>
+        // 1. إعداد الاتصال بقاعدة البيانات
+        const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
+        const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
+        
+        let supabaseClient = null;
+        try {
+            supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        } catch (e) {
+            console.log("Supabase connection failed: ", e);
+        }
+
+        // 2. إعداد الخريطة
         var startPoint = [30.0444, 31.2357];
         var map = L.map('map').setView(startPoint, 12);
 
@@ -76,8 +90,40 @@
             document.getElementById('request-btn').style.display = 'block';
         });
 
-        document.getElementById('request-btn').addEventListener('click', function() {
-            alert('هنا هنبعت الطلب لقاعدة البيانات في الخطوة الجاية!');
+        // 3. كود إرسال الطلب لقاعدة البيانات
+        document.getElementById('request-btn').addEventListener('click', async function() {
+            this.innerText = 'جاري إرسال الطلب...';
+            this.disabled = true;
+
+            if (!supabaseClient) {
+                alert('خطأ: لم يتم الاتصال بقاعدة البيانات.');
+                this.innerText = 'اطلب التوصيل الآن';
+                this.disabled = false;
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rides')
+                    .insert([
+                        { 
+                            distance: currentDistance, 
+                            price: currentPrice, 
+                            dest_lat: currentDestLat, 
+                            dest_lng: currentDestLng 
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                alert('تم إرسال طلبك بنجاح! الكابتن هيوصلك قريب.');
+                this.innerText = 'تم الطلب بنجاح';
+                this.style.backgroundColor = '#6c757d';
+            } catch (error) {
+                alert('حدث خطأ في إرسال الطلب: ' + error.message);
+                this.innerText = 'اطلب التوصيل الآن';
+                this.disabled = false;
+            }
         });
     </script>
 
