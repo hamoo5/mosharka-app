@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - تطبيق مشاركة</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1A237E">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 85%; max-width: 400px; text-align: center; }
+        .header { color: #1A237E; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+        input, select { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 16px; }
+        .btn { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; margin-top: 10px; }
+        .toggle-link { color: #007bff; cursor: pointer; margin-top: 15px; display: block; text-decoration: none; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="login-box">
+        <div class="header" id="form-title">تسجيل الدخول</div>
+        
+        <!-- قسم تسجيل الدخول -->
+        <div id="login-form">
+            <input type="tel" id="login-phone" placeholder="رقم الموبايل">
+            <input type="password" id="login-password" placeholder="كلمة المرور">
+            <button class="btn" onclick="login()">دخول</button>
+            <a class="toggle-link" onclick="toggleForm()">ليس لديك حساب؟ سجل الآن</a>
+        </div>
+
+        <!-- قسم إنشاء حساب -->
+        <div id="signup-form" class="hidden">
+            <input type="text" id="signup-name" placeholder="الاسم بالكامل">
+            <input type="tel" id="signup-phone" placeholder="رقم الموبايل">
+            <input type="password" id="signup-password" placeholder="كلمة المرور">
+            <select id="signup-role">
+                <option value="rider">أنا راكب (أطلب مشاوير)</option>
+                <option value="driver">أنا كابتن (أوصل مشاوير)</option>
+            </select>
+            <button class="btn" onclick="signup()">إنشاء حساب</button>
+            <a class="toggle-link" onclick="toggleForm()">لديك حساب بالفعل؟ سجل دخولك</a>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
+        const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // التبديل بين تسجيل الدخول وإنشاء حساب
+        function toggleForm() {
+            document.getElementById('login-form').classList.toggle('hidden');
+            document.getElementById('signup-form').classList.toggle('hidden');
+            const title = document.getElementById('form-title');
+            if (title.innerText === 'تسجيل الدخول') {
+                title.innerText = 'إنشاء حساب جديد';
+            } else {
+                title.innerText = 'تسجيل الدخول';
+            }
+        }
+
+        // دالة إنشاء حساب
+        async function signup() {
+            const name = document.getElementById('signup-name').value;
+            const phone = document.getElementById('signup-phone').value;
+            const pass = document.getElementById('signup-password').value;
+            const role = document.getElementById('signup-role').value;
+
+            if(!name || !phone || !pass) { alert('برجاء ملء جميع البيانات'); return; }
+
+            const { data, error } = await supabaseClient
+                .from('users')
+                .insert([{ name: name, phone: phone, password: pass, role: role }]);
+
+            if (error) {
+                if (error.code === '23505') { // كود خطأ التكرار
+                    alert('رقم الموبايل ده مسجل بالفعل!');
+                } else {
+                    alert('حدث خطأ: ' + error.message);
+                }
+            } else {
+                alert('تم إنشاء الحساب بنجاح! يمكنك تسجيل الدخول الآن.');
+                toggleForm(); // نرجعه لصفحة الدخول
+            }
+        }
+
+        // دالة تسجيل الدخول
+        async function login() {
+            const phone = document.getElementById('login-phone').value;
+            const pass = document.getElementById('login-password').value;
+
+            if(!phone || !pass) { alert('برجاء كتابة الرقم والباسورد'); return; }
+
+            const { data, error } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('phone', phone)
+                .eq('password', pass);
+
+            if (error) { alert('حدث خطأ'); return; }
+
+            if (data.length > 0) {
+                // حفظ بيانات المستخدم في المتصفح
+                localStorage.setItem('user', JSON.stringify(data[0]));
+                
+                // التوجيه حسب نوع الحساب
+                if (data[0].role === 'driver') {
+                    window.location.href = 'driver.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
+            } else {
+                alert('رقم الموبايل أو كلمة المرور غير صحيحة');
+            }
+        }
+    </script>
+</body>
+</html>
