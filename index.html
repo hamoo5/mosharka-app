@@ -8,28 +8,37 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background-color: #f4f4f9; padding: 10px; margin: 0; }
-        .header { background-color: #007bff; color: white; padding: 15px; font-size: 20px; font-weight: bold; border-radius: 8px; margin-bottom: 15px; }
-        h2 { color: #333; font-size: 18px; margin: 10px 0; }
-        #map { height: 350px; width: 100%; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 1; }
-        #ride-info { display: none; background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        body { font-family: 'Cairo', sans-serif; text-align: center; background-color: #f0f2f5; padding: 10px; margin: 0; }
+        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 22px; font-weight: bold; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #map { height: 350px; width: 100%; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 1; }
+        #ride-info { display: none; background-color: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
         #ride-info h3 { margin: 5px 0; color: #28a745; font-size: 22px; }
-        #ride-info p { margin: 5px 0; color: #555; font-size: 16px; }
-        .btn { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; }
-        .btn-waiting { background-color: #ffc107; color: #333; }
-        .btn-accepted { background-color: #17a2b8; color: white; }
+        .btn { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; }
+        
+        /* كارت بيانات الكابتن */
+        #driver-details { display: none; background-color: #e3f2fd; padding: 15px; border-radius: 12px; border: 2px solid #2196f3; margin-bottom: 15px; }
+        #driver-details h3 { color: #1A237E; margin-top: 0; }
+        .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="header">تطبيق مشاركة - الراكب</div>
+    <div class="header">تطبيق مشاركة</div>
     <p style="font-size: 14px; color: #666;">اضغط على الخريطة لتحديد وجهتك</p>
 
     <div id="map"></div>
 
     <div id="ride-info">
         <p>المسافة: <span id="distance-text">0</span> كم</p>
-        <h3>السعر التلقائي: <span id="price-text">0</span> جنيه</h3>
+        <h3>السعر: <span id="price-text">0</span> جنيه</h3>
+    </div>
+
+    <!-- كارت هيظهر فيه بيانات الكابتن بعد القبول -->
+    <div id="driver-details">
+        <h3>الكابتن في الطريق إليك 🚗</h3>
+        <p>اسم الكابتن: <span id="d-name"></span></p>
+        <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
     </div>
 
     <button id="request-btn" class="btn" style="display: none;">اطلب التوصيل الآن</button>
@@ -49,13 +58,8 @@
 
         L.marker(startPoint).addTo(map).bindPopup('موقعك الحالي').openPopup();
 
-        var destMarker = null;
-        var routeLine = null;
-        var currentDestLat = 0;
-        var currentDestLng = 0;
-        var currentDistance = 0;
-        var currentPrice = 0;
-        var currentRideId = null; // متغير عشان نحفظ رقم الطلب
+        var destMarker = null, routeLine = null;
+        var currentDestLat = 0, currentDestLng = 0, currentDistance = 0, currentPrice = 0, currentRideId = null;
 
         map.on('click', function(e) {
             currentDestLat = e.latlng.lat;
@@ -65,14 +69,11 @@
             if (routeLine) { map.removeLayer(routeLine); }
 
             destMarker = L.marker([currentDestLat, currentDestLng]).addTo(map).bindPopup('وجهتك').openPopup();
-            routeLine = L.polyline([startPoint, [currentDestLat, currentDestLng]], {color: 'blue', weight: 4}).addTo(map);
+            routeLine = L.polyline([startPoint, [currentDestLat, currentDestLng]], {color: '#1A237E', weight: 5}).addTo(map);
 
             var distanceInMeters = map.distance(startPoint, [currentDestLat, currentDestLng]);
             currentDistance = (distanceInMeters / 1000).toFixed(2);
-
-            var basePrice = 10;
-            var pricePerKm = 5;
-            currentPrice = Math.round(basePrice + (currentDistance * pricePerKm));
+            currentPrice = Math.round(10 + (currentDistance * 5));
 
             document.getElementById('ride-info').style.display = 'block';
             document.getElementById('distance-text').innerText = currentDistance;
@@ -80,10 +81,11 @@
             
             document.getElementById('request-btn').style.display = 'block';
             document.getElementById('request-btn').innerText = 'اطلب التوصيل الآن';
-            document.getElementById('request-btn').className = 'btn';
+            document.getElementById('request-btn').style.backgroundColor = '#28a745';
+            document.getElementById('request-btn').disabled = false;
+            document.getElementById('driver-details').style.display = 'none'; // نخفي بيانات الكابتن لو طلب جديد
         });
 
-        // إرسال الطلب
         document.getElementById('request-btn').addEventListener('click', async function() {
             this.innerText = 'جاري إرسال الطلب...';
             this.disabled = true;
@@ -91,51 +93,41 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('rides')
-                    .insert([{ 
-                        distance: currentDistance, 
-                        price: currentPrice, 
-                        dest_lat: currentDestLat, 
-                        dest_lng: currentDestLng,
-                        status: 'pending'
-                    }])
-                    .select(); // عشان نرجع بيانات الطلب اللي اتعمل
+                    .insert([{ distance: currentDistance, price: currentPrice, dest_lat: currentDestLat, dest_lng: currentDestLng, status: 'pending' }])
+                    .select();
 
                 if (error) throw error;
-
-                // بنحفظ رقم الطلب
                 currentRideId = data[0].id; 
                 
                 this.innerText = 'في انتظار قبول الكابتن...';
-                this.className = 'btn btn-waiting';
-                
+                this.style.backgroundColor = '#ffc107';
+                this.style.color = '#333';
             } catch (error) {
-                alert('حدث خطأ في إرسال الطلب: ' + error.message);
+                alert('حدث خطأ: ' + error.message);
                 this.innerText = 'اطلب التوصيل الآن';
                 this.disabled = false;
             }
         });
 
-        // الكود السحري: الراكب بيسمع هل الكابتن قبل الطلب ولا لأ
+        // السحر: استقبال بيانات الكابتن لما يقبل
         supabaseClient
             .channel('rider-channel')
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'rides' },
-                (payload) => {
-                    // لو التحديث ده على طلبنا، وحالته بقت accepted
-                    if (currentRideId && payload.new.id === currentRideId && payload.new.status === 'accepted') {
-                        const btn = document.getElementById('request-btn');
-                        btn.innerText = 'الكابتن قبل طلبك وهو في الطريق! 🚗';
-                        btn.className = 'btn btn-accepted';
-                        btn.disabled = true;
-                        
-                        // تنبيه للراكب (اختياري)
-                        alert('خبر سعيد! الكابتن وافق على مشوارك وهو في الطريق إليك.');
-                    }
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
+                if (currentRideId && payload.new.id === currentRideId && payload.new.status === 'accepted') {
+                    const btn = document.getElementById('request-btn');
+                    btn.innerText = 'تم قبول الطلب';
+                    btn.style.backgroundColor = '#6c757d';
+                    
+                    // إظهار بيانات الكابتن
+                    document.getElementById('driver-details').style.display = 'block';
+                    document.getElementById('d-name').innerText = payload.new.driver_name;
+                    
+                    // تجهيز زرار الاتصال
+                    const callBtn = document.getElementById('d-call');
+                    callBtn.href = 'tel:' + payload.new.driver_phone;
                 }
-            )
+            })
             .subscribe();
     </script>
-
 </body>
 </html>
