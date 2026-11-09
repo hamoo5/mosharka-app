@@ -19,8 +19,7 @@
         .ride-card p { margin: 8px 0; color: #555; font-size: 16px; }
         .price { color: #28a745; font-weight: bold; font-size: 20px; }
         .btn-accept { background-color: #28a745; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
-        .btn-accept:disabled { background-color: #6c757d; cursor: not-allowed; }
-        .nav-link { margin-top: 30px; display: block; color: #666; text-decoration: none; font-size: 14px; }
+        .btn-finish { background-color: #dc3545; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
         .map-links a { display: block; margin: 5px 0; background: #e3f2fd; padding: 10px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold;}
     </style>
 </head>
@@ -40,18 +39,17 @@
         <p>جاري تحميل الطلبات...</p>
     </div>
 
-    <a href="index.html" class="nav-link">الذهاب لصفحة الراكب 🚗</a>
-
     <script>
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         async function fetchOrders() {
+            // بنجيب الطلبات اللي حالتها pending أو accepted
             const { data, error } = await supabaseClient
                 .from('rides')
                 .select('*')
-                .eq('status', 'pending')
+                .in('status', ['pending', 'accepted']) // بنجيب الحالتين
                 .order('created_at', { ascending: false });
 
             const container = document.getElementById('orders-container');
@@ -68,22 +66,25 @@
 
             container.innerHTML = '';
             data.forEach(ride => {
-                // لو المكان مش متسجل (طلبات قديمة) بنحط 0
                 const pLat = ride.pickup_lat || 0;
                 const pLng = ride.pickup_lng || 0;
+                const isAccepted = ride.status === 'accepted';
 
                 container.innerHTML += `
-                    <div class="ride-card" id="card-${ride.id}">
-                        <h3>طلب مشوار جديد</h3>
+                    <div class="ride-card ${isAccepted ? 'accepted' : ''}" id="card-${ride.id}">
+                        <h3>${isAccepted ? 'مشوار جاري 🚗' : 'طلب مشوار جديد'}</h3>
                         <p>المسافة: <b>${ride.distance} كم</b></p>
                         <p class="price">السعر: ${ride.price} جنيه</p>
                         
                         <div class="map-links">
-                            <a href="https://www.google.com/maps?q=${pLat},${pLng}" target="_blank">📍 مكان الراكب (عشان تروحله)</a>
-                            <a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">🏁 مكان الوجهة (عشان تعرف هو رايح فين)</a>
+                            <a href="https://www.google.com/maps?q=${pLat},${pLng}" target="_blank">📍 مكان الراكب</a>
+                            <a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">🏁 مكان الوجهة</a>
                         </div>
 
-                        <button class="btn-accept" id="btn-${ride.id}" onclick="acceptRide(${ride.id})">قبول المشوار</button>
+                        ${isAccepted 
+                            ? `<button class="btn-finish" onclick="finishRide(${ride.id})">إنهاء الرحلة</button>` 
+                            : `<button class="btn-accept" onclick="acceptRide(${ride.id})">قبول المشوار</button>`
+                        }
                     </div>
                 `;
             });
@@ -98,35 +99,36 @@
                 return;
             }
 
-            const btn = document.getElementById(`btn-${rideId}`);
-            btn.innerText = 'جاري القبول...';
-            btn.disabled = true;
-
-            const { data, error } = await supabaseClient
+            const { error } = await supabaseClient
                 .from('rides')
-                .update({ 
-                    status: 'accepted',
-                    driver_name: dName,
-                    driver_phone: dPhone
-                })
+                .update({ status: 'accepted', driver_name: dName, driver_phone: dPhone })
                 .eq('id', rideId);
 
             if (error) {
                 alert('حدث خطأ، حاول مرة أخرى.');
-                btn.innerText = 'قبول المشوار';
-                btn.disabled = false;
-            } else {
-                const card = document.getElementById(`card-${rideId}`);
-                card.classList.add('accepted');
-                btn.innerText = 'تم قبول المشوار بنجاح ✓';
             }
+            fetchOrders(); // تحديث الشاشة
+        }
+
+        async function finishRide(rideId) {
+            if(!confirm('هل أنت متأكد من إنهاء الرحلة؟')) return;
+
+            const { error } = await supabaseClient
+                .from('rides')
+                .update({ status: 'completed' })
+                .eq('id', rideId);
+
+            if (error) {
+                alert('حدث خطأ، حاول مرة أخرى.');
+            }
+            fetchOrders(); // تحديث الشاشة
         }
 
         fetchOrders();
 
         supabaseClient
             .channel('driver-channel')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides' }, (payload) => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
                 fetchOrders(); 
             })
             .subscribe();
