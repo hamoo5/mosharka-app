@@ -12,7 +12,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         
-        /* الألوان الأساسية للنهار */
         :root {
             --bg-color: #f0f2f5;
             --panel-bg: #ffffff;
@@ -24,16 +23,20 @@
             --card-bg: #ffffff;
         }
 
-        /* الألوان للوضع الليلي */
         body.dark-mode {
             --bg-color: #121212;
             --panel-bg: #1e1e1e;
             --text-color: #e0e0e0;
             --input-bg: #2d2d2d;
             --border-color: #444444;
-            --header-bg: #0d133d; /* أزرق غامق جداً */
+            --header-bg: #0d133d;
             --header-text: #ffffff;
             --card-bg: #2d2d2d;
+        }
+
+        /* السر هنا: فلتر عكس الألوان للخريطة في الوضع الليلي */
+        body.dark-mode .leaflet-tile-pane {
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -78,17 +81,16 @@
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'rider') { window.location.href = 'login.html'; }
 
-        // كود الوضع الليلي والنهاري
         function applyTheme() {
             const hour = new Date().getHours();
-            if (hour >= 18 || hour < 6) { // من 6 مساءً لـ 6 صباحاً
+            if (hour >= 18 || hour < 6) {
                 document.body.classList.add('dark-mode');
             } else {
                 document.body.classList.remove('dark-mode');
             }
         }
         applyTheme();
-        setInterval(applyTheme, 60000); // يفحص الوقت كل دقيقة
+        setInterval(applyTheme, 60000);
     </script>
     <div class="header">توصيل مشاركة <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
     <div id="map"></div>
@@ -125,11 +127,9 @@
                 <div class="driver-distance-info" id="driver-eta-text">جاري تحديد موقع الكابتن...</div>
                 <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
             </div>
-            
             <div id="ride-info">
                 <h3>السعر: <span id="price-text">...</span> جنيه</h3>
             </div>
-            
             <button id="request-btn" class="btn-action" style="background-color: #28a745;">اطلب التوصيل الآن</button>
         </div>
     </div>
@@ -140,17 +140,7 @@
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
         
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
-        
-        // كود الخريطة الديناميكية (نهاري / ليلي)
-        function getMapUrl() {
-            const hour = new Date().getHours();
-            if (hour >= 18 || hour < 6) {
-                return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'; // خريطة ليلية
-            } else {
-                return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'; // خريطة نهارية شيك
-            }
-        }
-        L.tileLayer(getMapUrl(), { maxZoom: 19, attribution: '© OpenStreetMap © CARTO' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
         var pickupPoint = null, dropoffPoint = null;
         var currentDistance = 0, currentPrice = 0, currentRideId = null;
@@ -301,16 +291,9 @@
                     document.getElementById('driver-details').style.display = 'block';
                     document.getElementById('d-name').innerText = payload.new.driver_name;
                     document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
-                    
-                    if (payload.new.driver_lat && payload.new.driver_lng) {
-                        updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng);
-                    }
+                    if (payload.new.driver_lat && payload.new.driver_lng) { updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng); }
                 }
-                
-                if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') {
-                    updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng);
-                }
-
+                if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') { updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng); }
                 if (payload.new.status === 'completed') {
                     document.getElementById('driver-details').style.display = 'none';
                     document.getElementById('request-btn').innerText = 'وصلت بالسلامة!'; document.getElementById('request-btn').style.backgroundColor = '#1A237E'; document.getElementById('request-btn').disabled = true;
@@ -321,17 +304,11 @@
         }).subscribe();
         
         async function updateDriverLocation(dLat, dLng) {
-            if (driverCarMarker) {
-                driverCarMarker.setLatLng([dLat, dLng]);
-            } else {
-                const carIcon = L.divIcon({
-                    className: 'driver-car',
-                    html: `<svg width="35" height="35" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/></svg>`,
-                    iconSize: [35, 35], iconAnchor: [17, 17]
-                });
+            if (driverCarMarker) { driverCarMarker.setLatLng([dLat, dLng]); } 
+            else {
+                const carIcon = L.divIcon({ className: 'driver-car', html: `<svg width="35" height="35" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/></svg>`, iconSize: [35, 35], iconAnchor: [17, 17] });
                 driverCarMarker = L.marker([dLat, dLng], {icon: carIcon}).addTo(map).bindPopup('الكابتن في الطريق');
             }
-            
             if (pickupPoint) {
                 document.getElementById('driver-eta-text').innerText = `جاري تحديث المسافة...`;
                 const url = `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${pickupPoint[1]},${pickupPoint[0]}?overview=false`;
