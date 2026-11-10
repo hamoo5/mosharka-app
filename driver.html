@@ -54,7 +54,6 @@
         
         .map-links a { display: block; margin: 3px 0; background: var(--input-bg); padding: 5px; border-radius: 5px; text-decoration: none; color: #2196f3; font-weight: bold; font-size: 12px; transition: 0.5s;}
 
-        /* نافذة الملف الشخصي */
         #profile-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
@@ -69,7 +68,6 @@
         .history-item .price { color: #28a745; font-weight: bold; }
         .history-item .date { font-size: 12px; color: #888; }
 
-        /* نافذة التقييم */
         #rating-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; justify-content: center; align-items: center; }
         .rating-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
         .stars { font-size: 40px; color: #ddd; cursor: pointer; margin: 15px 0; }
@@ -77,6 +75,9 @@
     </style>
 </head>
 <body>
+    <!-- صوت التنبيه (مخفي) -->
+    <audio id="notifSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'driver') { window.location.href = 'login.html'; }
@@ -88,6 +89,13 @@
         }
         applyTheme();
         setInterval(applyTheme, 60000);
+
+        // طلب إذن الإشعارات
+        if ("Notification" in window) {
+            if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
     </script>
     
     <!-- نافذة الملف الشخصي -->
@@ -183,6 +191,7 @@
         var pendingRouteLine = null; 
         var isFollowingUser = true;
         var liveLocationInterval = null; 
+        var isAlertPlaying = false; // عشان نمنع تكرار الصوت
 
         const MAX_DISTANCE_KM = 5; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
@@ -191,6 +200,29 @@
             var targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 120]); 
             var targetLatLng = map.unproject(targetPoint, map.getZoom());
             map.panTo(targetLatLng, {animate: true, duration: 1});
+        }
+
+        // دالة تشغيل صوت التنبيه والاهتزاز
+        function playNewOrderAlert() {
+            if (isAlertPlaying) return;
+            isAlertPlaying = true;
+
+            // 1. تشغيل الصوت
+            const audio = document.getElementById('notifSound');
+            audio.play().catch(e => console.log("الصوت محتاج تفاعل من المستخدم", e));
+
+            // 2. اهتزاز الموبايل
+            if (navigator.vibrate) {
+                navigator.vibrate([500, 200, 500, 200, 500]);
+            }
+
+            // 3. إظهار إشعار في النظام
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("🚗 طلب توصيل جديد!", {
+                    body: "وصلك طلب جديد على تطبيق مشاركة، افتح التطبيق للتفاصيل.",
+                    icon: "https://cdn-icons-png.flaticon.com/512/3063/3063902.png"
+                });
+            }
         }
 
         function checkSubscription() {
@@ -280,6 +312,11 @@
                 });
 
                 if (closestRide) {
+                    // لو دي أول مرة يلاقي فيها الطلب، يشغل الصوت
+                    if (document.getElementById('requests-ui').style.display === 'none') {
+                        playNewOrderAlert();
+                    }
+
                     document.getElementById('waiting-ui').style.display = 'none';
                     document.getElementById('requests-ui').style.display = 'block';
                     container.innerHTML = `<p style="text-align:center;">جاري حساب المسافة الحقيقية للراكب...</p>`;
@@ -334,6 +371,7 @@
                         document.getElementById('requests-ui').style.display = 'none';
                         if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
                         if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
+                        isAlertPlaying = false; // وقفنا الصوت
                     }
                 }
             } else {
@@ -342,6 +380,7 @@
                     document.getElementById('requests-ui').style.display = 'none';
                     if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
                     if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
+                    isAlertPlaying = false; // وقفنا الصوت
                 }
             }
         }
@@ -351,6 +390,7 @@
             if (error) { alert('حدث خطأ.'); return; }
             currentActiveRideId = rideId;
             currentRiderName = rName;
+            isAlertPlaying = false; 
             
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
             
@@ -395,13 +435,11 @@
                 isFollowingUser = true;
                 fetchPendingRide();
                 
-                // إظهار نافذة التقييم
                 document.getElementById('rating-modal').style.display = 'flex';
                 document.getElementById('rate-rider-name').innerText = currentRiderName || 'الراكب';
             }
         }
 
-        // دوال الملف الشخصي للكابتن
         async function openProfile() {
             document.getElementById('profile-modal').style.display = 'flex';
             document.getElementById('p-name').innerText = user.name;
@@ -453,7 +491,6 @@
 
         function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
 
-        // دوال تقييم الكابتن للراكب
         let selectedRating = 5;
         let currentRiderName = "";
         
@@ -476,7 +513,7 @@
             }
         }
         
-        setRating(5); // افتراضي
+        setRating(5); 
 
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
             if (!currentActiveRideId) { fetchPendingRide(); }
