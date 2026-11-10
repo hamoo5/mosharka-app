@@ -21,12 +21,11 @@
 
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
 
-        /* تصغير اللوحة السفلية أكتر عشان الخريطة تبان */
         .bottom-panel {
             background: white; border-radius: 20px 20px 0 0;
             padding: 10px 15px; position: absolute; bottom: 0; left: 0; right: 0;
             z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            display: flex; flex-direction: column; gap: 6px; max-height: 35vh; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto;
         }
 
         .instruction-text { font-size: 15px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 2px; }
@@ -35,6 +34,7 @@
         .ride-card h3 { color: #1A237E; font-size: 15px; margin-bottom: 4px; }
         .ride-card p { color: #555; font-size: 13px; margin-bottom: 3px; }
         .ride-card .price { color: #28a745; font-weight: bold; font-size: 15px; }
+        .distance-to-rider { color: #007bff; font-weight: bold; }
         
         .btn-action { background-color: #28a745; color: white; padding: 10px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); transition: 0.2s; margin-top: 3px; }
         .btn-action:active { transform: scale(0.98); }
@@ -102,15 +102,13 @@
         var driverMarker = null;
         var riderMarker = null;
         var routeLine = null;
+        var pendingRouteLine = null; // الخط المبدئي قبل القبول
         var isFollowingUser = true;
         var liveLocationInterval = null; 
 
-        // إعدادات الزوم عشان نرفع الخريطة فوق اللوحة السفلية
-        const mapPadding = { paddingTopLeft: [20, 20], paddingBottomRight: [20, 280] };
+        const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
         
-        // دالة مساعدة لرفع العربية فوق اللوحة
         function panToDriverWithOffset(lat, lng) {
-            // بنرفع نقطة المركز لفوق بـ 120 بكسل
             var targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 120]); 
             var targetLatLng = map.unproject(targetPoint, map.getZoom());
             map.panTo(targetLatLng, {animate: true, duration: 1});
@@ -169,7 +167,6 @@
                         driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
                     }
                     
-                    // بنحرك الخريطة مع الإزاحة
                     if (isFollowingUser && !currentActiveRideId) { 
                         panToDriverWithOffset(lat, lng);
                     }
@@ -198,10 +195,25 @@
                 const ride = data[0];
                 document.getElementById('waiting-ui').style.display = 'none';
                 document.getElementById('requests-ui').style.display = 'block';
+
+                // حساب المسافة المبدئية بين الكابتن والراكب (هوائية)
+                let distToRider = 0;
+                if (driverMarker) {
+                    const dPos = driverMarker.getLatLng();
+                    distToRider = (map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000).toFixed(1);
+                    
+                    // رسم خط متقطع بين الكابتن والراكب
+                    if (pendingRouteLine) map.removeLayer(pendingRouteLine);
+                    pendingRouteLine = L.polyline([dPos, [ride.pickup_lat, ride.pickup_lng]], {
+                        color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10'
+                    }).addTo(map);
+                }
+
                 container.innerHTML = `
                     <div class="ride-card">
                         <h3>راكب يطلب توصيل</h3>
-                        <p>المسافة: <b>${ride.distance} كم</b></p>
+                        <p class="distance-to-rider">🚗 المسافة للوصول للراكب: ${distToRider} كم</p>
+                        <p>مشوار الراكب: <b>${ride.distance} كم</b></p>
                         <p class="price">السعر: ${ride.price} جنيه</p>
                         <div class="map-links">
                             <a href="https://www.google.com/maps?q=${ride.pickup_lat},${ride.pickup_lng}" target="_blank">📍 مكان الراكب</a>
@@ -213,17 +225,22 @@
                 if (!riderMarker) {
                     riderMarker = L.marker([ride.pickup_lat, ride.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
                     
-                    // الزوم الذكي عشان يشوف مكانه ومكان الراكب مع بعض
                     let bounds = L.latLngBounds([]);
                     if(driverMarker) bounds.extend(driverMarker.getLatLng());
                     bounds.extend([ride.pickup_lat, ride.pickup_lng]);
-                    map.fitBounds(bounds, mapPadding);
+                    
+                    map.flyToBounds(bounds, { 
+                        paddingTopLeft: [40, 50], 
+                        paddingBottomRight: [40, 300],
+                        maxZoom: 16 
+                    });
                 }
             } else {
                 if (!currentActiveRideId) {
                     document.getElementById('waiting-ui').style.display = 'block';
                     document.getElementById('requests-ui').style.display = 'none';
                     if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
+                    if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; } // مسح الخط المبدئي
                 }
             }
         }
@@ -232,6 +249,10 @@
             const { error } = await supabaseClient.from('rides').update({ status: 'accepted', driver_name: user.name, driver_phone: user.phone }).eq('id', rideId);
             if (error) { alert('حدث خطأ.'); return; }
             currentActiveRideId = rideId;
+            
+            // مسح الخط المبدئي
+            if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
+            
             document.getElementById('requests-ui').style.display = 'none';
             document.getElementById('active-ride-ui').style.display = 'block';
             document.getElementById('link-rider').href = `https://www.google.com/maps?q=${pLat},${pLng}`;
@@ -252,6 +273,7 @@
                 const data = await response.json();
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const route = data.routes[0];
+                    // رسم المسار الحقيقي (أخضر متصل)
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#28a745', weight: 6, opacity: 0.8 } }).addTo(map);
                     
                     map.fitBounds(routeLine.getBounds(), mapPadding);
