@@ -189,6 +189,8 @@
             </div>
 
             <button id="arrived-btn" class="btn-action btn-accept" style="background-color: #007bff; width:100%;" onclick="arriveAtRider()">📍 وصلت للراكب</button>
+            
+            <!-- الزرار ده هيتحول من (بدء الرحلة بـ PIN) لـ (إنهاء الرحلة) -->
             <button id="finish-btn" class="btn-action btn-finish" style="display:none;" onclick="openPinModal()">بدء الرحلة (إدخال الرقم السري)</button>
         </div>
     </div>
@@ -229,9 +231,9 @@
         var waitSeconds = 0;
         
         var currentPickupPoint = null; 
-        var currentDestPoint = null; // عشان نستخدمها لو الـ PIN صح
+        var currentDestPoint = null; 
         var currentRiderName = "";
-        var currentRidePin = ""; // لحفظ الـ PIN للتحقق
+        var currentRidePin = ""; 
         var ignoredRides = []; 
 
         const MAX_DISTANCE_KM = 15; 
@@ -309,7 +311,6 @@
                             fetchSingleRide(); 
                         }
                         
-                        // لو لسه في مرحلة الذهاب للراكب (مش بدأنا الرحلة)
                         if (currentActiveRideId && currentPickupPoint && !document.getElementById('finish-btn').innerText.includes('إنهاء')) {
                             const distToPickup = newPos.distanceTo(L.latLng(currentPickupPoint[0], currentPickupPoint[1]));
                             if (distToPickup <= 150 && document.getElementById('arrived-btn').style.display !== 'none') {
@@ -371,7 +372,7 @@
 
         async function displayRide(ride, minDistance) {
             currentPendingRideId = ride.id;
-            currentRidePin = ride.pin_code; // حفظ الـ PIN
+            currentRidePin = ride.pin_code; 
             
             document.getElementById('waiting-ui').style.display = 'none';
             document.getElementById('selected-ride-ui').style.display = 'block';
@@ -452,7 +453,7 @@
             
             currentActiveRideId = rideId; currentRiderName = rName; isAlertPlaying = false; 
             currentPickupPoint = [pLat, pLng]; 
-            currentDestPoint = [dLat, dLng]; // حفظ الوجهة
+            currentDestPoint = [dLat, dLng]; 
             
             if (currentRiderMarker) { map.removeLayer(currentRiderMarker); currentRiderMarker = null; }
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
@@ -523,9 +524,11 @@
                 
                 startWaitTimer();
                 
+                // هنا بيظهر زرار بدء الرحلة (اللي بيفتح الـ PIN)
                 document.getElementById('finish-btn').style.display = 'block';
                 document.getElementById('finish-btn').innerText = "بدء الرحلة (إدخال الرقم السري)";
                 document.getElementById('finish-btn').style.backgroundColor = "#28a745"; 
+                document.getElementById('finish-btn').setAttribute('onclick', 'openPinModal()');
             }
         }
 
@@ -540,7 +543,6 @@
             }, 1000);
         }
 
-        // دالة فتح شاشة الـ PIN
         function openPinModal() {
             document.getElementById('pin-input').value = "";
             document.getElementById('pin-modal').style.display = 'flex';
@@ -551,29 +553,30 @@
             document.getElementById('pin-modal').style.display = 'none';
         }
 
-        // دالة التحقق من الـ PIN
         async function verifyPin() {
             const enteredPin = document.getElementById('pin-input').value.trim();
             
             if (!enteredPin) { alert('برجاء إدخال الرقم السري.'); return; }
 
             if (enteredPin === currentRidePin) {
-                // الرقم صح! نبدأ الرحلة
+                // الرقم صح!
                 closePinModal();
-                clearInterval(waitTimer); // وقف العداد
+                clearInterval(waitTimer); 
                 document.getElementById('wait-timer-ui').style.display = 'none';
 
-                // تحديث الداتا بيز إن الرحلة بدأت
                 const { error } = await supabaseClient.from('rides').update({ ride_started_at: new Date().toISOString() }).eq('id', currentActiveRideId);
                 
                 if (!error) {
-                    // تغيير الواجهة للذهاب للوجهة
                     document.getElementById('active-ride-header').innerText = "في الطريق إلى الوجهة 🏁";
                     document.getElementById('active-ride-distance-text').style.display = 'block';
                     document.getElementById('active-ride-time-text').style.display = 'block';
-                    document.getElementById('finish-btn').innerText = "إنهاء الرحلة (وصلت للوجهة)";
                     
-                    // رسم المسار للوجهة (الخط البنفسجي يبقى هو الأساسي)
+                    // ** التعديل الأهم هنا: تغيير الزرار لإنهاء الرحلة **
+                    const finishBtn = document.getElementById('finish-btn');
+                    finishBtn.innerText = "إنهاء الرحلة (وصلت للوجهة)";
+                    finishBtn.style.backgroundColor = "#dc3545"; // لون أحمر للإنهاء
+                    finishBtn.setAttribute('onclick', 'finishRide()'); // ربطه بدالة إنهاء الرحلة
+                    
                     if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
                     if (currentDestPoint) {
                         drawRouteToDestination(currentDestPoint[0], currentDestPoint[1]);
