@@ -39,7 +39,7 @@
         }
         .fab-locate:active { background-color: #e3f2fd; transform: scale(0.9); }
 
-        /* الدبوس الثابت */
+        /* الدبوس الثابت مع تأثير النبض */
         .center-pin {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -100%);
@@ -48,11 +48,21 @@
             margin-top: -15px;
         }
         
-        .pin-svg { width: 40px; height: 40px; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.4)); }
+        .pin-svg { width: 40px; height: 40px; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
         .pin-svg.green path { fill: #28a745; }
         .pin-svg.red path { fill: #dc3545; }
         
-        .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; }
+        .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; animation: shadow-scale 2s infinite; }
+
+        /* حركة النبض */
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes shadow-scale {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(0.7); opacity: 0.2; }
+        }
 
         .bottom-panel {
             background: white; border-radius: 20px 20px 0 0;
@@ -107,7 +117,6 @@
 
     <div id="map"></div>
 
-    <!-- زرار موقعي الحالي -->
     <button class="fab-locate" onclick="flyToMyLocation()">🎯</button>
 
     <div id="center-pin" class="center-pin">
@@ -119,7 +128,6 @@
 
     <div class="bottom-panel">
         
-        <!-- واجهة الانطلاق -->
         <div id="ui-pickup">
             <div class="instruction-text">📍 حدد مكان الانطلاق</div>
             <div class="search-box">
@@ -130,7 +138,6 @@
             <button class="btn-action btn-confirm-pickup" onclick="confirmPickup()">تأكيد موقع الانطلاق</button>
         </div>
 
-        <!-- واجهة الوصول -->
         <div id="ui-dropoff" style="display: none;">
             <div class="instruction-text">🏁 حدد مكان الوصول</div>
             <div class="search-box">
@@ -141,7 +148,6 @@
             <button class="btn-action btn-confirm-dropoff" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
         </div>
 
-        <!-- واجهة الطلب -->
         <div id="ui-ride" style="display: none;">
             
             <div id="driver-details">
@@ -175,6 +181,7 @@
         var currentStep = 'pickup'; 
         var routeLine = null;
         var isSearching = false;
+        var watchId = null;
 
         async function getAddress(lat, lng) {
             try {
@@ -187,6 +194,14 @@
             }
         }
 
+        // 1. التحديث الفوري (حي) بمجرد لمس الخريطة
+        map.on('movestart', function() {
+            if (currentStep === 'ride' || isSearching) return;
+            const addressTextId = currentStep === 'pickup' ? 'pickup-address' : 'dropoff-address';
+            document.getElementById(addressTextId).innerText = "جاري تحديد الموقع...";
+        });
+
+        // 2. تحديث العنوان لما الخريطة توقف
         map.on('moveend', async function() {
             if (currentStep === 'ride' || isSearching) return; 
 
@@ -230,7 +245,6 @@
                     
                     map.flyTo([lat, lon], 16);
                     
-                    // بنستنى الخريطة تخلص حركة عشان نشغل التحديث التلقائي تاني
                     map.once('moveend', () => { 
                         isSearching = false; 
                         btnElement.innerText = originalText;
@@ -247,30 +261,34 @@
             }
         }
 
-        // دالة تحديد الموقع الحالي
+        // 3. دالة التتبع المباشر (Live GPS)
         function flyToMyLocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
+                // لو فيه تتبع شغال، بنقفله الأول عشان منعملش دبل
+                if (watchId !== null) {
+                    navigator.geolocation.clearWatch(watchId);
+                }
+
+                watchId = navigator.geolocation.watchPosition(function(position) {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
                     
-                    // لو إحنا واقفين في نفس المكان، بلاش نعمل طيران عشان moveend ميهنجش
+                    // بنحدث المكان
                     if (map.getCenter().lat.toFixed(4) === lat.toFixed(4) && map.getCenter().lng.toFixed(4) === lon.toFixed(4)) {
-                        map.fire('moveend'); // نجبره يحدث العنوان
+                        map.fire('moveend'); 
                     } else {
-                        isSearching = true; // بنقفل التحديث التلقائي لحد ما يوصل
+                        isSearching = true; 
                         map.flyTo([lat, lon], 16);
                         map.once('moveend', () => { isSearching = false; });
                     }
                 }, function(error) { 
                     alert('برجاء السماح بالوصول للموقع من إعدادات المتصفح.');
-                }, { enableHighAccuracy: true });
+                }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
             } else {
                 alert('متصفحك لا يدعم تحديد الموقع.');
             }
         }
 
-        // أول ما التطبيق يفتح
         isSearching = true;
         flyToMyLocation();
 
@@ -297,7 +315,12 @@
             document.getElementById('ui-dropoff').style.display = 'none';
             document.getElementById('ui-ride').style.display = 'block';
             document.getElementById('center-pin').style.display = 'none'; 
-            document.querySelector('.fab-locate').style.display = 'none'; // نخفي زرار الموقع بعد التأكيد
+            document.querySelector('.fab-locate').style.display = 'none'; 
+            
+            // بنقفل التتبع المباشر عشان منحركش الخريطة وهو بيطلب
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+            }
             
             await drawRoute();
         }
