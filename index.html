@@ -53,6 +53,7 @@
         .address-text { font-size: 13px; color: var(--text-color); text-align: center; background: var(--input-bg); padding: 8px; border-radius: 8px; min-height: 35px; display: flex; align-items: center; justify-content: center; transition: 0.5s;}
         .btn-action { background-color: #1A237E; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(26, 35, 126, 0.3); transition: 0.2s; }
         .btn-confirm-pickup { background-color: #28a745; } .btn-confirm-dropoff { background-color: #dc3545; }
+        .btn-cancel { background-color: #dc3545; margin-top: 10px; display: none; }
         
         #ride-info { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 10px; text-align: center; transition: 0.5s; }
         #ride-info h3 { color: #28a745; font-size: 26px; margin: 5px 0; }
@@ -62,7 +63,6 @@
         .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; background: rgba(211, 47, 47, 0.1); padding: 5px; border-radius: 5px;}
         .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 5px; }
 
-        /* نافذة الملف الشخصي */
         #profile-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
@@ -76,7 +76,6 @@
         .history-item .price { color: #28a745; font-weight: bold; }
         .history-item .date { font-size: 12px; color: #888; }
 
-        /* نافذة التقييم */
         #rating-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; justify-content: center; align-items: center; }
         .rating-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
         .stars { font-size: 40px; color: #ddd; cursor: pointer; margin: 15px 0; }
@@ -86,7 +85,6 @@
 <body>
     <div id="install-banner">📥 اضغط هنا لتثبيت التطبيق على هاتفك</div>
     
-    <!-- نافذة الملف الشخصي -->
     <div id="profile-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -104,7 +102,6 @@
         </div>
     </div>
 
-    <!-- نافذة التقييم -->
     <div id="rating-modal">
         <div class="rating-content">
             <h3>قيّم الكابتن</h3>
@@ -177,6 +174,8 @@
                 <h3>السعر: <span id="price-text">...</span> جنيه</h3>
             </div>
             <button id="request-btn" class="btn-action" style="background-color: #28a745;">اطلب التوصيل الآن</button>
+            <!-- زرار إلغاء الطلب -->
+            <button id="cancel-btn" class="btn-action btn-cancel" onclick="cancelRide()">إلغاء الطلب</button>
         </div>
     </div>
     <script>
@@ -328,13 +327,30 @@
                 if (error) throw error;
                 currentRideId = data[0].id; 
                 this.innerText = 'في انتظار قبول الكابتن...'; this.style.backgroundColor = '#ffc107'; this.style.color = '#333';
+                
+                // إظهار زرار الإلغاء
+                document.getElementById('cancel-btn').style.display = 'block';
+                
             } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب التوصيل الآن'; this.disabled = false; }
         });
+
+        // دالة إلغاء الطلب
+        async function cancelRide() {
+            if (!currentRideId) return;
+            if (!confirm('هل أنت متأكد من إلغاء الطلب؟')) return;
+
+            const { error } = await supabaseClient.from('rides').update({ status: 'cancelled' }).eq('id', currentRideId);
+            if (!error) {
+                alert('تم إلغاء الطلب.');
+                location.reload(); // إعادة تحميل الصفحة عشان يقدر يطلب تاني
+            }
+        }
 
         supabaseClient.channel('rider-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
             if (currentRideId && payload.new.id === currentRideId) {
                 if (payload.new.status === 'accepted') {
                     document.getElementById('request-btn').innerText = 'تم قبول الطلب'; document.getElementById('request-btn').style.backgroundColor = '#6c757d';
+                    document.getElementById('cancel-btn').style.display = 'none'; // إخفاء زرار الإلغاء بعد القبول
                     document.getElementById('driver-details').style.display = 'block';
                     document.getElementById('d-name').innerText = payload.new.driver_name;
                     document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
@@ -344,7 +360,7 @@
                 if (payload.new.status === 'completed') {
                     document.getElementById('driver-details').style.display = 'none';
                     document.getElementById('request-btn').innerText = 'وصلت بالسلامة!'; document.getElementById('request-btn').style.backgroundColor = '#1A237E'; document.getElementById('request-btn').disabled = true;
-                    // إظهار نافذة التقييم
+                    document.getElementById('cancel-btn').style.display = 'none';
                     document.getElementById('rating-modal').style.display = 'flex';
                     document.getElementById('rate-driver-name').innerText = payload.new.driver_name;
                     if(driverCarMarker) { map.removeLayer(driverCarMarker); driverCarMarker = null; }
@@ -377,7 +393,6 @@
             }
         }
 
-        // دوال الملف الشخصي والتقييم
         async function openProfile() {
             document.getElementById('profile-modal').style.display = 'flex';
             document.getElementById('p-name').innerText = user.name;
@@ -409,7 +424,6 @@
 
         function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
 
-        // كود التقييم
         let selectedRating = 5;
         function setRating(rating) {
             selectedRating = rating;
@@ -427,12 +441,10 @@
                 alert('شكراً لتقييمك!');
                 document.getElementById('rating-modal').style.display = 'none';
                 currentRideId = null;
-                // إعادة تحميل الصفحة عشان يقدر يطلب تاني
                 setTimeout(() => location.reload(), 1000);
             }
         }
 
-        // تشغيل التقييم الافتراضي (5 نجوم)
         setRating(5);
 
         let deferredPrompt;
