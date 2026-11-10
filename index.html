@@ -16,7 +16,7 @@
         :root {
             --bg-color: #F4F5F7;
             --card-bg: #FFFFFF;
-            --primary: #000000; /* أسود زي أوبر */
+            --primary: #000000; 
             --text-main: #1A1A1A;
             --text-sub: #7A7A7A;
             --danger: #E53935;
@@ -40,15 +40,15 @@
         .sos-float { position: absolute; top: 70px; left: 20px; z-index: 1000; background: var(--card-bg); color: var(--danger); padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; border: 1px solid var(--danger); box-shadow: 0 2px 8px rgba(229, 57, 53, 0.2); cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .sos-float svg { width: 16px; height: 16px; fill: var(--danger); }
 
-        /* الدبوس الثابت في النص (شكل حقيقي) */
-        .center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -10px;}
-        .pin-icon { width: 45px; height: 45px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
-        .pin-shadow { width: 15px; height: 5px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -2px; animation: shadow-scale 2s infinite; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        /* الدبوس الثابت (تم رفعه لفوق عشان ميتغطاش) */
+        .center-pin { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -100%); z-index: 2000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -10px;}
+        .pin-icon { width: 50px; height: 50px; filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
+        .pin-shadow { width: 18px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; animation: shadow-scale 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes shadow-scale { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(0.7); opacity: 0.2; } }
 
         /* الشريط السفلي (Bottom Sheet) */
-        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 20px 20px 0 0; padding: 20px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); transition: 0.3s ease; max-height: 80vh; overflow-y: auto; color: var(--text-main); border-top: 1px solid var(--border-color); }
+        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 20px 20px 0 0; padding: 20px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); transition: 0.3s ease; max-height: 60vh; overflow-y: auto; color: var(--text-main); border-top: 1px solid var(--border-color); }
         
         .title { font-size: 20px; font-weight: 700; margin-bottom: 15px; text-align: center; }
         
@@ -61,10 +61,6 @@
         .search-btn svg { width: 22px; height: 22px; fill: var(--text-main); }
 
         .address-display { font-size: 13px; color: var(--text-sub); text-align: right; margin-bottom: 15px; padding-right: 15px; font-weight: 600;}
-
-        .saved-places { display: flex; gap: 10px; margin-bottom: 20px; }
-        .saved-btn { flex: 1; background: #F4F5F7; border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; color: var(--text-main); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
-        .saved-btn svg { width: 18px; height: 18px; fill: var(--text-sub); }
 
         .btn-main { width: 100%; background: var(--primary); color: white; padding: 16px; border-radius: 12px; border: none; font-size: 18px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Cairo', sans-serif;}
         .btn-main:active { transform: scale(0.98); opacity: 0.9; }
@@ -103,7 +99,7 @@
         .fare-price { color: var(--text-main); font-size: 20px; font-weight: 800;}
 
         /* المودالات */
-        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: flex-end; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: flex-end; }
         .modal-content { background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0; padding: 25px 20px; text-align: center; animation: slideUp 0.3s ease; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .sos-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px;}
@@ -141,7 +137,7 @@
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> SOS
     </div>
 
-    <!-- الدبوس الجديد -->
+    <!-- الدبوس (تم رفعه فوق) -->
     <div id="center-pin" class="center-pin">
         <svg class="pin-icon" viewBox="0 0 24 24" fill="#1A1A1A" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/>
@@ -178,20 +174,12 @@
                 </div>
                 <div class="address-display" id="dropoff-address">جاري تحديد الموقع...</div>
                 
-                <div class="saved-places">
-                    <button class="saved-btn" onclick="setSavedPlace('home')">
-                        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> المنزل
-                    </button>
-                    <button class="saved-btn" onclick="setSavedPlace('work')">
-                        <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg> العمل
-                    </button>
-                </div>
+                <!-- تم حذف أزرار المنزل والعمل -->
                 
-                <button class="btn-main" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
+                <button class="btn-main" style="margin-top: 20px;" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
             </div>
         </div>
 
-        <!-- صور العربيات مع الوصف -->
         <div id="ui-vehicle" style="display: none;">
             <h2 class="title">اختر رحلتك</h2>
             
@@ -263,7 +251,6 @@
 
     </div>
 
-    <!-- المودالات -->
     <div id="profile-modal" class="modal"><div class="modal-content" style="text-align: right;"><h2 class="title" style="text-align: center;">حسابي</h2><p style="margin-bottom: 10px; font-size: 16px; font-weight: 600;">الاسم: <b id="p-name" style="color: var(--text-main);"></b></p><p style="margin-bottom: 20px; font-size: 16px; font-weight: 600;">الموبايل: <b id="p-phone" style="color: var(--text-main);"></b></p><h3 style="margin-bottom: 10px; font-weight: 700;">سجل الرحلات</h3><div id="history-list" style="max-height: 200px; overflow-y: auto; color: var(--text-sub); font-weight: 600;"></div><button class="btn-main" style="margin-top: 20px;" onclick="closeProfile()">إغلاق</button></div></div>
     <div id="rating-modal" class="modal"><div class="modal-content"><h2 class="title">قيّم الكابتن</h2><p style="color: var(--text-sub); margin-bottom: 15px; font-weight: 600;">كيف كانت رحلتك مع <b id="rate-driver-name" style="color: var(--text-main);"></b>؟</p><div class="stars" id="star-container" style="font-size: 40px; color: #E0E0E0; cursor: pointer; margin: 15px 0; display: flex; justify-content: center; gap: 10px;"><span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span></div><button class="btn-main" onclick="submitRating()">إرسال التقييم</button></div></div>
 
@@ -274,7 +261,6 @@
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
         function closeSos() { document.getElementById('sos-modal').style.display = 'none'; }
         
-        // أيقونات مخصصة للخريطة
         const greenIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #28A745; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
         const redIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #E53935; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
 
@@ -327,14 +313,6 @@
             } catch (e) { alert('حدث خطأ في البحث، تأكد من الإنترنت.'); } 
         }
 
-        function setSavedPlace(type) {
-            const input = document.getElementById('search-dropoff');
-            if(type === 'home') input.value = "المنزل (شارع عباس العقاد)";
-            else input.value = "العمل (وسط البلد)";
-            map.flyTo([30.0600, 31.3300], 15); 
-        }
-
-        // ** إضافة علامة الموقع الحقيقي (الدايرة الزرقاء) **
         function startTracking() {
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition(function(position) {
@@ -343,15 +321,7 @@
                     if (userMarker) {
                         userMarker.setLatLng([lat, lng]);
                     } else {
-                        // رسم دايرة زرقاء زي جوجل ماب
-                        userMarker = L.circleMarker([lat, lng], {
-                            radius: 8,
-                            fillColor: "#007AFF",
-                            color: "#FFFFFF",
-                            weight: 3,
-                            opacity: 1,
-                            fillOpacity: 1
-                        }).addTo(map);
+                        userMarker = L.circleMarker([lat, lng], { radius: 8, fillColor: "#007AFF", color: "#FFFFFF", weight: 3, opacity: 1, fillOpacity: 1 }).addTo(map);
                     }
                     
                     if (isFollowingUser) { map.panTo([lat, lng], {animate: true, duration: 1}); } 
@@ -370,8 +340,10 @@
             document.getElementById('dropoff-section').style.display = 'block';
             document.getElementById('instruction-title').innerText = "إلى أين تريد الذهاب؟";
             
-            // تغيير لون الدبوس من أسود لأحمر
             document.querySelector('.pin-icon path').setAttribute('fill', '#E53935');
+            
+            // رفع الخريطة شوية عشان الدبوس ميتغطاش
+            map.panBy([0, -100]); 
             
             currentStep = 'dropoff'; map.fire('moveend'); 
         }
@@ -384,7 +356,6 @@
             document.getElementById('pickup-section').style.display = 'block';
             document.getElementById('instruction-title').innerText = "أين أنت الآن؟";
             
-            // رجوع لون الدبوس أسود
             document.querySelector('.pin-icon path').setAttribute('fill', '#1A1A1A');
             
             map.fire('moveend');
@@ -497,10 +468,7 @@
                     document.getElementById('d-msg').href = 'https://wa.me/2' + payload.new.driver_phone + '?text=أنا عند المنتظر.';
                 }
 
-                if (payload.new.driver_arrived_at) {
-                    document.getElementById('eta-time').innerText = "0";
-                }
-
+                if (payload.new.driver_arrived_at) { document.getElementById('eta-time').innerText = "0"; }
                 if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') { updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng); }
 
                 if (payload.new.status === 'completed') {
