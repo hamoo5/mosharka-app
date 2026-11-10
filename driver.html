@@ -35,7 +35,6 @@
         
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
 
-        /* زرار موقعي الحالي العايم */
         .fab-locate {
             position: absolute; bottom: 250px; left: 15px; z-index: 1000;
             background-color: white; color: #1A237E; border: 2px solid #1A237E;
@@ -104,38 +103,19 @@
         setInterval(applyTheme, 60000);
     </script>
     
+    <!-- المودالات هنا (نفس الكود السابق) -->
     <div id="profile-modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>حسابي (كابتن)</h3>
-                <button class="close-btn" onclick="closeProfile()">X</button>
-            </div>
-            <div class="profile-info">
-                <p><b>الاسم:</b> <span id="p-name"></span></p>
-                <p><b>الموبايل:</b> <span id="p-phone"></span></p>
-                <p><b>حالة الاشتراك:</b> <span id="p-sub" style="font-weight:bold;"></span></p>
-            </div>
-            <div class="earnings-box">
-                إجمالي الأرباح: <span id="p-earnings">0</span> جنيه
-            </div>
-            <h4>سجل المشاوير المكتملة:</h4>
-            <div class="history-list" id="history-list">
-                <p style="text-align:center;">جاري التحميل...</p>
-            </div>
+            <div class="modal-header"><h3>حسابي (كابتن)</h3><button class="close-btn" onclick="closeProfile()">X</button></div>
+            <div class="profile-info"><p><b>الاسم:</b> <span id="p-name"></span></p><p><b>الموبايل:</b> <span id="p-phone"></span></p><p><b>حالة الاشتراك:</b> <span id="p-sub" style="font-weight:bold;"></span></p></div>
+            <div class="earnings-box">إجمالي الأرباح: <span id="p-earnings">0</span> جنيه</div>
+            <h4>سجل المشاوير المكتملة:</h4><div class="history-list" id="history-list"><p style="text-align:center;">جاري التحميل...</p></div>
         </div>
     </div>
-
     <div id="rating-modal">
         <div class="rating-content">
-            <h3>قيّم الراكب</h3>
-            <p>كيف كانت تجربتك مع <b id="rate-rider-name"></b>؟</p>
-            <div class="stars" id="star-container">
-                <span onclick="setRating(1)">★</span>
-                <span onclick="setRating(2)">★</span>
-                <span onclick="setRating(3)">★</span>
-                <span onclick="setRating(4)">★</span>
-                <span onclick="setRating(5)">★</span>
-            </div>
+            <h3>قيّم الراكب</h3><p>كيف كانت تجربتك مع <b id="rate-rider-name"></b>؟</p>
+            <div class="stars" id="star-container"><span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span></div>
             <button class="btn-action" style="background-color:#2196f3;" onclick="submitRating()">إرسال التقييم</button>
         </div>
     </div>
@@ -149,12 +129,10 @@
     <div id="map"></div>
     <button class="fab-locate" onclick="centerToMyLocation()">🎯</button>
     <div class="bottom-panel">
-        
         <button id="enable-alerts-btn" onclick="enableAlerts()">🔔 اضغط هنا لتفعيل صوت التنبيهات</button>
 
         <div id="subscription-box">
-            <h3>عذراً، اشتراكك غير نشط!</h3>
-            <p style="font-size:12px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري.</p>
+            <h3>عذراً، اشتراكك غير نشط!</h3><p style="font-size:12px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري.</p>
             <button class="btn-action btn-subscribe" onclick="activateMockSubscription()">تفعيل الاشتراك (تجريبي)</button>
         </div>
         <div id="waiting-ui" style="display: none;">
@@ -162,21 +140,30 @@
             <p style="text-align:center; font-size:12px; opacity:0.7;">(بنبحث في نطاق 15 كم حول موقعك)</p>
         </div>
         <div id="requests-ui" style="display: none;">
-            <div class="instruction-text">🔔 وصلك طلب جديد!</div>
-            <div id="requests-container"></div>
+            <div class="instruction-text">🔔 وصلك طلب جديد!</div><div id="requests-container"></div>
         </div>
+        
+        <!-- شاشة الرحلة النشطة -->
         <div id="active-ride-ui" style="display: none;">
-            <div class="instruction-text" style="color: #28a745;">🚗 أنت في رحلة الآن</div>
-            <div class="ride-card" style="border-right-color: #28a745;">
-                <h3>توجه إلى الراكب</h3>
-                <p>المسافة للراكب: <span id="driver-to-rider-distance" style="color: #2196f3; font-weight: bold;">...</span> كم</p>
-                <p>الوقت المتوقع: <span id="driver-to-rider-time" style="color: #2196f3; font-weight: bold;">...</span> دقيقة</p>
+            <div class="instruction-text" style="color: #28a745;" id="active-ride-title">🚗 أنت في رحلة الآن</div>
+            <div class="ride-card" style="border-right-color: #28a745;" id="active-ride-card">
+                <h3 id="active-ride-header">توجه إلى الراكب</h3>
+                <p id="active-ride-distance-text">المسافة للراكب: <span id="driver-to-rider-distance" style="color: #2196f3; font-weight: bold;">...</span> كم</p>
+                <p id="active-ride-time-text">الوقت المتوقع: <span id="driver-to-rider-time" style="color: #2196f3; font-weight: bold;">...</span> دقيقة</p>
                 <div class="map-links">
                     <a href="#" id="link-rider" target="_blank">📍 فتح مكان الراكب</a>
                     <a href="#" id="link-dest" target="_blank">🏁 فتح الوجهة</a>
                 </div>
             </div>
-            <button class="btn-action btn-finish" onclick="finishRide()">إنهاء الرحلة (وصلت)</button>
+            
+            <!-- عداد الانتظار (مخفي في البداية) -->
+            <div id="wait-timer-ui" style="display:none; text-align:center; font-weight:bold; color:#dc3545; font-size:20px; margin: 10px 0; background: #ffebee; padding: 10px; border-radius: 8px;">
+                ⏱️ في انتظار الراكب: <span id="timer-text">00:00</span>
+            </div>
+
+            <!-- أزرار التحكم -->
+            <button id="arrived-btn" class="btn-action" style="background-color: #007bff;" onclick="arriveAtRider()">📍 وصلت للراكب</button>
+            <button id="finish-btn" class="btn-action btn-finish" style="display:none;" onclick="finishRide()">إنهاء الرحلة (وصلت للوجهة)</button>
         </div>
     </div>
 
@@ -189,17 +176,14 @@
 
         function enableAlerts() {
             const audio = document.getElementById('notifSound');
-            audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => console.log("Audio unlock failed", e));
+            audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => console.log(e));
             if ("Notification" in window) { Notification.requestPermission(); }
             if (navigator.vibrate) { navigator.vibrate(200); }
             document.getElementById('enable-alerts-btn').style.display = 'none';
             localStorage.setItem('alertsEnabled', 'true');
-            alert('تم تفعيل التنبيهات بنجاح!');
+            alert('تم تفعيل التنبيهات!');
         }
-
-        if (localStorage.getItem('alertsEnabled') === 'true') {
-            document.getElementById('enable-alerts-btn').style.display = 'none';
-        }
+        if (localStorage.getItem('alertsEnabled') === 'true') { document.getElementById('enable-alerts-btn').style.display = 'none'; }
 
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
@@ -213,7 +197,9 @@
         var isFollowingUser = true;
         var liveLocationInterval = null; 
         var isAlertPlaying = false;
-        var lastDriverPos = null; // لتتبع حركة الكابتن
+        var lastDriverPos = null;
+        var waitTimer = null; // متغير عداد الانتظار
+        var waitSeconds = 0;
 
         const MAX_DISTANCE_KM = 15; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
@@ -224,22 +210,16 @@
             map.panTo(targetLatLng, {animate: true, duration: 1});
         }
 
-        // زرار الرجوع لموقعي
-        function centerToMyLocation() {
-            isFollowingUser = true;
-            if (driverMarker) {
-                map.flyTo(driverMarker.getLatLng(), 16);
-            }
-        }
+        function centerToMyLocation() { isFollowingUser = true; if (driverMarker) { map.flyTo(driverMarker.getLatLng(), 16); } }
 
         function playNewOrderAlert() {
             if (isAlertPlaying) return;
             isAlertPlaying = true;
             const audio = document.getElementById('notifSound');
-            audio.play().catch(e => console.log("الصوت محتاج تفاعل", e));
+            audio.play().catch(e => console.log(e));
             if (navigator.vibrate) { navigator.vibrate([500, 200, 500, 200, 500]); }
             if ("Notification" in window && Notification.permission === "granted") {
-                new Notification("🚗 طلب توصيل جديد!", { body: "وصلك طلب جديد على تطبيق مشاركة، افتح التطبيق للتفاصيل.", icon: "https://cdn-icons-png.flaticon.com/512/3063/3063902.png" });
+                new Notification("🚗 طلب توصيل جديد!", { body: "وصلك طلب جديد، افتح التطبيق للتفاصيل.", icon: "https://cdn-icons-png.flaticon.com/512/3063/3063902.png" });
             }
         }
 
@@ -259,14 +239,12 @@
         }
 
         async function activateMockSubscription() {
-            const nextMonth = new Date();
-            nextMonth.setMonth(nextMonth.getMonth() + 1);
+            const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
             const { error } = await supabaseClient.from('users').update({ sub_end_date: nextMonth.toISOString() }).eq('id', user.id);
             if (error) { alert('حدث خطأ: ' + error.message); } 
             else {
                 alert('تم تفعيل الاشتراك بنجاح!');
-                user.sub_end_date = nextMonth.toISOString();
-                localStorage.setItem('user', JSON.stringify(user));
+                user.sub_end_date = nextMonth.toISOString(); localStorage.setItem('user', JSON.stringify(user));
                 checkSubscription();
             }
         }
@@ -280,32 +258,22 @@
                 });
 
                 navigator.geolocation.watchPosition(function(position) {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    let heading = position.coords.heading;
-
+                    const lat = position.coords.latitude; const lng = position.coords.longitude; let heading = position.coords.heading;
                     const newPos = L.latLng(lat, lng);
-                    // لو دي أول مرة، أو العربية اتحركت مسافة
+                    
                     if (!lastDriverPos || lastDriverPos.distanceTo(newPos) > 2) {
                         lastDriverPos = newPos;
-
                         if (driverMarker) {
                             driverMarker.setLatLng([lat, lng]);
                             if(heading !== null && !isNaN(heading)) {
                                 const svgElement = driverMarker.getElement().querySelector('svg');
                                 if(svgElement) svgElement.style.transform = `rotate(${heading}deg)`;
                             }
-                        } else {
-                            driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
-                        }
+                        } else { driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map); }
                         
-                        // لو إحنا في وضع المتابعة، الخريطة تتحرك مع العربية
-                        if (isFollowingUser && !currentActiveRideId) { 
-                            panToDriverWithOffset(lat, lng); 
-                        }
+                        if (isFollowingUser && !currentActiveRideId) { panToDriverWithOffset(lat, lng); }
                     }
                     
-                    // إرسال الموقع للداتا بيز لو في رحلة نشطة
                     if(currentActiveRideId && liveLocationInterval === null) {
                         liveLocationInterval = setInterval(() => {
                             if(driverMarker) {
@@ -322,151 +290,94 @@
         map.on('dragstart', function() { isFollowingUser = false; });
 
         async function fetchPendingRide() {
+            if (currentActiveRideId) return; // لو في رحلة شغالة، بلاش نجيب طلبات
+            
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending').order('created_at', { ascending: false });
             if (error) return;
             const container = document.getElementById('requests-container');
             
             if (data && data.length > 0 && driverMarker) {
-                let closestRide = null;
-                let minDistance = Infinity;
+                let closestRide = null; let minDistance = Infinity;
                 const dPos = driverMarker.getLatLng();
 
                 data.forEach(ride => {
                     const dist = map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000;
-                    if (dist < MAX_DISTANCE_KM && dist < minDistance) {
-                        minDistance = dist;
-                        closestRide = ride;
-                    }
+                    if (dist < MAX_DISTANCE_KM && dist < minDistance) { minDistance = dist; closestRide = ride; }
                 });
 
                 if (closestRide) {
-                    // التعديل هنا: لو نفس الطلب اللي معروض، بنحدث المسافة بس ومش بنعيد تشغيل الصوت
-                    if (currentPendingRideId === closestRide.id) {
-                        return; 
-                    }
-
+                    if (currentPendingRideId === closestRide.id) return;
                     currentPendingRideId = closestRide.id; 
-                    
                     document.getElementById('waiting-ui').style.display = 'none';
                     document.getElementById('requests-ui').style.display = 'block';
-                    container.innerHTML = `<p style="text-align:center;">جاري حساب المسافة الحقيقية للراكب...</p>`;
+                    container.innerHTML = `<p style="text-align:center;">جاري حساب المسافة...</p>`;
 
                     if (minDistance < 0.1) {
-                        container.innerHTML = `
-                            <div class="ride-card">
-                                <h3>راكب يطلب توصيل</h3>
-                                <p class="distance-to-rider" style="background:#e8f5e9; color:#2e7d32;">🚗 الراكب في نفس موقعك تقريباً</p>
-                                <p>مشوار الراكب: <b>${closestRide.distance} كم</b></p>
-                                <p class="price">السعر: ${closestRide.price} جنيه</p>
-                                <div class="map-links">
-                                    <a href="https://www.google.com/maps?q=${closestRide.pickup_lat},${closestRide.pickup_lng}" target="_blank">📍 مكان الراكب</a>
-                                    <a href="https://www.google.com/maps?q=${closestRide.dest_lat},${closestRide.dest_lng}" target="_blank">🏁 الوجهة</a>
-                                </div>
-                                <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button>
-                            </div>`;
-                        
+                        container.innerHTML = `<div class="ride-card"><h3>راكب يطلب توصيل</h3><p class="distance-to-rider" style="background:#e8f5e9; color:#2e7d32;">🚗 الراكب في نفس موقعك تقريباً</p><p>مشوار الراكب: <b>${closestRide.distance} كم</b></p><p class="price">السعر: ${closestRide.price} جنيه</p><button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button></div>`;
                         setTimeout(() => { playNewOrderAlert(); }, 500);
-
-                        if (!riderMarker) {
-                            riderMarker = L.marker([closestRide.pickup_lat, closestRide.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
-                            map.flyTo([closestRide.pickup_lat, closestRide.pickup_lng], 17);
-                        }
-
+                        if (!riderMarker) { riderMarker = L.marker([closestRide.pickup_lat, closestRide.pickup_lng]).addTo(map).bindPopup("راكب").openPopup(); map.flyTo([closestRide.pickup_lat, closestRide.pickup_lng], 17); }
                     } else {
                         const url = `https://router.project-osrm.org/route/v1/driving/${dPos.lng},${dPos.lat};${closestRide.pickup_lng},${closestRide.pickup_lat}?overview=full&geometries=geojson`;
-                        
                         try {
-                            const response = await fetch(url);
-                            const routeData = await response.json();
+                            const response = await fetch(url); const routeData = await response.json();
                             let roadDist, roadTime;
-
                             if (routeData.code === 'Ok' && routeData.routes.length > 0) {
-                                roadDist = (routeData.routes[0].distance / 1000).toFixed(1);
-                                roadTime = Math.round(routeData.routes[0].duration / 60);
+                                roadDist = (routeData.routes[0].distance / 1000).toFixed(1); roadTime = Math.round(routeData.routes[0].duration / 60);
                                 if (pendingRouteLine) map.removeLayer(pendingRouteLine);
                                 pendingRouteLine = L.geoJSON(routeData.routes[0].geometry, { style: { color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10' } }).addTo(map);
-                            } else { throw new Error("No route"); }
-
-                            container.innerHTML = `
-                                <div class="ride-card">
-                                    <h3>راكب يطلب توصيل</h3>
-                                    <p class="distance-to-rider">🚗 يبعد عنك: ${roadDist} كم (تقريباً ${roadTime} دقيقة)</p>
-                                    <p>مشوار الراكب: <b>${closestRide.distance} كم</b></p>
-                                    <p class="price">السعر: ${closestRide.price} جنيه</p>
-                                    <div class="map-links">
-                                        <a href="https://www.google.com/maps?q=${closestRide.pickup_lat},${closestRide.pickup_lng}" target="_blank">📍 مكان الراكب</a>
-                                        <a href="https://www.google.com/maps?q=${closestRide.dest_lat},${closestRide.dest_lng}" target="_blank">🏁 الوجهة</a>
-                                    </div>
-                                    <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button>
-                                </div>`;
-                            
+                            } else { throw new Error(); }
+                            container.innerHTML = `<div class="ride-card"><h3>راكب يطلب توصيل</h3><p class="distance-to-rider">🚗 يبعد عنك: ${roadDist} كم (${roadTime} دقيقة)</p><p>مشوار الراكب: <b>${closestRide.distance} كم</b></p><p class="price">السعر: ${closestRide.price} جنيه</p><button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button></div>`;
                             setTimeout(() => { playNewOrderAlert(); }, 500);
-
                         } catch(e) {
-                            container.innerHTML = `
-                                <div class="ride-card">
-                                    <h3>راكب يطلب توصيل</h3>
-                                    <p class="distance-to-rider">🚗 يبعد عنك: ${minDistance.toFixed(1)} كم</p>
-                                    <p class="price">السعر: ${closestRide.price} جنيه</p>
-                                    <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button>
-                                </div>`;
-                            
+                            container.innerHTML = `<div class="ride-card"><h3>راكب يطلب توصيل</h3><p class="distance-to-rider">🚗 يبعد عنك: ${minDistance.toFixed(1)} كم</p><p class="price">السعر: ${closestRide.price} جنيه</p><button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button></div>`;
                             setTimeout(() => { playNewOrderAlert(); }, 500);
                         }
-                        
                         if (!riderMarker) {
-                            riderMarker = L.marker([closestRide.pickup_lat, closestRide.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
-                            let bounds = L.latLngBounds([]);
-                            if(driverMarker) bounds.extend(driverMarker.getLatLng());
+                            riderMarker = L.marker([closestRide.pickup_lat, closestRide.pickup_lng]).addTo(map).bindPopup("راكب").openPopup();
+                            let bounds = L.latLngBounds([]); if(driverMarker) bounds.extend(driverMarker.getLatLng());
                             bounds.extend([closestRide.pickup_lat, closestRide.pickup_lng]);
                             map.flyToBounds(bounds, { paddingTopLeft: [40, 50], paddingBottomRight: [40, 300], maxZoom: 16 });
                         }
                     }
-
                 } else {
-                    if (!currentActiveRideId) {
-                        currentPendingRideId = null; 
-                        document.getElementById('waiting-ui').style.display = 'block';
-                        document.getElementById('requests-ui').style.display = 'none';
-                        if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
-                        if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
-                        isAlertPlaying = false;
-                    }
-                }
-            } else {
-                if (!currentActiveRideId) {
-                    currentPendingRideId = null; 
-                    document.getElementById('waiting-ui').style.display = 'block';
+                    currentPendingRideId = null; document.getElementById('waiting-ui').style.display = 'block';
                     document.getElementById('requests-ui').style.display = 'none';
                     if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
                     if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
                     isAlertPlaying = false;
                 }
+            } else {
+                currentPendingRideId = null; document.getElementById('waiting-ui').style.display = 'block';
+                document.getElementById('requests-ui').style.display = 'none';
+                if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
+                if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
+                isAlertPlaying = false;
             }
         }
 
         async function acceptRide(rideId, pLat, pLng, dLat, dLng, rName) {
             const { data: checkRide } = await supabaseClient.from('rides').select('status').eq('id', rideId).single();
             if (checkRide && checkRide.status !== 'pending') {
-                alert('هذا الطلب لم يعد متاحاً.');
-                currentPendingRideId = null;
-                document.getElementById('requests-ui').style.display = 'none';
-                document.getElementById('waiting-ui').style.display = 'block';
-                fetchPendingRide();
-                return;
+                alert('هذا الطلب لم يعد متاحاً.'); fetchPendingRide(); return;
             }
 
             const { error } = await supabaseClient.from('rides').update({ status: 'accepted', driver_name: user.name, driver_phone: user.phone }).eq('id', rideId);
             if (error) { alert('حدث خطأ.'); return; }
-            currentActiveRideId = rideId;
-            currentRiderName = rName;
-            isAlertPlaying = false; 
-            currentPendingRideId = null; 
             
+            currentActiveRideId = rideId; currentRiderName = rName; isAlertPlaying = false; currentPendingRideId = null; 
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
             
+            // تجهيز الواجهة
             document.getElementById('requests-ui').style.display = 'none';
             document.getElementById('active-ride-ui').style.display = 'block';
+            document.getElementById('active-ride-title').innerText = "🚗 أنت في رحلة الآن";
+            document.getElementById('active-ride-header').innerText = "توجه إلى الراكب";
+            document.getElementById('active-ride-distance-text').style.display = 'block';
+            document.getElementById('active-ride-time-text').style.display = 'block';
+            document.getElementById('arrived-btn').style.display = 'block';
+            document.getElementById('finish-btn').style.display = 'none';
+            document.getElementById('wait-timer-ui').style.display = 'none';
+
             document.getElementById('link-rider').href = `https://www.google.com/maps?q=${pLat},${pLng}`;
             document.getElementById('link-dest').href = `https://www.google.com/maps?q=${dLat},${dLng}`;
             
@@ -477,7 +388,6 @@
         async function drawRouteToRider(pLat, pLng) {
             if (!driverMarker) return;
             const startPoint = driverMarker.getLatLng();
-            
             const distDirect = map.distance(startPoint, [pLat, pLng]) / 1000;
             if (distDirect < 0.1) {
                 document.getElementById('driver-to-rider-distance').innerText = "0.0";
@@ -485,12 +395,10 @@
                 map.flyTo([pLat, pLng], 17);
                 return;
             }
-
             const url = `https://router.project-osrm.org/route/v1/driving/${startPoint.lng},${startPoint.lat};${pLng},${pLat}?overview=full&geometries=geojson`;
             if (routeLine) { map.removeLayer(routeLine); }
             try {
-                const response = await fetch(url);
-                const data = await response.json();
+                const response = await fetch(url); const data = await response.json();
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const route = data.routes[0];
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#28a745', weight: 6, opacity: 0.8 } }).addTo(map);
@@ -501,13 +409,52 @@
             } catch (e) {}
         }
 
+        // دالة زرار "وصلت للراكب"
+        async function arriveAtRider() {
+            if (!currentActiveRideId) return;
+            
+            // تحديث الداتابيز إن الكابتن وصل
+            const { error } = await supabaseClient.from('rides').update({ driver_arrived_at: new Date().toISOString() }).eq('id', currentActiveRideId);
+            
+            if (!error) {
+                // إخفاء زرار "وصلت" وإظهار العداد
+                document.getElementById('arrived-btn').style.display = 'none';
+                document.getElementById('wait-timer-ui').style.display = 'block';
+                document.getElementById('active-ride-header').innerText = "في انتظار الراكب...";
+                document.getElementById('active-ride-distance-text').style.display = 'none';
+                document.getElementById('active-ride-time-text').style.display = 'none';
+                
+                // بدء العداد
+                startWaitTimer();
+                
+                // إظهار زرار إنهاء الرحلة (عشان يبدأ المشوار)
+                document.getElementById('finish-btn').style.display = 'block';
+                document.getElementById('finish-btn').innerText = "بدء الرحلة (وصل الراكب)";
+                document.getElementById('finish-btn').style.backgroundColor = "#28a745"; // لون أخضر للبدء
+            }
+        }
+
+        function startWaitTimer() {
+            waitSeconds = 0;
+            clearInterval(waitTimer);
+            waitTimer = setInterval(() => {
+                waitSeconds++;
+                const mins = String(Math.floor(waitSeconds / 60)).padStart(2, '0');
+                const secs = String(waitSeconds % 60).padStart(2, '0');
+                document.getElementById('timer-text').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
         async function finishRide() {
             if (!currentActiveRideId) return;
+            
             if (!confirm('هل وصلت بالراكب للوجهة؟')) return;
+            
             const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', currentActiveRideId);
             if (!error) {
-                clearInterval(liveLocationInterval); 
-                liveLocationInterval = null;
+                clearInterval(liveLocationInterval); liveLocationInterval = null;
+                clearInterval(waitTimer); waitTimer = null; // وقف عداد الانتظار
+                
                 document.getElementById('active-ride-ui').style.display = 'none';
                 document.getElementById('waiting-ui').style.display = 'block';
                 if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
@@ -520,96 +467,41 @@
             }
         }
 
+        // دوال الملف الشخصي والتقييم (نفس الكود السابق)
         async function openProfile() {
             document.getElementById('profile-modal').style.display = 'flex';
-            document.getElementById('p-name').innerText = user.name;
-            document.getElementById('p-phone').innerText = user.phone;
-            const now = new Date();
-            const subEnd = user.sub_end_date ? new Date(user.sub_end_date) : null;
+            document.getElementById('p-name').innerText = user.name; document.getElementById('p-phone').innerText = user.phone;
+            const now = new Date(); const subEnd = user.sub_end_date ? new Date(user.sub_end_date) : null;
             const subElement = document.getElementById('p-sub');
-            if (subEnd && subEnd > now) {
-                const daysLeft = Math.ceil((subEnd - now) / (1000 * 60 * 60 * 24));
-                subElement.innerText = `نشط (متبقي ${daysLeft} يوم)`;
-                subElement.style.color = '#28a745';
-            } else {
-                subElement.innerText = 'غير نشط أو منتهي';
-                subElement.style.color = '#dc3545';
-            }
-            
-            const listContainer = document.getElementById('history-list');
-            listContainer.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
+            if (subEnd && subEnd > now) { subElement.innerText = `نشط (متبقي ${Math.ceil((subEnd - now) / (1000 * 60 * 60 * 24))} يوم)`; subElement.style.color = '#28a745'; } 
+            else { subElement.innerText = 'غير نشط أو منتهي'; subElement.style.color = '#dc3545'; }
+            const listContainer = document.getElementById('history-list'); listContainer.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
             const { data, error } = await supabaseClient.from('rides').select('*').eq('driver_phone', user.phone).eq('status', 'completed').order('created_at', { ascending: false });
-
-            if (error || !data || data.length === 0) {
-                listContainer.innerHTML = '<p style="text-align:center; color:#888;">لا يوجد مشاوير مكتملة.</p>';
-                document.getElementById('p-earnings').innerText = '0';
-                return;
-            }
-            let totalEarnings = 0;
-            listContainer.innerHTML = '';
-            data.forEach(ride => {
-                totalEarnings += Number(ride.price);
-                const date = new Date(ride.created_at).toLocaleDateString('ar-EG');
-                let ratingText = ride.rating_by_driver ? `تقييمك للراكب: ${'★'.repeat(ride.rating_by_driver)}` : 'لم يتم التقييم';
-                listContainer.innerHTML += `
-                    <div class="history-item">
-                        <p>راكب: ${ride.rider_name || 'غير معروف'} | مسافة: ${ride.distance} كم</p>
-                        <p class="price">+ ${ride.price} جنيه</p>
-                        <p class="date">${date} | ${ratingText}</p>
-                    </div>
-                `;
-            });
+            if (error || !data || data.length === 0) { listContainer.innerHTML = '<p style="text-align:center; color:#888;">لا يوجد مشاوير مكتملة.</p>'; document.getElementById('p-earnings').innerText = '0'; return; }
+            let totalEarnings = 0; listContainer.innerHTML = '';
+            data.forEach(ride => { totalEarnings += Number(ride.price); const date = new Date(ride.created_at).toLocaleDateString('ar-EG'); let ratingText = ride.rating_by_driver ? `تقييمك للراكب: ${'★'.repeat(ride.rating_by_driver)}` : 'لم يتم التقييم'; listContainer.innerHTML += `<div class="history-item"><p>راكب: ${ride.rider_name || 'غير معروف'} | مسافة: ${ride.distance} كم</p><p class="price">+ ${ride.price} جنيه</p><p class="date">${date} | ${ratingText}</p></div>`; });
             document.getElementById('p-earnings').innerText = totalEarnings;
         }
-
         function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
-        let selectedRating = 5;
-        let currentRiderName = "";
-        function setRating(rating) {
-            selectedRating = rating;
-            const stars = document.querySelectorAll('#star-container span');
-            stars.forEach((star, index) => {
-                if (index < rating) star.classList.add('active');
-                else star.classList.remove('active');
-            });
-        }
+        let selectedRating = 5; let currentRiderName = "";
+        function setRating(rating) { selectedRating = rating; const stars = document.querySelectorAll('#star-container span'); stars.forEach((star, index) => { if (index < rating) star.classList.add('active'); else star.classList.remove('active'); }); }
+        async function submitRating() { if (!currentActiveRideId) return; const { error } = await supabaseClient.from('rides').update({ rating_by_driver: selectedRating }).eq('id', currentActiveRideId); if (!error) { alert('شكراً لتقييمك!'); document.getElementById('rating-modal').style.display = 'none'; currentActiveRideId = null; } }
+        setRating(5);
 
-        async function submitRating() {
-            if (!currentActiveRideId) return;
-            const { error } = await supabaseClient.from('rides').update({ rating_by_driver: selectedRating }).eq('id', currentActiveRideId);
-            if (!error) {
-                alert('شكراً لتقييمك!');
-                document.getElementById('rating-modal').style.display = 'none';
-                currentActiveRideId = null;
-            }
-        }
-        setRating(5); 
-
+        // الـ Realtime listener للكابتن
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
-            
             if (payload.new && payload.new.status === 'cancelled') {
                 if (currentActiveRideId && payload.new.id === currentActiveRideId) {
                     alert('عذراً، الراكب قام بإلغاء الرحلة.');
-                    currentActiveRideId = null;
-                    clearInterval(liveLocationInterval); 
-                    liveLocationInterval = null;
-                    document.getElementById('active-ride-ui').style.display = 'none';
-                    document.getElementById('waiting-ui').style.display = 'block';
-                    if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
-                    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-                    isFollowingUser = true;
+                    currentActiveRideId = null; clearInterval(liveLocationInterval); liveLocationInterval = null; clearInterval(waitTimer); waitTimer = null;
+                    document.getElementById('active-ride-ui').style.display = 'none'; document.getElementById('waiting-ui').style.display = 'block';
+                    if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; } if (routeLine) { map.removeLayer(routeLine); routeLine = null; } isFollowingUser = true;
                 }
-                
                 if (currentPendingRideId && payload.new.id === currentPendingRideId) {
-                    currentPendingRideId = null;
-                    document.getElementById('waiting-ui').style.display = 'block';
-                    document.getElementById('requests-ui').style.display = 'none';
-                    if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
-                    if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
-                    isAlertPlaying = false;
+                    currentPendingRideId = null; document.getElementById('waiting-ui').style.display = 'block'; document.getElementById('requests-ui').style.display = 'none';
+                    if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; } if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; } isAlertPlaying = false;
                 }
             }
-            
             if (!currentActiveRideId) { fetchPendingRide(); }
         }).subscribe();
         
