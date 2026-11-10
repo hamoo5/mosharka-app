@@ -6,125 +6,55 @@
     <title>تطبيق مشاركة - الراكب</title>
     <link rel="manifest" href="manifest-rider.json">
     <meta name="theme-color" content="#1A237E">
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-        
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-
-        #install-banner {
-            display: none; position: fixed; top: 0; left: 0; right: 0;
-            background-color: #28a745; color: white; padding: 12px; text-align: center; z-index: 9999;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; font-weight: bold; font-size: 16px;
-        }
-
+        #install-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background-color: #28a745; color: white; padding: 12px; text-align: center; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; font-weight: bold; font-size: 16px; }
         .header { background-color: #1A237E; color: white; padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; }
         .logout-btn { position: absolute; left: 15px; top: 18px; background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; }
-
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
-
-        .fab-locate {
-            position: absolute; bottom: 260px; left: 15px; z-index: 1000;
-            background-color: white; color: #1A237E; border: 2px solid #1A237E;
-            width: 45px; height: 45px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer;
-            transition: 0.2s;
-        }
-        .fab-locate:active { background-color: #e3f2fd; transform: scale(0.9); }
-
-        .center-pin {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -100%);
-            z-index: 1000; pointer-events: none;
-            display: flex; flex-direction: column; align-items: center;
-            margin-top: -15px;
-        }
-        
+        .fab-locate { position: absolute; bottom: 260px; left: 15px; z-index: 1000; background-color: white; color: #1A237E; border: 2px solid #1A237E; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
+        .center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -15px; }
         .pin-svg { width: 40px; height: 40px; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
-        .pin-svg.green path { fill: #28a745; }
-        .pin-svg.red path { fill: #dc3545; }
-        
+        .pin-svg.green path { fill: #28a745; } .pin-svg.red path { fill: #dc3545; }
         .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; animation: shadow-scale 2s infinite; }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        @keyframes shadow-scale {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(0.7); opacity: 0.2; }
-        }
-
-        .bottom-panel {
-            background: white; border-radius: 20px 20px 0 0;
-            padding: 20px; position: absolute; bottom: 0; left: 0; right: 0;
-            z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            display: flex; flex-direction: column; gap: 10px;
-        }
-
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes shadow-scale { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(0.7); opacity: 0.2; } }
+        .bottom-panel { background: white; border-radius: 20px 20px 0 0; padding: 20px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px; }
         .instruction-text { font-size: 16px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 5px; }
-        
         .search-box { position: relative; width: 100%; display: flex; align-items: center; margin-bottom: 5px; }
         .search-box input { width: 100%; padding: 12px 15px 12px 50px; border: 2px solid #ddd; border-radius: 12px; font-family: 'Cairo', sans-serif; font-size: 16px; outline: none; transition: 0.3s; background-color: #f8f9fa; }
         .search-box input:focus { border-color: #1A237E; background-color: #fff; }
-        
-        .search-btn { 
-            position: absolute; left: 6px; top: 50%; transform: translateY(-50%); 
-            background-color: #1A237E; color: white; border: none; 
-            width: 38px; height: 38px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; font-size: 18px; transition: 0.2s;
-        }
-        .search-btn:active { background-color: #121858; }
-
+        .search-btn { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); background-color: #1A237E; color: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: 0.2s; }
         .address-text { font-size: 13px; color: #555; text-align: center; background: #f8f9fa; padding: 8px; border-radius: 8px; min-height: 35px; display: flex; align-items: center; justify-content: center;}
-
         .btn-action { background-color: #1A237E; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(26, 35, 126, 0.3); transition: 0.2s; }
-        .btn-action:active { transform: scale(0.98); }
-        
-        .btn-confirm-pickup { background-color: #28a745; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
-        .btn-confirm-dropoff { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
-
+        .btn-confirm-pickup { background-color: #28a745; } .btn-confirm-dropoff { background-color: #dc3545; }
         #ride-info { display: none; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; text-align: center; }
         #ride-info h3 { color: #28a745; font-size: 24px; margin: 5px 0; }
-        
         #driver-details { display: none; background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; }
         .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
-
     <div id="install-banner">📥 اضغط هنا لتثبيت التطبيق على هاتفك</div>
-
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'rider') { window.location.href = 'login.html'; }
     </script>
-
-    <div class="header">
-        تطبيق مشاركة
-        <a href="#" onclick="logout()" class="logout-btn">خروج</a>
-    </div>
-
+    <div class="header">تطبيق مشاركة <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
     <div id="map"></div>
-
     <button class="fab-locate" onclick="centerToMyLocation()">🎯</button>
-
     <div id="center-pin" class="center-pin">
         <svg class="pin-svg green" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/>
         </svg>
         <div class="pin-shadow"></div>
     </div>
-
     <div class="bottom-panel">
-        
         <div id="ui-pickup">
             <div class="instruction-text">📍 حدد مكان الانطلاق</div>
             <div class="search-box">
@@ -134,7 +64,6 @@
             <div class="address-text" id="pickup-address">جاري تحديد الموقع...</div>
             <button class="btn-action btn-confirm-pickup" onclick="confirmPickup()">تأكيد موقع الانطلاق</button>
         </div>
-
         <div id="ui-dropoff" style="display: none;">
             <div class="instruction-text">🏁 حدد مكان الوصول</div>
             <div class="search-box">
@@ -144,196 +73,119 @@
             <div class="address-text" id="dropoff-address">جاري تحديد الموقع...</div>
             <button class="btn-action btn-confirm-dropoff" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
         </div>
-
         <div id="ui-ride" style="display: none;">
-            
             <div id="driver-details">
                 <h3>الكابتن في الطريق إليك 🚗</h3>
                 <p>اسم الكابتن: <b id="d-name"></b></p>
                 <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
             </div>
-            
             <div id="ride-info">
                 <p>المسافة: <span id="distance-text">...</span> كم</p>
                 <h3>السعر: <span id="price-text">...</span> جنيه</h3>
             </div>
-            
             <button id="request-btn" class="btn-action" style="background-color: #28a745;">اطلب التوصيل الآن</button>
         </div>
-
     </div>
-
     <script>
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
-
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
-
         var pickupPoint = null, dropoffPoint = null;
         var currentDistance = 0, currentPrice = 0, currentRideId = null;
         var currentStep = 'pickup'; 
-        var routeLine = null;
-        
-        var watchId = null;
-        var userMarker = null;
-        var lastPosition = null;
-        var isFollowingUser = true; 
-        var moveEndTimeout; 
+        var routeLine = null, driverCarMarker = null; // ماركر العربية
+        var watchId = null, userMarker = null, lastPosition = null, isFollowingUser = true, moveEndTimeout;
 
         async function getAddress(lat, lng) {
             try {
-                // بنجيب تفاصيل أكتر (الشارع + الحي + المدينة)
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=ar`);
                 const data = await response.json();
-                
                 if(data.error) return "موقع محدد على الخريطة";
-                
                 const road = data.address.road || data.address.pedestrian || data.address.footway || "";
                 const suburb = data.address.suburb || data.address.neighbourhood || "";
                 const city = data.address.city || data.address.town || data.address.village || "";
-                
-                // تجميع الاسم بشكل مفصل
                 let fullAddress = "";
                 if (road) fullAddress += road;
                 if (suburb && suburb !== road) fullAddress += (fullAddress ? '، ' : '') + suburb;
                 if (city && city !== suburb && city !== road) fullAddress += (fullAddress ? '، ' : '') + city;
-
                 return fullAddress || "موقع محدد على الخريطة";
-            } catch (e) {
-                return "موقع محدد على الخريطة";
-            }
+            } catch (e) { return "موقع محدد على الخريطة"; }
         }
 
         map.on('moveend', function() {
             clearTimeout(moveEndTimeout);
-            
             moveEndTimeout = setTimeout(async () => {
                 if (currentStep === 'ride') return; 
-
                 const center = map.getCenter();
                 const addressTextId = currentStep === 'pickup' ? 'pickup-address' : 'dropoff-address';
                 const inputId = currentStep === 'pickup' ? 'search-pickup' : 'search-dropoff';
                 const inputElement = document.getElementById(inputId);
-
                 document.getElementById(addressTextId).innerText = "جاري تحديد اسم الشارع...";
-                
                 const address = await getAddress(center.lat, center.lng);
                 document.getElementById(addressTextId).innerText = address;
-                
-                // هنحدث الخانة بالاسم التفصيلي، بس لو المستخدم مش بيكتب فيها
-                if (document.activeElement !== inputElement) {
-                    inputElement.value = address;
-                }
+                if (document.activeElement !== inputElement) { inputElement.value = address; }
             }, 600);
         });
-
-        map.on('dragstart', function() {
-            isFollowingUser = false;
-        });
+        map.on('dragstart', function() { isFollowingUser = false; });
 
         async function handleSearch(event, type) {
             if (event && event.key !== 'Enter') return;
-
             isFollowingUser = false; 
             const inputId = type === 'pickup' ? 'search-pickup' : 'search-dropoff';
             const inputElement = document.getElementById(inputId);
             const query = inputElement.value;
-            
             if(!query || query.trim() === '') return;
-
             const btnElement = inputElement.nextElementSibling;
             const originalText = btnElement.innerText;
             btnElement.innerText = '⏳';
-
             try {
                 const encodedQuery = encodeURIComponent(query);
                 const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=eg&accept-language=ar`);
                 const data = await response.json();
-
                 if (data && data.length > 0) {
                     const lat = parseFloat(data[0].lat);
                     const lon = parseFloat(data[0].lon);
                     map.flyTo([lat, lon], 16);
-                } else {
-                    alert('لم يتم العثور على المكان. جرب اسم تاني أو حدد من الخريطة.');
-                }
-            } catch (e) {
-                alert('حدث خطأ في البحث.');
-            } finally {
-                setTimeout(() => {
-                    btnElement.innerText = originalText;
-                }, 1000);
-            }
+                } else { alert('لم يتم العثور على المكان.'); }
+            } catch (e) { alert('حدث خطأ في البحث.'); } 
+            finally { setTimeout(() => { btnElement.innerText = originalText; }, 1000); }
         }
 
         function startTracking() {
             if (navigator.geolocation) {
-                if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-
-                const arrowIcon = L.divIcon({
-                    className: 'user-arrow',
-                    html: `<svg width="30" height="30" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;">
-                            <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="#1A237E" stroke="white" stroke-width="1.5"/>
-                           </svg>`,
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 15]
-                });
-
+                const arrowIcon = L.divIcon({ className: 'user-arrow', html: `<svg width="30" height="30" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="#1A237E" stroke="white" stroke-width="1.5"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
                 watchId = navigator.geolocation.watchPosition(function(position) {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
+                    const lat = position.coords.latitude, lng = position.coords.longitude;
                     let heading = position.coords.heading;
-
                     if ((!heading || isNaN(heading)) && lastPosition) {
                         heading = Math.atan2(lat - lastPosition.lat, lng - lastPosition.lng) * 180 / Math.PI;
                         heading = (heading + 360) % 360;
                     }
-
                     if (userMarker) {
                         userMarker.setLatLng([lat, lng]);
                         if(heading !== null && !isNaN(heading)) {
                             const svgElement = userMarker.getElement().querySelector('svg');
                             if(svgElement) svgElement.style.transform = `rotate(${heading}deg)`;
                         }
-                    } else {
-                        userMarker = L.marker([lat, lng], {icon: arrowIcon}).addTo(map);
-                    }
-
-                    if (isFollowingUser) {
-                        map.panTo([lat, lng], {animate: true, duration: 1});
-                    }
-
+                    } else { userMarker = L.marker([lat, lng], {icon: arrowIcon}).addTo(map); }
+                    if (isFollowingUser) { map.panTo([lat, lng], {animate: true, duration: 1}); }
                     lastPosition = { lat: lat, lng: lng };
-                }, function(error) { 
-                    console.log('Location error');
-                }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
+                }, function(error) { console.log('Location error'); }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
             }
         }
-
-        function centerToMyLocation() {
-            isFollowingUser = true;
-            if (lastPosition) {
-                map.flyTo([lastPosition.lat, lastPosition.lng], 16);
-            }
-        }
-
+        function centerToMyLocation() { isFollowingUser = true; if (lastPosition) { map.flyTo([lastPosition.lat, lastPosition.lng], 16); } }
         startTracking();
 
         function confirmPickup() {
             const center = map.getCenter();
             pickupPoint = [center.lat, center.lng];
-            
             document.getElementById('ui-pickup').style.display = 'none';
             document.getElementById('ui-dropoff').style.display = 'block';
-            
             const pinSvg = document.querySelector('.pin-svg');
-            pinSvg.classList.remove('green');
-            pinSvg.classList.add('red');
-            
+            pinSvg.classList.remove('green'); pinSvg.classList.add('red');
             currentStep = 'dropoff';
             map.fire('moveend'); 
         }
@@ -341,43 +193,33 @@
         async function confirmDropoff() {
             const center = map.getCenter();
             dropoffPoint = [center.lat, center.lng];
-            
             currentStep = 'ride';
             document.getElementById('ui-dropoff').style.display = 'none';
             document.getElementById('ui-ride').style.display = 'block';
             document.getElementById('center-pin').style.display = 'none'; 
             document.querySelector('.fab-locate').style.display = 'none'; 
-            
             if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-            
             await drawRoute();
         }
 
         async function drawRoute() {
             if (!pickupPoint || !dropoffPoint) return;
             if (routeLine) { map.removeLayer(routeLine); }
-
             const url = `https://router.project-osrm.org/route/v1/driving/${pickupPoint[1]},${pickupPoint[0]};${dropoffPoint[1]},${dropoffPoint[0]}?overview=full&geometries=geojson`;
-
             try {
                 const response = await fetch(url);
                 const data = await response.json();
-                
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const route = data.routes[0];
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#1A237E', weight: 6, opacity: 0.8 } }).addTo(map);
                     map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
                     currentDistance = (route.distance / 1000).toFixed(2);
-                } else {
-                    throw new Error("لا يوجد مسار");
-                }
+                } else { throw new Error("لا يوجد مسار"); }
             } catch (error) {
                 routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#1A237E', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map);
                 map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-                const distanceInMeters = map.distance(pickupPoint, dropoffPoint);
-                currentDistance = (distanceInMeters / 1000).toFixed(2);
+                currentDistance = (map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(2);
             }
-
             currentPrice = Math.round(10 + (currentDistance * 5)); 
             document.getElementById('distance-text').innerText = currentDistance;
             document.getElementById('price-text').innerText = currentPrice;
@@ -385,55 +227,59 @@
         }
 
         document.getElementById('request-btn').addEventListener('click', async function() {
-            this.innerText = 'جاري إرسال الطلب...';
-            this.disabled = true;
-
+            this.innerText = 'جاري إرسال الطلب...'; this.disabled = true;
             try {
-                const { data, error } = await supabaseClient.from('rides').insert([{ 
-                    distance: currentDistance, price: currentPrice, dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], status: 'pending' 
-                }]).select();
-
+                const { data, error } = await supabaseClient.from('rides').insert([{ distance: currentDistance, price: currentPrice, dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], status: 'pending' }]).select();
                 if (error) throw error;
                 currentRideId = data[0].id; 
-                
-                this.innerText = 'في انتظار قبول الكابتن...';
-                this.style.backgroundColor = '#ffc107';
-                this.style.color = '#333';
+                this.innerText = 'في انتظار قبول الكابتن...'; this.style.backgroundColor = '#ffc107'; this.style.color = '#333';
             } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب التوصيل الآن'; this.disabled = false; }
         });
 
+        // التحديث السحري: استقبال مكان الكابتن لايف
         supabaseClient.channel('rider-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
             if (currentRideId && payload.new.id === currentRideId) {
+                // لو الكابتن قبل
                 if (payload.new.status === 'accepted') {
                     document.getElementById('request-btn').innerText = 'تم قبول الطلب'; document.getElementById('request-btn').style.backgroundColor = '#6c757d';
                     document.getElementById('driver-details').style.display = 'block';
                     document.getElementById('d-name').innerText = payload.new.driver_name;
                     document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
                 }
+                
+                // لو الكابتن باعت مكانه (التتبع اللايف)
+                if (payload.new.driver_lat && payload.new.driver_lng) {
+                    const dLat = payload.new.driver_lat;
+                    const dLng = payload.new.driver_lng;
+                    
+                    if (driverCarMarker) {
+                        driverCarMarker.setLatLng([dLat, dLng]); // حرك العربية
+                    } else {
+                        // ارسم العربية أول مرة
+                        const carIcon = L.divIcon({
+                            className: 'driver-car',
+                            html: `<svg width="35" height="35" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/></svg>`,
+                            iconSize: [35, 35], iconAnchor: [17, 17]
+                        });
+                        driverCarMarker = L.marker([dLat, dLng], {icon: carIcon}).addTo(map).bindPopup('الكابتن في الطريق');
+                    }
+                }
+
                 if (payload.new.status === 'completed') {
                     document.getElementById('driver-details').style.display = 'none';
                     document.getElementById('request-btn').innerText = 'وصلت بالسلامة!'; document.getElementById('request-btn').style.backgroundColor = '#1A237E'; document.getElementById('request-btn').disabled = true;
                     alert('تم إنهاء الرحلة.');
+                    if(driverCarMarker) { map.removeLayer(driverCarMarker); driverCarMarker = null; }
                 }
             }
         }).subscribe();
 
         let deferredPrompt;
         const installBanner = document.getElementById('install-banner');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBanner.style.display = 'block'; 
-        });
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; installBanner.style.display = 'block'; });
         installBanner.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') { installBanner.style.display = 'none'; }
-                deferredPrompt = null;
-            } else {
-                alert('لتثبيت التطبيق: اضغط على زر المشاركة/القائمة في المتصفح، ثم "إضافة إلى الشاشة الرئيسية".');
-            }
+            if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') { installBanner.style.display = 'none'; } deferredPrompt = null; } 
+            else { alert('لتثبيت التطبيق: اضغط على زر المشاركة/القائمة في المتصفح، ثم "إضافة إلى الشاشة الرئيسية".'); }
         });
     </script>
 </body>
