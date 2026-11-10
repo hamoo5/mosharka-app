@@ -41,9 +41,19 @@
         .btn-cancel { background-color: #dc3545; margin-top: 10px; display: none; }
         #ride-info { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 10px; text-align: center; transition: 0.5s; }
         #ride-info h3 { color: #28a745; font-size: 26px; margin: 5px 0; }
+        
         #driver-details { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2); transition: 0.5s; }
         #driver-details h3 { color: #2196f3; margin-bottom: 5px; font-size: 18px;}
         .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; background: rgba(211, 47, 47, 0.1); padding: 5px; border-radius: 5px;}
+        
+        /* كارت الـ PIN */
+        .pin-box { background-color: #fff3cd; border: 2px dashed #ffc107; padding: 10px; border-radius: 10px; margin: 10px 0; }
+        .pin-box h4 { color: #856404; margin-bottom: 5px; font-size: 14px; }
+        .pin-code-text { font-size: 32px; font-weight: bold; color: #333; letter-spacing: 5px; }
+        body.dark-mode .pin-box { background-color: #3e2723; border-color: #ffb300; }
+        body.dark-mode .pin-code-text { color: #fff; }
+        body.dark-mode .pin-box h4 { color: #ffca28; }
+
         .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 5px; }
         #profile-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
@@ -119,6 +129,13 @@
                 <h3>الكابتن في الطريق إليك 🚗</h3>
                 <p>اسم الكابتن: <b id="d-name"></b></p>
                 <div class="driver-distance-info" id="driver-eta-text">جاري تحديد موقع الكابتن...</div>
+                
+                <!-- كارت الـ PIN -->
+                <div class="pin-box" id="pin-box" style="display:none;">
+                    <h4>الرقم السري للرحلة (اعطه للكابتن):</h4>
+                    <div class="pin-code-text" id="rider-pin-display">----</div>
+                </div>
+
                 <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
             </div>
             <div id="ride-info"><h3>السعر: <span id="price-text">...</span> جنيه</h3></div>
@@ -219,9 +236,21 @@
 
         document.getElementById('request-btn').addEventListener('click', async function() {
             this.innerText = 'جاري إرسال الطلب...'; this.disabled = true;
+            
+            // توليد رقم PIN عشوائي من 4 أرقام
+            const generatedPin = Math.floor(1000 + Math.random() * 9000).toString();
+
             try {
-                const { data, error } = await supabaseClient.from('rides').insert([{ distance: currentDistance, price: currentPrice, dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], status: 'pending', rider_name: user.name, rider_phone: user.phone }]).select();
-                if (error) throw error; currentRideId = data[0].id; 
+                const { data, error } = await supabaseClient.from('rides').insert([{ 
+                    distance: currentDistance, price: currentPrice, dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], status: 'pending', rider_name: user.name, rider_phone: user.phone, pin_code: generatedPin 
+                }]).select();
+                if (error) throw error; 
+                currentRideId = data[0].id; 
+                
+                // عرض الرقم للراكب
+                document.getElementById('rider-pin-display').innerText = generatedPin;
+                document.getElementById('pin-box').style.display = 'block';
+
                 this.innerText = 'في انتظار قبول الكابتن...'; this.style.backgroundColor = '#ffc107'; this.style.color = '#333';
                 document.getElementById('cancel-btn').style.display = 'block';
             } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب التوصيل الآن'; this.disabled = false; }
@@ -253,6 +282,14 @@
                     document.getElementById('driver-eta-text').style.color = "#dc3545";
                 }
 
+                // لو الكابتن بدأ الرحلة بالـ PIN
+                if (payload.new.ride_started_at) {
+                    document.getElementById('driver-eta-text').innerText = "🚗 الرحلة بدأت، في أمان الله!";
+                    document.getElementById('driver-eta-text').style.backgroundColor = "#e8f5e9";
+                    document.getElementById('driver-eta-text').style.color = "#2e7d32";
+                    document.getElementById('pin-box').style.display = 'none'; // اخفاء الرقم
+                }
+
                 if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') { updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng); }
 
                 if (payload.new.status === 'completed') {
@@ -281,7 +318,6 @@
                     const response = await fetch(url); const data = await response.json();
                     if (data.code === 'Ok' && data.routes.length > 0) { 
                         const roadDist = (data.routes[0].distance / 1000).toFixed(1); 
-                        // ** هنا معامل تصحيح الوقت للراكب **
                         const roadTime = Math.round((data.routes[0].duration / 60) * 2.5) + 1; 
                         document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${roadDist} كم (تقريباً ${roadTime} دقيقة)`; 
                     } else { throw new Error(); }
