@@ -30,7 +30,7 @@
 
         /* زرار موقعي الحالي العايم */
         .fab-locate {
-            position: absolute; bottom: 250px; left: 15px; z-index: 1000;
+            position: absolute; bottom: 260px; left: 15px; z-index: 1000;
             background-color: white; color: #1A237E; border: 2px solid #1A237E;
             width: 45px; height: 45px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
@@ -39,7 +39,7 @@
         }
         .fab-locate:active { background-color: #e3f2fd; transform: scale(0.9); }
 
-        /* الدبوس الثابت مع تأثير النبض */
+        /* الدبوس الثابت للتحديد */
         .center-pin {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -100%);
@@ -48,21 +48,11 @@
             margin-top: -15px;
         }
         
-        .pin-svg { width: 40px; height: 40px; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
+        .pin-svg { width: 40px; height: 40px; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.4)); }
         .pin-svg.green path { fill: #28a745; }
         .pin-svg.red path { fill: #dc3545; }
         
-        .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; animation: shadow-scale 2s infinite; }
-
-        /* حركة النبض */
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        @keyframes shadow-scale {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(0.7); opacity: 0.2; }
-        }
+        .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; }
 
         .bottom-panel {
             background: white; border-radius: 20px 20px 0 0;
@@ -117,8 +107,9 @@
 
     <div id="map"></div>
 
-    <button class="fab-locate" onclick="flyToMyLocation()">🎯</button>
+    <button class="fab-locate" onclick="centerToMyLocation()">🎯</button>
 
+    <!-- الدبوس الثابت اللي في النص -->
     <div id="center-pin" class="center-pin">
         <svg class="pin-svg green" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/>
@@ -181,7 +172,12 @@
         var currentStep = 'pickup'; 
         var routeLine = null;
         var isSearching = false;
+        
+        // متغيرات التتبع المباشر
         var watchId = null;
+        var userMarker = null;
+        var lastPosition = null;
+        var isFollowingUser = true; // هل التطبيق بيتابع حركتك ولا لأ
 
         async function getAddress(lat, lng) {
             try {
@@ -194,14 +190,7 @@
             }
         }
 
-        // 1. التحديث الفوري (حي) بمجرد لمس الخريطة
-        map.on('movestart', function() {
-            if (currentStep === 'ride' || isSearching) return;
-            const addressTextId = currentStep === 'pickup' ? 'pickup-address' : 'dropoff-address';
-            document.getElementById(addressTextId).innerText = "جاري تحديد الموقع...";
-        });
-
-        // 2. تحديث العنوان لما الخريطة توقف
+        // 1. تحديث العنوان لما الخريطة تتحرك
         map.on('moveend', async function() {
             if (currentStep === 'ride' || isSearching) return; 
 
@@ -220,9 +209,16 @@
             }
         });
 
+        // لما المستخدم يلمس الخريطة بإيده، بنفصل الـ GPS عشان ميرجعوش
+        map.on('dragstart', function() {
+            isFollowingUser = false;
+        });
+
+        // 2. البحث بالكتابة
         async function handleSearch(event, type) {
             if (event && event.key !== 'Enter') return;
 
+            isFollowingUser = false; // بنفصل التتبع عشان البحث ميتلغيش
             const inputId = type === 'pickup' ? 'search-pickup' : 'search-dropoff';
             const inputElement = document.getElementById(inputId);
             const query = inputElement.value;
@@ -261,36 +257,68 @@
             }
         }
 
-        // 3. دالة التتبع المباشر (Live GPS)
-        function flyToMyLocation() {
+        // 3. التتبع المباشر وحركة السهم
+        function startTracking() {
             if (navigator.geolocation) {
-                // لو فيه تتبع شغال، بنقفله الأول عشان منعملش دبل
-                if (watchId !== null) {
-                    navigator.geolocation.clearWatch(watchId);
-                }
+                if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+
+                // رسم أيقونة السهم
+                const arrowIcon = L.divIcon({
+                    className: 'user-arrow',
+                    html: `<svg width="30" height="30" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;">
+                            <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="#1A237E" stroke="white" stroke-width="1.5"/>
+                           </svg>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
 
                 watchId = navigator.geolocation.watchPosition(function(position) {
                     const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    
-                    // بنحدث المكان
-                    if (map.getCenter().lat.toFixed(4) === lat.toFixed(4) && map.getCenter().lng.toFixed(4) === lon.toFixed(4)) {
-                        map.fire('moveend'); 
-                    } else {
-                        isSearching = true; 
-                        map.flyTo([lat, lon], 16);
-                        map.once('moveend', () => { isSearching = false; });
+                    const lng = position.coords.longitude;
+                    let heading = position.coords.heading;
+
+                    // لو الـ GPS مش بيبعت اتجاه، بنحسب الاتجاه من الحركة
+                    if ((!heading || isNaN(heading)) && lastPosition) {
+                        heading = Math.atan2(lat - lastPosition.lat, lng - lastPosition.lng) * 180 / Math.PI;
+                        heading = (heading + 360) % 360;
                     }
+
+                    // تحديث أو إنشاء علامة السهم
+                    if (userMarker) {
+                        userMarker.setLatLng([lat, lng]);
+                        // لف السهم
+                        if(heading !== null && !isNaN(heading)) {
+                            const svgElement = userMarker.getElement().querySelector('svg');
+                            if(svgElement) svgElement.style.transform = `rotate(${heading}deg)`;
+                        }
+                    } else {
+                        userMarker = L.marker([lat, lng], {icon: arrowIcon}).addTo(map);
+                    }
+
+                    // لو إحنا في وضع "متابعة المستخدم"، بنحرك الخريطة معاه بسلاسة
+                    if (isFollowingUser) {
+                        map.panTo([lat, lng], {animate: true, duration: 1});
+                    }
+
+                    lastPosition = { lat: lat, lng: lng };
                 }, function(error) { 
-                    alert('برجاء السماح بالوصول للموقع من إعدادات المتصفح.');
+                    console.log('Location error');
                 }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
-            } else {
-                alert('متصفحك لا يدعم تحديد الموقع.');
             }
         }
 
-        isSearching = true;
-        flyToMyLocation();
+        // زرار "موقعي"
+        function centerToMyLocation() {
+            isFollowingUser = true;
+            if (lastPosition) {
+                map.flyTo([lastPosition.lat, lastPosition.lng], 16);
+                map.fire('moveend'); 
+            } else {
+                startTracking();
+            }
+        }
+
+        startTracking();
 
         function confirmPickup() {
             const center = map.getCenter();
@@ -317,10 +345,7 @@
             document.getElementById('center-pin').style.display = 'none'; 
             document.querySelector('.fab-locate').style.display = 'none'; 
             
-            // بنقفل التتبع المباشر عشان منحركش الخريطة وهو بيطلب
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-            }
+            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
             
             await drawRoute();
         }
