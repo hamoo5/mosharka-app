@@ -43,7 +43,7 @@
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes shadow-scale { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(0.7); opacity: 0.2; } }
 
-        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 20px 20px 0 0; padding: 20px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); transition: 0.3s ease; max-height: 70vh; overflow-y: auto; color: var(--text-main); border-top: 1px solid var(--border-color); }
+        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 20px 20px 0 0; padding: 20px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); transition: 0.3s ease; max-height: 75vh; overflow-y: auto; color: var(--text-main); border-top: 1px solid var(--border-color); }
         
         .title { font-size: 20px; font-weight: 700; margin-bottom: 15px; text-align: center; }
         
@@ -61,8 +61,11 @@
         .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); margin-top: 10px; }
         .btn-back { background: transparent; color: var(--text-sub); padding: 5px 0; border: none; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; margin-bottom: 10px; font-weight: 600;}
 
-        /* زرار إضافة نقطة توقف */
         .add-stop-btn { background: transparent; color: var(--blue-dot); border: 1px dashed var(--blue-dot); width: 100%; padding: 10px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 5px; font-family: 'Cairo', sans-serif;}
+
+        .stop-input-box { display: none; background: #FFFBEA; padding: 10px; border-radius: 12px; border: 1px solid #FFC107; margin-bottom: 15px; }
+        .stop-input-box .input-group { background: white; margin-bottom: 5px; }
+        .remove-stop { background:none; border:none; color:var(--danger); font-size:12px; font-weight:bold; cursor:pointer;}
 
         .vehicles-scroll { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 15px; scrollbar-width: none; }
         .vehicles-scroll::-webkit-scrollbar { display: none; }
@@ -167,19 +170,17 @@
                 </div>
                 <div class="address-display" id="dropoff-address">جاري تحديد الموقع...</div>
                 
-                <!-- زرار إضافة نقطة توقف -->
                 <button id="add-stop-btn" class="add-stop-btn" onclick="showStopInput()">➕ إضافة نقطة توقف (اختياري)</button>
                 
-                <!-- خانة نقطة التوقف (مخفية في البداية) -->
-                <div id="stop-input-box" style="display: none; background: #FFFBEA; padding: 10px; border-radius: 12px; border: 1px solid #FFC107; margin-bottom: 15px;">
-                    <div class="input-group" style="background: white; margin-bottom: 5px;">
-                        <input type="text" id="search-stop" placeholder="مكان التوقف..." onkeypress="handleSearch(event, 'stop')">
+                <div id="stop-input-box" class="stop-input-box">
+                    <div class="input-group">
+                        <input type="text" id="search-stop" placeholder="اكتب اسم مكان التوقف..." onkeypress="handleSearch(event, 'stop')">
                         <button class="search-btn" onclick="handleSearch(null, 'stop')">
                             <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                         </button>
                     </div>
-                    <div class="address-display" id="stop-address" style="margin-bottom: 5px;">جاري تحديد الموقع...</div>
-                    <button style="background:none; border:none; color:var(--danger); font-size:12px; font-weight:bold; cursor:pointer;" onclick="removeStopInput()">❌ إزالة نقطة التوقف</button>
+                    <div class="address-display" id="stop-address" style="margin-bottom: 5px; color: #856404;">اكتب اسم المكان واضغط بحث</div>
+                    <button class="remove-stop" onclick="removeStopInput()">❌ إزالة نقطة التوقف</button>
                 </div>
 
                 <button class="btn-main" style="margin-top: 10px;" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
@@ -294,22 +295,23 @@
             } catch (e) { return "موقع محدد"; }
         }
 
+        // التحديث التلقائي للعنوان بيتحرك بس لما يكون في وضع الانطلاق أو الوصول. التوقف بيتحدد بالبحث بس عشان ميبوظش الدنيا.
         map.on('moveend', function() {
             clearTimeout(moveEndTimeout);
             moveEndTimeout = setTimeout(async () => {
                 if (currentStep === 'ride' || currentStep === 'vehicle') return; 
                 const center = map.getCenter(); 
-                let addressTextId = ''; let inputId = '';
                 
-                if (currentStep === 'pickup') { addressTextId = 'pickup-address'; inputId = 'search-pickup'; }
-                else if (currentStep === 'dropoff') { addressTextId = 'dropoff-address'; inputId = 'search-dropoff'; }
-                else if (currentStep === 'stop') { addressTextId = 'stop-address'; inputId = 'search-stop'; }
-
-                if(document.getElementById(addressTextId)) {
-                    document.getElementById(addressTextId).innerText = "جاري تحديد الشارع...";
+                if (currentStep === 'pickup') {
+                    document.getElementById('pickup-address').innerText = "جاري تحديد الشارع...";
                     const address = await getAddress(center.lat, center.lng); 
-                    document.getElementById(addressTextId).innerText = address;
-                    if (document.activeElement !== document.getElementById(inputId)) { document.getElementById(inputId).value = address; }
+                    document.getElementById('pickup-address').innerText = address;
+                    if (document.activeElement !== document.getElementById('search-pickup')) { document.getElementById('search-pickup').value = address; }
+                } else if (currentStep === 'dropoff') {
+                    document.getElementById('dropoff-address').innerText = "جاري تحديد الشارع...";
+                    const address = await getAddress(center.lat, center.lng); 
+                    document.getElementById('dropoff-address').innerText = address;
+                    if (document.activeElement !== document.getElementById('search-dropoff')) { document.getElementById('search-dropoff').value = address; }
                 }
             }, 600);
         });
@@ -328,24 +330,20 @@
                     const lat = parseFloat(data[0].lat); const lon = parseFloat(data[0].lon);
                     map.flyTo([lat, lon], 16); 
                     
-                    // لو بحث عن نقطة توقف، نحط الماركر الأصفر
                     if (type === 'stop') {
                         stopPoint = [lat, lon];
                         if (stopMarker) map.removeLayer(stopMarker);
                         stopMarker = L.marker(stopPoint, {icon: yellowIcon}).addTo(map);
                         document.getElementById('stop-address').innerText = query;
-                    } else if (type === 'dropoff') {
-                        dropoffPoint = [lat, lon];
+                        document.getElementById('stop-address').style.color = "#28A745";
                     }
-                } else { alert('لم يتم العثور على المكان، جرب تكتب اسم تاني.'); }
+                } else { alert('لم يتم العثور على المكان، جرب تكتب اسم تاني.'); } 
             } catch (e) { alert('حدث خطأ في البحث، تأكد من الإنترنت.'); } 
         }
 
         function showStopInput() {
             document.getElementById('add-stop-btn').style.display = 'none';
             document.getElementById('stop-input-box').style.display = 'block';
-            currentStep = 'stop'; // بنحول الدبوس عشان يدور على التوقف
-            document.querySelector('.pin-icon path').setAttribute('fill', '#FFC107');
         }
 
         function removeStopInput() {
@@ -353,8 +351,9 @@
             document.getElementById('stop-input-box').style.display = 'none';
             stopPoint = null;
             if (stopMarker) { map.removeLayer(stopMarker); stopMarker = null; }
-            currentStep = 'dropoff';
-            document.querySelector('.pin-icon path').setAttribute('fill', '#E53935');
+            document.getElementById('search-stop').value = "";
+            document.getElementById('stop-address').innerText = "اكتب اسم المكان واضغط بحث";
+            document.getElementById('stop-address').style.color = "#856404";
         }
 
         function startTracking() {
@@ -415,7 +414,6 @@
         async function drawRoute() {
             if (!pickupPoint || !dropoffPoint) return; if (routeLine) { map.removeLayer(routeLine); }
             
-            // بناء اللينك لو في نقطة توقف أو لأ
             let coords = `${pickupPoint[1]},${pickupPoint[0]}`;
             if (stopPoint) coords += `;${stopPoint[1]},${stopPoint[0]}`;
             coords += `;${dropoffPoint[1]},${dropoffPoint[0]}`;
@@ -466,8 +464,8 @@
                     distance: currentDistance, price: currentPrice, 
                     dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], 
                     pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], 
-                    stop_lat: stopPoint ? stopPoint[0] : null, // ضفنا نقطة التوقف
-                    stop_lng: stopPoint ? stopPoint[1] : null, // ضفنا نقطة التوقف
+                    stop_lat: stopPoint ? stopPoint[0] : null, 
+                    stop_lng: stopPoint ? stopPoint[1] : null, 
                     status: 'pending', rider_name: user.name, rider_phone: user.phone, pin_code: generatedPin 
                 }]).select();
                 if (error) throw error; 
