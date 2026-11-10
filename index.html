@@ -236,11 +236,9 @@
             if (!error) { alert('تم إلغاء الطلب.'); location.reload(); }
         }
 
-        // استماع الراكب للتحديثات (قبول الكابتن، ووصول الكابتن)
         supabaseClient.channel('rider-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
             if (currentRideId && payload.new.id === currentRideId) {
                 
-                // الكابتن قبل
                 if (payload.new.status === 'accepted') {
                     document.getElementById('request-btn').innerText = 'تم قبول الطلب'; document.getElementById('request-btn').style.backgroundColor = '#6c757d';
                     document.getElementById('cancel-btn').style.display = 'none'; 
@@ -249,17 +247,14 @@
                     document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
                 }
 
-                // ** التعديل الجديد: الكابتن وصل **
                 if (payload.new.driver_arrived_at) {
                     document.getElementById('driver-eta-text').innerText = "🚨 الكابتن وصل وهو في انتظارك!";
                     document.getElementById('driver-eta-text').style.backgroundColor = "#ffebee";
                     document.getElementById('driver-eta-text').style.color = "#dc3545";
                 }
 
-                // تتبع العربية
                 if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') { updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng); }
 
-                // انتهت الرحلة
                 if (payload.new.status === 'completed') {
                     document.getElementById('driver-details').style.display = 'none';
                     document.getElementById('request-btn').innerText = 'وصلت بالسلامة!'; document.getElementById('request-btn').style.backgroundColor = '#1A237E'; document.getElementById('request-btn').disabled = true;
@@ -269,7 +264,6 @@
                     if(driverCarMarker) { map.removeLayer(driverCarMarker); driverCarMarker = null; }
                 }
 
-                // الكابتن لغى
                 if (payload.new.status === 'cancelled') { alert('تم إلغاء الرحلة من قبل الكابتن.'); location.reload(); }
             }
         }).subscribe();
@@ -285,7 +279,12 @@
                 const url = `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${pickupPoint[1]},${pickupPoint[0]}?overview=false`;
                 try {
                     const response = await fetch(url); const data = await response.json();
-                    if (data.code === 'Ok' && data.routes.length > 0) { const roadDist = (data.routes[0].distance / 1000).toFixed(1); const roadTime = Math.round(data.routes[0].duration / 60); document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${roadDist} كم (تقريباً ${roadTime} دقيقة)`; } else { throw new Error(); }
+                    if (data.code === 'Ok' && data.routes.length > 0) { 
+                        const roadDist = (data.routes[0].distance / 1000).toFixed(1); 
+                        // ** هنا معامل تصحيح الوقت للراكب **
+                        const roadTime = Math.round((data.routes[0].duration / 60) * 2.5) + 1; 
+                        document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${roadDist} كم (تقريباً ${roadTime} دقيقة)`; 
+                    } else { throw new Error(); }
                 } catch (e) { const dist = map.distance([dLat, dLng], [pickupPoint[0], pickupPoint[1]]) / 1000; const eta = Math.round((dist / 30) * 60); document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${dist.toFixed(1)} كم (تقريباً ${eta} دقيقة)`; }
             }
         }
