@@ -44,12 +44,11 @@
 
         #map { flex-grow: 1; width: 100%; height: 100vh; z-index: 1; background-color: #05070a; }
         
-        /* فلاتر الخريطة */
         .dark-tiles { filter: brightness(0.65) invert(1) contrast(1.3) hue-rotate(200deg) saturate(0.4); }
         .light-tiles { filter: none; }
 
-        /* دبوس التحديد */
-        .center-pin { position: absolute; top: 27%; left: 50%; transform: translate(-50%, -100%); z-index: 2000; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
+        /* الدبوس في المنتصف البصري (30%) */
+        .center-pin { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -100%); z-index: 2000; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
         .pin-label { background: var(--card-bg); color: var(--primary); border: 1px solid var(--primary); padding: 4px 12px; border-radius: 14px; font-size: 11px; font-weight: 700; margin-bottom: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); white-space: nowrap; }
         .pin-icon { width: 42px; height: 42px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4)); animation: float-pin 2s ease-in-out infinite; }
         @keyframes float-pin { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -61,9 +60,7 @@
         
         .input-group { display: flex; align-items: center; background: var(--bg-color); border: 1px solid var(--card-border); border-radius: 14px; margin-bottom: 10px; padding: 3px 4px 3px 10px; }
         .input-group:focus-within { border-color: var(--primary); }
-        .input-group input { 
-            flex-grow: 1; background: transparent !important; border: none; padding: 10px; color: var(--text-main) !important; font-size: 14px; outline: none; font-weight: 600; -webkit-text-fill-color: var(--text-main); -webkit-box-shadow: 0 0 0px 1000px var(--bg-color) inset !important; transition: background-color 5000s ease-in-out 0s;
-        }
+        .input-group input { flex-grow: 1; background: transparent !important; border: none; padding: 10px; color: var(--text-main) !important; font-size: 14px; outline: none; font-weight: 600; -webkit-text-fill-color: var(--text-main); -webkit-box-shadow: 0 0 0px 1000px var(--bg-color) inset !important; transition: background-color 5000s ease-in-out 0s; }
         
         .search-btn { background: var(--card-border); color: var(--text-main); border: none; padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; }
 
@@ -108,8 +105,7 @@
         </div>
     </div>
 
-    <!-- زرار موقعي الآن -->
-    <div class="nav-btn location-btn" onclick="goToMyLocation()" title="موقعي">
+    <div class="nav-btn location-btn" onclick="goToMyLocation()" title="موقعي الآن">
         <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
     </div>
 
@@ -129,7 +125,7 @@
         <div id="ui-pickup">
             <h2 class="title"><span style="color: #22c55e;">🟢</span> من أين تبدأ رحلتك؟</h2>
             <div class="input-group">
-                <input type="text" id="search-pickup" placeholder="ابحث عن مكان الانطلاق (مثال: المعادي)..." autocomplete="off" onkeypress="handleSearch(event, 'pickup')">
+                <input type="text" id="search-pickup" placeholder="ابحث عن مكان الانطلاق..." autocomplete="off" onkeypress="handleSearch(event, 'pickup')">
                 <button class="search-btn" onclick="handleSearch(null, 'pickup')">بحث</button>
             </div>
             <div class="route-summary-box">
@@ -146,7 +142,7 @@
                 <div class="route-step"><div class="dot-icon dot-green"></div><span>من: <b id="confirmed-pickup-text" style="color: var(--text-main);">...</b></span></div>
             </div>
             <div class="input-group">
-                <input type="text" id="search-dropoff" placeholder="اكتب وجهتك (مثال: حلوان، التجمع)..." autocomplete="off" onkeypress="handleSearch(event, 'dropoff')">
+                <input type="text" id="search-dropoff" placeholder="اكتب وجهتك..." autocomplete="off" onkeypress="handleSearch(event, 'dropoff')">
                 <button class="search-btn" onclick="handleSearch(null, 'dropoff')">بحث</button>
             </div>
             <div class="route-summary-box" style="margin-bottom: 8px;">
@@ -218,7 +214,6 @@
         let tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
         let isDark = true;
-        // تفعيل الفلتر الداكن مبدئياً
         document.getElementById('map').classList.add('dark-tiles');
 
         function toggleTheme() {
@@ -241,7 +236,6 @@
                 badgeText.textContent = 'النهاري';
             }
             
-            // تحديث لون خط السير لو كان موجود
             if (routeLine) {
                 routeLine.setStyle({ color: isDark ? '#00f2fe' : '#0284c7' });
             }
@@ -252,17 +246,31 @@
         var currentStep = 'pickup', selectedVehicleType = 'car'; 
         var routeLine = null, startMarker = null, destMarker = null, userMarker = null, moveEndTimeout;
 
-        // تحديد موقع الراكب
+        // دالة الذهاب للموقع الحالي مع تظبيط الإزاحة عشان الدبوس يبقى على الموقع
         function goToMyLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
                     const lat = pos.coords.latitude, lng = pos.coords.longitude;
-                    map.flyTo([lat, lng], 16);
+                    
+                    // رسم النقطة الخضراء في مكانها الحقيقي
                     if (!userMarker) {
                         userMarker = L.circleMarker([lat, lng], { radius: 9, fillColor: "#22c55e", color: "#ffffff", weight: 3, opacity: 1, fillOpacity: 1 }).addTo(map);
                     } else {
                         userMarker.setLatLng([lat, lng]);
                     }
+
+                    // حساب حركة الخريطة عشان النقطة الخضراء تقع تحت الدبوس (30%)
+                    const targetZoom = 16;
+                    const targetPoint = map.project([lat, lng], targetZoom);
+                    const offsetPixels = (0.5 - 0.30) * map.getSize().y; 
+                    const newCenterPoint = L.point(targetPoint.x, targetPoint.y + offsetPixels);
+                    const newCenterLatLng = map.unproject(newCenterPoint, targetZoom);
+
+                    map.flyTo(newCenterLatLng, targetZoom, { animate: true, duration: 1.5 });
+
+                    // تحديث العنوان بعد ما الخريطة تتحرك
+                    setTimeout(() => { map.fire('moveend'); }, 1600);
+
                 }, () => { alert("تأكد من تشغيل GPS"); }, { enableHighAccuracy: true });
             }
         }
@@ -277,12 +285,12 @@
             } catch (e) { return "موقع محدد على الخريطة"; }
         }
 
-        // التحديث الذكي بناءً على مكان الدبوس
         map.on('moveend', function() {
             clearTimeout(moveEndTimeout);
             moveEndTimeout = setTimeout(async () => {
                 if (currentStep === 'pickup' || currentStep === 'dropoff') {
-                    const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.27]);
+                    // قراءة الإحداثيات من تحت الدبوس بالظبط (30%)
+                    const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.30]);
                     
                     if (currentStep === 'pickup') {
                         document.getElementById('pickup-address').innerText = "جاري تحديد الشارع...";
@@ -316,10 +324,10 @@
                 if (data && data.length > 0) {
                     const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
                     
-                    // السر هنا: حساب إزاحة الخريطة بحيث الدبوس (27%) يقف على المكان
+                    // تحريك الخريطة بحيث المكان المبحوث عنه يقع تحت الدبوس (30%)
                     const targetZoom = 16;
                     const targetPoint = map.project([lat, lon], targetZoom);
-                    const offsetPixels = (0.5 - 0.27) * map.getSize().y; 
+                    const offsetPixels = (0.5 - 0.30) * map.getSize().y; 
                     const newCenterPoint = L.point(targetPoint.x, targetPoint.y + offsetPixels);
                     const newCenterLatLng = map.unproject(newCenterPoint, targetZoom);
                     
@@ -330,7 +338,7 @@
         }
 
         function confirmPickup() {
-            const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.27]);
+            const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.30]);
             if (!pickupPoint) pickupPoint = [center.lat, center.lng];
             if (startMarker) map.removeLayer(startMarker);
             startMarker = L.marker(pickupPoint, {icon: L.divIcon({ html: `<div style="width: 18px; height: 18px; background: #22c55e; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px #22c55e;"></div>`, iconSize: [18,18], iconAnchor: [9,9] })}).addTo(map);
@@ -365,7 +373,7 @@
         }
 
         async function confirmDropoff() {
-            const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.27]);
+            const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.30]);
             if (!dropoffPoint) dropoffPoint = [center.lat, center.lng];
             currentStep = 'vehicle';
 
@@ -399,7 +407,6 @@
                 routeLine = L.polyline([pickupPoint, dropoffPoint], {color: isDark ? '#00f2fe' : '#0284c7', weight: 6, opacity: 0.95}).addTo(map);
             }
 
-            // عمل مساحة تحت عشان المسار يبان فوق الشاشة السفلية
             map.fitBounds(routeLine.getBounds(), { 
                 paddingTopLeft: [40, 40], 
                 paddingBottomRight: [40, window.innerHeight * 0.65] 
