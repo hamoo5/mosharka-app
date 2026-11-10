@@ -34,6 +34,10 @@
             --card-bg: #2d2d2d;
         }
 
+        body.dark-mode .leaflet-tile-pane {
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.5s; }
         
@@ -67,14 +71,10 @@
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'driver') { window.location.href = 'login.html'; }
 
-        // كود الوضع الليلي والنهاري
         function applyTheme() {
             const hour = new Date().getHours();
-            if (hour >= 18 || hour < 6) { // من 6 مساءً لـ 6 صباحاً
-                document.body.classList.add('dark-mode');
-            } else {
-                document.body.classList.remove('dark-mode');
-            }
+            if (hour >= 18 || hour < 6) { document.body.classList.add('dark-mode'); } 
+            else { document.body.classList.remove('dark-mode'); }
         }
         applyTheme();
         setInterval(applyTheme, 60000);
@@ -119,17 +119,7 @@
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
 
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
-        
-        // كود الخريطة الديناميكية (نهاري / ليلي)
-        function getMapUrl() {
-            const hour = new Date().getHours();
-            if (hour >= 18 || hour < 6) {
-                return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'; // خريطة ليلية
-            } else {
-                return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'; // خريطة نهارية شيك
-            }
-        }
-        L.tileLayer(getMapUrl(), { maxZoom: 19, attribution: '© OpenStreetMap © CARTO' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
         var currentActiveRideId = null;
         var driverMarker = null;
@@ -199,9 +189,7 @@
                         driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
                     }
                     
-                    if (isFollowingUser && !currentActiveRideId) { 
-                        panToDriverWithOffset(lat, lng);
-                    }
+                    if (isFollowingUser && !currentActiveRideId) { panToDriverWithOffset(lat, lng); }
                     
                     if(currentActiveRideId && liveLocationInterval === null) {
                         liveLocationInterval = setInterval(() => {
@@ -254,9 +242,7 @@
 
                             if (pendingRouteLine) map.removeLayer(pendingRouteLine);
                             pendingRouteLine = L.geoJSON(routeData.routes[0].geometry, { style: { color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10' } }).addTo(map);
-                        } else {
-                            throw new Error("No route");
-                        }
+                        } else { throw new Error("No route"); }
 
                         container.innerHTML = `
                             <div class="ride-card">
@@ -282,11 +268,9 @@
                     
                     if (!riderMarker) {
                         riderMarker = L.marker([closestRide.pickup_lat, closestRide.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
-                        
                         let bounds = L.latLngBounds([]);
                         if(driverMarker) bounds.extend(driverMarker.getLatLng());
                         bounds.extend([closestRide.pickup_lat, closestRide.pickup_lng]);
-                        
                         map.flyToBounds(bounds, { paddingTopLeft: [40, 50], paddingBottomRight: [40, 300], maxZoom: 16 });
                     }
                 } else {
@@ -320,7 +304,6 @@
             document.getElementById('link-dest').href = `https://www.google.com/maps?q=${dLat},${dLng}`;
             
             if(riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
-            
             drawRouteToRider(pLat, pLng);
         }
 
@@ -335,9 +318,7 @@
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const route = data.routes[0];
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#28a745', weight: 6, opacity: 0.8 } }).addTo(map);
-                    
                     map.fitBounds(routeLine.getBounds(), mapPadding);
-                    
                     document.getElementById('driver-to-rider-distance').innerText = (route.distance / 1000).toFixed(2);
                     document.getElementById('driver-to-rider-time').innerText = Math.round(route.duration / 60);
                 }
