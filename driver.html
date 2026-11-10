@@ -62,12 +62,18 @@
         .close-btn { background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
         .profile-info { background: var(--input-bg); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border-color); }
         .profile-info p { margin-bottom: 5px; }
-        .earnings-box { background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 18px; border: 1px solid #c8e6c9;}
+        .earnings-box { background: rgba(40, 167, 69, 0.1); color: #2e7d32; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 18px; border: 1px solid rgba(40, 167, 69, 0.3);}
         .history-list { overflow-y: auto; flex-grow: 1; }
         .history-item { border-bottom: 1px solid var(--border-color); padding: 10px 0; }
         .history-item:last-child { border-bottom: none; }
         .history-item .price { color: #28a745; font-weight: bold; }
         .history-item .date { font-size: 12px; color: #888; }
+
+        /* نافذة التقييم */
+        #rating-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; justify-content: center; align-items: center; }
+        .rating-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
+        .stars { font-size: 40px; color: #ddd; cursor: pointer; margin: 15px 0; }
+        .stars .active { color: #ffc107; }
     </style>
 </head>
 <body>
@@ -105,6 +111,22 @@
             <div class="history-list" id="history-list">
                 <p style="text-align:center;">جاري التحميل...</p>
             </div>
+        </div>
+    </div>
+
+    <!-- نافذة التقييم للكابتن -->
+    <div id="rating-modal">
+        <div class="rating-content">
+            <h3>قيّم الراكب</h3>
+            <p>كيف كانت تجربتك مع <b id="rate-rider-name"></b>؟</p>
+            <div class="stars" id="star-container">
+                <span onclick="setRating(1)">★</span>
+                <span onclick="setRating(2)">★</span>
+                <span onclick="setRating(3)">★</span>
+                <span onclick="setRating(4)">★</span>
+                <span onclick="setRating(5)">★</span>
+            </div>
+            <button class="btn-action" style="background-color:#2196f3;" onclick="submitRating()">إرسال التقييم</button>
         </div>
     </div>
 
@@ -287,7 +309,7 @@
                                     <a href="https://www.google.com/maps?q=${closestRide.pickup_lat},${closestRide.pickup_lng}" target="_blank">📍 مكان الراكب</a>
                                     <a href="https://www.google.com/maps?q=${closestRide.dest_lat},${closestRide.dest_lng}" target="_blank">🏁 الوجهة</a>
                                 </div>
-                                <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng})">قبول المشوار</button>
+                                <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button>
                             </div>`;
                     } catch(e) {
                         container.innerHTML = `
@@ -295,7 +317,7 @@
                                 <h3>راكب يطلب توصيل</h3>
                                 <p class="distance-to-rider">🚗 يبعد عنك: ${minDistance.toFixed(1)} كم</p>
                                 <p class="price">السعر: ${closestRide.price} جنيه</p>
-                                <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng})">قبول المشوار</button>
+                                <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button>
                             </div>`;
                     }
                     
@@ -324,10 +346,11 @@
             }
         }
 
-        async function acceptRide(rideId, pLat, pLng, dLat, dLng) {
+        async function acceptRide(rideId, pLat, pLng, dLat, dLng, rName) {
             const { error } = await supabaseClient.from('rides').update({ status: 'accepted', driver_name: user.name, driver_phone: user.phone }).eq('id', rideId);
             if (error) { alert('حدث خطأ.'); return; }
             currentActiveRideId = rideId;
+            currentRiderName = rName;
             
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
             
@@ -363,7 +386,6 @@
             if (!confirm('هل وصلت بالراكب للوجهة؟')) return;
             const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', currentActiveRideId);
             if (!error) {
-                currentActiveRideId = null;
                 clearInterval(liveLocationInterval); 
                 liveLocationInterval = null;
                 document.getElementById('active-ride-ui').style.display = 'none';
@@ -372,6 +394,10 @@
                 if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
                 isFollowingUser = true;
                 fetchPendingRide();
+                
+                // إظهار نافذة التقييم
+                document.getElementById('rating-modal').style.display = 'flex';
+                document.getElementById('rate-rider-name').innerText = currentRiderName || 'الراكب';
             }
         }
 
@@ -397,13 +423,7 @@
             const listContainer = document.getElementById('history-list');
             listContainer.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
 
-            // جلب الرحلات المكتملة للكابتن
-            const { data, error } = await supabaseClient
-                .from('rides')
-                .select('*')
-                .eq('driver_phone', user.phone)
-                .eq('status', 'completed')
-                .order('created_at', { ascending: false });
+            const { data, error } = await supabaseClient.from('rides').select('*').eq('driver_phone', user.phone).eq('status', 'completed').order('created_at', { ascending: false });
 
             if (error || !data || data.length === 0) {
                 listContainer.innerHTML = '<p style="text-align:center; color:#888;">لا يوجد مشاوير مكتملة.</p>';
@@ -411,19 +431,19 @@
                 return;
             }
 
-            // حساب إجمالي الأرباح
             let totalEarnings = 0;
             listContainer.innerHTML = '';
             
             data.forEach(ride => {
                 totalEarnings += Number(ride.price);
                 const date = new Date(ride.created_at).toLocaleDateString('ar-EG');
+                let ratingText = ride.rating_by_driver ? `تقييمك للراكب: ${'★'.repeat(ride.rating_by_driver)}` : 'لم يتم التقييم';
                 
                 listContainer.innerHTML += `
                     <div class="history-item">
                         <p>راكب: ${ride.rider_name || 'غير معروف'} | مسافة: ${ride.distance} كم</p>
                         <p class="price">+ ${ride.price} جنيه</p>
-                        <p class="date">${date}</p>
+                        <p class="date">${date} | ${ratingText}</p>
                     </div>
                 `;
             });
@@ -432,6 +452,31 @@
         }
 
         function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
+
+        // دوال تقييم الكابتن للراكب
+        let selectedRating = 5;
+        let currentRiderName = "";
+        
+        function setRating(rating) {
+            selectedRating = rating;
+            const stars = document.querySelectorAll('#star-container span');
+            stars.forEach((star, index) => {
+                if (index < rating) star.classList.add('active');
+                else star.classList.remove('active');
+            });
+        }
+
+        async function submitRating() {
+            if (!currentActiveRideId) return;
+            const { error } = await supabaseClient.from('rides').update({ rating_by_driver: selectedRating }).eq('id', currentActiveRideId);
+            if (!error) {
+                alert('شكراً لتقييمك!');
+                document.getElementById('rating-modal').style.display = 'none';
+                currentActiveRideId = null;
+            }
+        }
+        
+        setRating(5); // افتراضي
 
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
             if (!currentActiveRideId) { fetchPendingRide(); }
