@@ -5,72 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>توصيل مشاركة - الكابتن</title>
     <link rel="manifest" href="manifest-driver.json">
-    <meta name="theme-color" content="#1A237E">
+    <meta name="theme-color" content="#FFFFFF">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-        
-        :root {
-            --bg-color: #f0f2f5; --panel-bg: #ffffff; --text-color: #333333;
-            --input-bg: #f8f9fa; --border-color: #dddddd; --header-bg: #1A237E;
-            --header-text: #ffffff; --card-bg: #f8f9fa;
-        }
-        body.dark-mode {
-            --bg-color: #121212; --panel-bg: #1e1e1e; --text-color: #e0e0e0;
-            --input-bg: #2d2d2d; --border-color: #444444; --header-bg: #0d133d;
-            --header-text: #ffffff; --card-bg: #2d2d2d;
-        }
+        :root { --bg-color: #f0f2f5; --panel-bg: #ffffff; --text-color: #333333; --input-bg: #f8f9fa; --border-color: #dddddd; --header-bg: #1A237E; --header-text: #ffffff; --card-bg: #f8f9fa; }
+        body.dark-mode { --bg-color: #121212; --panel-bg: #1e1e1e; --text-color: #e0e0e0; --input-bg: #2d2d2d; --border-color: #444444; --header-bg: #0d133d; --header-text: #ffffff; --card-bg: #2d2d2d; }
         body.dark-mode .leaflet-tile-pane { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.5s; }
-        
         .header { background-color: var(--header-bg); color: var(--header-text); padding: 12px; font-size: 18px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; transition: 0.5s; }
-        
         .header-btn { position: absolute; top: 15px; color: white; padding: 4px 8px; border-radius: 5px; text-decoration: none; font-size: 13px; cursor: pointer; }
         .logout-btn { left: 15px; background-color: #dc3545; }
         .profile-btn { right: 15px; background-color: #2196f3; }
-        
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
-
-        .fab-locate {
-            position: absolute; bottom: 250px; left: 15px; z-index: 1000;
-            background-color: white; color: #1A237E; border: 2px solid #1A237E;
-            width: 45px; height: 45px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer;
-            transition: 0.2s;
-        }
-        .fab-locate:active { background-color: #e3f2fd; transform: scale(0.9); }
-        
+        .fab-locate { position: absolute; bottom: 250px; left: 15px; z-index: 1000; background-color: white; color: #1A237E; border: 2px solid #1A237E; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
         .bottom-panel { background: var(--panel-bg); border-radius: 20px 20px 0 0; padding: 10px 15px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 6px; max-height: 45vh; overflow-y: auto; transition: 0.5s; color: var(--text-color); }
         .instruction-text { font-size: 15px; font-weight: bold; color: var(--text-color); text-align: center; margin-bottom: 2px; }
-        
         .ride-card { background: var(--card-bg); padding: 10px; border-radius: 10px; border-right: 4px solid #FFC107; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.5s; }
         .ride-card h3 { color: var(--text-color); font-size: 15px; margin-bottom: 4px; }
         .ride-card p { color: var(--text-color); font-size: 13px; margin-bottom: 3px; opacity: 0.8; }
         .ride-card .price { color: #28a745; font-weight: bold; font-size: 15px; opacity: 1;}
         .distance-to-rider { color: #007bff; font-weight: bold; background: rgba(0, 123, 255, 0.1); padding: 4px; border-radius: 5px; display: inline-block; margin-bottom: 3px;}
-        
         .action-buttons { display: flex; gap: 10px; margin-top: 8px; }
         .btn-action { padding: 10px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; font-family: 'Cairo', sans-serif; transition: 0.2s; }
         .btn-accept { background-color: #28a745; color: white; flex: 1; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
         .btn-ignore { background-color: #dc3545; color: white; width: 50px; font-size: 20px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
         .btn-finish { background-color: #dc3545; width: 100%; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
         .btn-subscribe { background-color: #ffc107; color: #333; width: 100%; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
-        
         #enable-alerts-btn { background-color: #e91e63; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(233, 30, 99, 0.3); animation: pulse 2s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-
         #subscription-box { display: none; background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 5px; border: 2px solid #dc3545; text-align: center; transition: 0.5s;}
         #subscription-box h3 { color: #dc3545; margin-bottom: 5px; font-size: 15px;}
-        
         .map-links a { display: block; margin: 3px 0; background: var(--input-bg); padding: 5px; border-radius: 5px; text-decoration: none; color: #2196f3; font-weight: bold; font-size: 12px; transition: 0.5s;}
-
         .rider-pin-icon { background-color: #FFC107; border: 2px solid white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 16px; }
-
+        
         #pin-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 4000; justify-content: center; align-items: center; }
         .pin-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
         .pin-content h3 { margin-bottom: 10px; color: #2196f3;}
@@ -80,7 +51,6 @@
         .pin-btns button { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 16px;}
         .pin-cancel { background: #dc3545; color: white; }
         .pin-submit { background: #28a745; color: white; }
-
         #profile-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
@@ -94,7 +64,6 @@
         .history-item:last-child { border-bottom: none; }
         .history-item .price { color: #28a745; font-weight: bold; }
         .history-item .date { font-size: 12px; color: #888; }
-
         #rating-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; justify-content: center; align-items: center; }
         .rating-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
         .stars { font-size: 40px; color: #ddd; cursor: pointer; margin: 15px 0; }
@@ -103,74 +72,25 @@
 </head>
 <body>
     <audio id="notifSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
-
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'driver') { window.location.href = 'login.html'; }
-
-        function applyTheme() {
-            const hour = new Date().getHours();
-            if (hour >= 18 || hour < 6) { document.body.classList.add('dark-mode'); } 
-            else { document.body.classList.remove('dark-mode'); }
-        }
-        applyTheme();
-        setInterval(applyTheme, 60000);
+        function applyTheme() { const hour = new Date().getHours(); if (hour >= 18 || hour < 6) { document.body.classList.add('dark-mode'); } else { document.body.classList.remove('dark-mode'); } }
+        applyTheme(); setInterval(applyTheme, 60000);
     </script>
     
-    <!-- المودالات -->
-    <div id="pin-modal">
-        <div class="pin-content">
-            <h3>بدء الرحلة</h3>
-            <p>برجاء إدخال الرقم السري الذي يظهر عند الراكب:</p>
-            <input type="number" id="pin-input" placeholder="****" maxlength="4">
-            <div class="pin-btns">
-                <button class="pin-cancel" onclick="closePinModal()">إلغاء</button>
-                <button class="pin-submit" onclick="verifyPin()">تأكيد</button>
-            </div>
-        </div>
-    </div>
+    <div id="pin-modal"><div class="pin-content"><h3>بدء الرحلة</h3><p>برجاء إدخال الرقم السري:</p><input type="number" id="pin-input" placeholder="****" maxlength="4"><div class="pin-btns"><button class="pin-cancel" onclick="closePinModal()">إلغاء</button><button class="pin-submit" onclick="verifyPin()">تأكيد</button></div></div></div>
+    <div id="profile-modal"><div class="modal-content"><div class="modal-header"><h3>حسابي (كابتن)</h3><button class="close-btn" onclick="closeProfile()">X</button></div><div class="profile-info"><p><b>الاسم:</b> <span id="p-name"></span></p><p><b>الموبايل:</b> <span id="p-phone"></span></p><p><b>حالة الاشتراك:</b> <span id="p-sub" style="font-weight:bold;"></span></p></div><div class="earnings-box">إجمالي الأرباح: <span id="p-earnings">0</span> جنيه</div><h4>سجل المشاوير المكتملة:</h4><div class="history-list" id="history-list"><p style="text-align:center;">جاري التحميل...</p></div></div></div>
+    <div id="rating-modal"><div class="rating-content"><h3>قيّم الراكب</h3><p>كيف كانت تجربتك مع <b id="rate-rider-name"></b>؟</p><div class="stars" id="star-container"><span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span></div><button class="btn-action btn-accept" style="width:100%;" onclick="submitRating()">إرسال التقييم</button></div></div>
 
-    <div id="profile-modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>حسابي (كابتن)</h3><button class="close-btn" onclick="closeProfile()">X</button></div>
-            <div class="profile-info"><p><b>الاسم:</b> <span id="p-name"></span></p><p><b>الموبايل:</b> <span id="p-phone"></span></p><p><b>حالة الاشتراك:</b> <span id="p-sub" style="font-weight:bold;"></span></p></div>
-            <div class="earnings-box">إجمالي الأرباح: <span id="p-earnings">0</span> جنيه</div>
-            <h4>سجل المشاوير المكتملة:</h4><div class="history-list" id="history-list"><p style="text-align:center;">جاري التحميل...</p></div>
-        </div>
-    </div>
-    <div id="rating-modal">
-        <div class="rating-content">
-            <h3>قيّم الراكب</h3><p>كيف كانت تجربتك مع <b id="rate-rider-name"></b>؟</p>
-            <div class="stars" id="star-container"><span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span></div>
-            <button class="btn-action btn-accept" style="width:100%;" onclick="submitRating()">إرسال التقييم</button>
-        </div>
-    </div>
-
-    <div class="header">
-        توصيل مشاركة - كابتن 
-        <a href="#" onclick="logout()" class="logout-btn header-btn">خروج</a>
-        <a onclick="openProfile()" class="profile-btn header-btn">👤 حسابي</a>
-    </div>
-    
+    <div class="header">توصيل مشاركة - كابتن <a href="#" onclick="logout()" class="logout-btn header-btn">خروج</a><a onclick="openProfile()" class="profile-btn header-btn">👤 حسابي</a></div>
     <div id="map"></div>
     <button class="fab-locate" onclick="centerToMyLocation()">🎯</button>
     <div class="bottom-panel">
         <button id="enable-alerts-btn" onclick="enableAlerts()">🔔 اضغط هنا لتفعيل صوت التنبيهات</button>
-
-        <div id="subscription-box">
-            <h3>عذراً، اشتراكك غير نشط!</h3><p style="font-size:12px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري.</p>
-            <button class="btn-action btn-subscribe" onclick="activateMockSubscription()">تفعيل الاشتراك (تجريبي)</button>
-        </div>
-        
-        <div id="waiting-ui" style="display: none;">
-            <div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div>
-        </div>
-
-        <div id="selected-ride-ui" style="display: none;">
-            <div class="instruction-text">🔔 تفاصيل الطلب</div>
-            <div id="requests-container"></div>
-        </div>
-        
+        <div id="subscription-box"><h3>عذراً، اشتراكك غير نشط!</h3><p style="font-size:12px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري.</p><button class="btn-action btn-subscribe" onclick="activateMockSubscription()">تفعيل الاشتراك (تجريبي)</button></div>
+        <div id="waiting-ui" style="display: none;"><div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div></div>
+        <div id="selected-ride-ui" style="display: none;"><div class="instruction-text">🔔 تفاصيل الطلب</div><div id="requests-container"></div></div>
         <div id="active-ride-ui" style="display: none;">
             <div class="instruction-text" style="color: #28a745;" id="active-ride-title">🚗 أنت في رحلة الآن</div>
             <div class="ride-card" style="border-right-color: #28a745;" id="active-ride-card">
@@ -179,14 +99,11 @@
                 <p id="active-ride-time-text">الوقت المتوقع: <span id="driver-to-rider-time" style="color: #2196f3; font-weight: bold;">...</span> دقيقة</p>
                 <div class="map-links">
                     <a href="#" id="link-rider" target="_blank">📍 فتح مكان الراكب</a>
+                    <a href="#" id="link-stop" style="display:none; background:#fff3cd; color:#856404;" target="_blank">🟡 فتح نقطة التوقف</a>
                     <a href="#" id="link-dest" target="_blank">🏁 فتح الوجهة</a>
                 </div>
             </div>
-            
-            <div id="wait-timer-ui" style="display:none; text-align:center; font-weight:bold; color:#dc3545; font-size:20px; margin: 10px 0; background: #ffebee; padding: 10px; border-radius: 8px;">
-                ⏱️ في انتظار الراكب: <span id="timer-text">00:00</span>
-            </div>
-
+            <div id="wait-timer-ui" style="display:none; text-align:center; font-weight:bold; color:#dc3545; font-size:20px; margin: 10px 0; background: #ffebee; padding: 10px; border-radius: 8px;">⏱️ في انتظار الراكب: <span id="timer-text">00:00</span></div>
             <button id="arrived-btn" class="btn-action btn-accept" style="background-color: #007bff; width:100%;" onclick="arriveAtRider()">📍 وصلت للراكب</button>
             <button id="finish-btn" class="btn-action btn-finish" style="display:none;" onclick="openPinModal()">بدء الرحلة (إدخال الرقم السري)</button>
         </div>
@@ -198,16 +115,7 @@
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
-
-        function enableAlerts() {
-            const audio = document.getElementById('notifSound');
-            audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => console.log(e));
-            if ("Notification" in window) { Notification.requestPermission(); }
-            if (navigator.vibrate) { navigator.vibrate(200); }
-            document.getElementById('enable-alerts-btn').style.display = 'none';
-            localStorage.setItem('alertsEnabled', 'true');
-            alert('تم تفعيل التنبيهات!');
-        }
+        function enableAlerts() { const audio = document.getElementById('notifSound'); audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => console.log(e)); if ("Notification" in window) { Notification.requestPermission(); } if (navigator.vibrate) { navigator.vibrate(200); } document.getElementById('enable-alerts-btn').style.display = 'none'; localStorage.setItem('alertsEnabled', 'true'); alert('تم تفعيل التنبيهات!'); }
         if (localStorage.getItem('alertsEnabled') === 'true') { document.getElementById('enable-alerts-btn').style.display = 'none'; }
 
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
@@ -217,118 +125,43 @@
         var currentPendingRideId = null; 
         var driverMarker = null;
         var currentRiderMarker = null; 
-        var routeLine = null;
-        var destRouteLine = null; 
-        var pendingRouteLine = null; 
-        var isFollowingUser = true;
-        var liveLocationInterval = null; 
-        var isAlertPlaying = false;
-        var lastDriverPos = null;
-        var waitTimer = null; 
-        var waitSeconds = 0;
-        
-        var currentPickupPoint = null; 
-        var currentDestPoint = null; 
-        var currentRiderName = "";
-        var currentRidePin = ""; 
+        var routeLine = null, destRouteLine = null, pendingRouteLine = null, stopMarker = null; 
+        var isFollowingUser = true, liveLocationInterval = null, isAlertPlaying = false, lastDriverPos = null, waitTimer = null, waitSeconds = 0;
+        var currentPickupPoint = null, currentDestPoint = null, currentStopPoint = null; 
+        var currentRiderName = "", currentRidePin = ""; 
         var ignoredRides = []; 
 
         const MAX_DISTANCE_KM = 15; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
-        
         const riderIcon = L.divIcon({ className: 'rider-pin-icon', html: `👤`, iconSize: [30, 30], iconAnchor: [15, 15] });
+        const stopIcon = L.divIcon({ className: 'stop-pin', html: `<div style="width: 20px; height: 20px; background: #FFC107; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [20, 20], iconAnchor: [10, 10] });
 
-        function panToDriverWithOffset(lat, lng) {
-            var targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 120]); 
-            var targetLatLng = map.unproject(targetPoint, map.getZoom());
-            map.panTo(targetLatLng, {animate: true, duration: 1});
-        }
-
+        function panToDriverWithOffset(lat, lng) { var targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 120]); var targetLatLng = map.unproject(targetPoint, map.getZoom()); map.panTo(targetLatLng, {animate: true, duration: 1}); }
         function centerToMyLocation() { isFollowingUser = true; if (driverMarker) { map.flyTo(driverMarker.getLatLng(), 16); } }
+        function playNewOrderAlert() { if (isAlertPlaying) return; isAlertPlaying = true; const audio = document.getElementById('notifSound'); audio.play().catch(e => console.log(e)); if (navigator.vibrate) { navigator.vibrate([500, 200, 500, 200, 500]); } if ("Notification" in window && Notification.permission === "granted") { new Notification("🚗 طلب جديد!", { body: "وصلك طلب جديد، افتح التطبيق للتفاصيل." }); } }
 
-        function playNewOrderAlert() {
-            if (isAlertPlaying) return;
-            isAlertPlaying = true;
-            const audio = document.getElementById('notifSound');
-            audio.play().catch(e => console.log(e));
-            if (navigator.vibrate) { navigator.vibrate([500, 200, 500, 200, 500]); }
-            if ("Notification" in window && Notification.permission === "granted") {
-                new Notification("🚗 طلب جديد!", { body: "وصلك طلب جديد، افتح التطبيق للتفاصيل." });
-            }
-        }
-
-        function checkSubscription() {
-            const now = new Date();
-            const subEnd = user.sub_end_date ? new Date(user.sub_end_date) : null;
-            if (subEnd && subEnd > now) {
-                document.getElementById('subscription-box').style.display = 'none';
-                document.getElementById('waiting-ui').style.display = 'block';
-                startTrackingAndListening();
-            } else {
-                document.getElementById('subscription-box').style.display = 'block';
-                document.getElementById('waiting-ui').style.display = 'none';
-                document.getElementById('selected-ride-ui').style.display = 'none';
-                document.getElementById('active-ride-ui').style.display = 'none';
-            }
-        }
-
-        async function activateMockSubscription() {
-            const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
-            const { error } = await supabaseClient.from('users').update({ sub_end_date: nextMonth.toISOString() }).eq('id', user.id);
-            if (error) { alert('حدث خطأ: ' + error.message); } 
-            else {
-                alert('تم تفعيل الاشتراك بنجاح!');
-                user.sub_end_date = nextMonth.toISOString(); localStorage.setItem('user', JSON.stringify(user));
-                checkSubscription();
-            }
-        }
+        function checkSubscription() { const now = new Date(); const subEnd = user.sub_end_date ? new Date(user.sub_end_date) : null; if (subEnd && subEnd > now) { document.getElementById('subscription-box').style.display = 'none'; document.getElementById('waiting-ui').style.display = 'block'; startTrackingAndListening(); } else { document.getElementById('subscription-box').style.display = 'block'; document.getElementById('waiting-ui').style.display = 'none'; document.getElementById('selected-ride-ui').style.display = 'none'; document.getElementById('active-ride-ui').style.display = 'none'; } }
+        async function activateMockSubscription() { const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1); const { error } = await supabaseClient.from('users').update({ sub_end_date: nextMonth.toISOString() }).eq('id', user.id); if (error) { alert('حدث خطأ: ' + error.message); } else { alert('تم تفعيل الاشتراك بنجاح!'); user.sub_end_date = nextMonth.toISOString(); localStorage.setItem('user', JSON.stringify(user)); checkSubscription(); } }
 
         function startTrackingAndListening() {
             if (navigator.geolocation) {
-                const carIcon = L.divIcon({
-                    className: 'driver-car',
-                    html: `<svg width="45" height="45" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4h14v4z" fill="#1A237E" stroke="white" stroke-width="1"/><circle cx="7.5" cy="14.5" r="1.5" fill="#333"/><circle cx="16.5" cy="14.5" r="1.5" fill="#333"/></svg>`,
-                    iconSize: [45, 45], iconAnchor: [22, 22]
-                });
-
+                const carIcon = L.divIcon({ className: 'driver-car', html: `<svg width="45" height="45" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4h14v4z" fill="#1A237E" stroke="white" stroke-width="1"/><circle cx="7.5" cy="14.5" r="1.5" fill="#333"/><circle cx="16.5" cy="14.5" r="1.5" fill="#333"/></svg>`, iconSize: [45, 45], iconAnchor: [22, 22] });
                 navigator.geolocation.watchPosition(function(position) {
                     const lat = position.coords.latitude; const lng = position.coords.longitude; let heading = position.coords.heading;
                     const newPos = L.latLng(lat, lng);
-                    
                     if (!lastDriverPos || lastDriverPos.distanceTo(newPos) > 2) {
                         lastDriverPos = newPos;
-                        if (driverMarker) {
-                            driverMarker.setLatLng([lat, lng]);
-                            if(heading !== null && !isNaN(heading)) {
-                                const svgElement = driverMarker.getElement().querySelector('svg');
-                                if(svgElement) svgElement.style.transform = `rotate(${heading}deg)`;
-                            }
-                        } else { 
-                            driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map); 
-                            fetchSingleRide(); 
-                        }
-                        
+                        if (driverMarker) { driverMarker.setLatLng([lat, lng]); if(heading !== null && !isNaN(heading)) { const svgElement = driverMarker.getElement().querySelector('svg'); if(svgElement) svgElement.style.transform = `rotate(${heading}deg)`; } } 
+                        else { driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map); fetchSingleRide(); }
                         if (currentActiveRideId && currentPickupPoint && !document.getElementById('finish-btn').innerText.includes('إنهاء')) {
                             const distToPickup = newPos.distanceTo(L.latLng(currentPickupPoint[0], currentPickupPoint[1]));
-                            if (distToPickup <= 150 && document.getElementById('arrived-btn').style.display !== 'none') {
-                                document.getElementById('arrived-btn').innerText = "✅ أنت قريب، اضغط لتأكيد الوصول";
-                                document.getElementById('arrived-btn').style.backgroundColor = "#28a745"; 
-                            } else if (distToPickup > 150 && document.getElementById('arrived-btn').style.display !== 'none') {
-                                document.getElementById('arrived-btn').innerText = "📍 وصلت للراكب (اقترب أولاً)";
-                                document.getElementById('arrived-btn').style.backgroundColor = "#6c757d"; 
-                            }
+                            if (distToPickup <= 150 && document.getElementById('arrived-btn').style.display !== 'none') { document.getElementById('arrived-btn').innerText = "✅ أنت قريب، اضغط لتأكيد الوصول"; document.getElementById('arrived-btn').style.backgroundColor = "#28a745"; } 
+                            else if (distToPickup > 150 && document.getElementById('arrived-btn').style.display !== 'none') { document.getElementById('arrived-btn').innerText = "📍 وصلت للراكب (اقترب أولاً)"; document.getElementById('arrived-btn').style.backgroundColor = "#6c757d"; }
                         }
-
                         if (isFollowingUser && !currentActiveRideId) { panToDriverWithOffset(lat, lng); }
                     }
-                    
                     if(currentActiveRideId && liveLocationInterval === null) {
-                        liveLocationInterval = setInterval(() => {
-                            if(driverMarker) {
-                                const pos = driverMarker.getLatLng();
-                                supabaseClient.from('rides').update({ driver_lat: pos.lat, driver_lng: pos.lng }).eq('id', currentActiveRideId).then();
-                            }
-                        }, 5000);
+                        liveLocationInterval = setInterval(() => { if(driverMarker) { const pos = driverMarker.getLatLng(); supabaseClient.from('rides').update({ driver_lat: pos.lat, driver_lng: pos.lng }).eq('id', currentActiveRideId).then(); } }, 5000);
                     }
                 }, function(error) {}, { enableHighAccuracy: true });
             }
@@ -338,31 +171,19 @@
 
         async function fetchSingleRide() {
             if (currentActiveRideId || !driverMarker || currentPendingRideId) return; 
-            
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending');
             if (error) return;
-
             if (data.length === 0) { showWaitingUI(); return; }
-
-            const dPos = driverMarker.getLatLng();
-            let closestRide = null;
-            let minDistance = Infinity;
-
-            const now = new Date(); // عشان نحسب عمر الطلب
-
+            const dPos = driverMarker.getLatLng(); let closestRide = null; let minDistance = Infinity;
+            const now = new Date(); 
             data.forEach(ride => {
                 if (ignoredRides.includes(ride.id)) return;
-                
-                // ** فلتر الطلبات القديمة (أكتر من 10 دقايق) **
                 const rideAgeMinutes = (now - new Date(ride.created_at)) / 60000;
                 if (rideAgeMinutes > 10) return; 
-
                 const dist = map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000;
                 if (dist < MAX_DISTANCE_KM && dist < minDistance) { minDistance = dist; closestRide = ride; }
             });
-
-            if (closestRide) { displayRide(closestRide, minDistance); } 
-            else { showWaitingUI(); }
+            if (closestRide) { displayRide(closestRide, minDistance); } else { showWaitingUI(); }
         }
 
         function showWaitingUI() {
@@ -372,12 +193,12 @@
             if (currentRiderMarker) { map.removeLayer(currentRiderMarker); currentRiderMarker = null; }
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
             if (destRouteLine) { map.removeLayer(destRouteLine); destRouteLine = null; }
+            if (stopMarker) { map.removeLayer(stopMarker); stopMarker = null; }
         }
 
         async function displayRide(ride, minDistance) {
             currentPendingRideId = ride.id;
             currentRidePin = ride.pin_code; 
-            
             document.getElementById('waiting-ui').style.display = 'none';
             document.getElementById('selected-ride-ui').style.display = 'block';
             const container = document.getElementById('requests-container');
@@ -385,99 +206,48 @@
             if (currentRiderMarker) map.removeLayer(currentRiderMarker);
             currentRiderMarker = L.marker([ride.pickup_lat, ride.pickup_lng], {icon: riderIcon}).addTo(map);
             
+            // عرض نقطة التوقف للكابتن لو موجودة
+            if (ride.stop_lat && ride.stop_lng) {
+                if (stopMarker) map.removeLayer(stopMarker);
+                stopMarker = L.marker([ride.stop_lat, ride.stop_lng], {icon: stopIcon}).addTo(map);
+            }
+
             let bounds = L.latLngBounds([[ride.pickup_lat, ride.pickup_lng], [ride.dest_lat, ride.dest_lng]]);
+            if(ride.stop_lat && ride.stop_lng) bounds.extend([ride.stop_lat, ride.stop_lng]);
             if(driverMarker) bounds.extend(driverMarker.getLatLng());
             map.fitBounds(bounds, mapPadding);
 
-            let roadDist = minDistance.toFixed(1);
-            let roadTime = Math.round((minDistance / 30) * 60) + 1; 
+            let roadDist = minDistance.toFixed(1); let roadTime = Math.round((minDistance / 30) * 60) + 1; 
             
             container.innerHTML = `<div class="ride-card">
                 <h3>راكب يطلب توصيل</h3>
                 <p class="distance-to-rider">🚗 يبعد عنك: ${roadDist} كم (${roadTime} دقيقة)</p>
-                <p>مشوار الراكب: <b>${ride.distance} كم</b></p>
+                <p>مشوار الراكب: <b>${ride.distance} كم</b> ${ride.stop_lat ? '(يوجد نقطة توقف 🟡)' : ''}</p>
                 <p class="price">السعر: ${ride.price} جنيه</p>
                 <div class="action-buttons">
-                    <button class="btn-action btn-accept" id="accept-btn-${ride.id}" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}')">قبول</button>
+                    <button class="btn-action btn-accept" id="accept-btn-${ride.id}" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}', ${ride.stop_lat || null}, ${ride.stop_lng || null})">قبول</button>
                     <button class="btn-action btn-ignore" onclick="ignoreRide(${ride.id})">X</button>
                 </div>
             </div>`;
             playNewOrderAlert();
-
-            try {
-                const urlDest = `https://router.project-osrm.org/route/v1/driving/${ride.pickup_lng},${ride.pickup_lat};${ride.dest_lng},${ride.dest_lat}?overview=full&geometries=geojson`;
-                const responseDest = await fetch(urlDest); const destData = await responseDest.json();
-                if (destData.code === 'Ok' && destData.routes.length > 0) {
-                    if (destRouteLine) map.removeLayer(destRouteLine);
-                    destRouteLine = L.geoJSON(destData.routes[0].geometry, { style: { color: '#9C27B0', weight: 5, opacity: 0.8 } }).addTo(map);
-                }
-            } catch(e) {}
-
-            try {
-                const url = `https://router.project-osrm.org/route/v1/driving/${driverMarker.getLatLng().lng},${driverMarker.getLatLng().lat};${ride.pickup_lng},${ride.pickup_lat}?overview=full&geometries=geojson`;
-                const response = await fetch(url); const routeData = await response.json();
-                if (routeData.code === 'Ok' && routeData.routes.length > 0) {
-                    roadDist = (routeData.routes[0].distance / 1000).toFixed(1); 
-                    roadTime = Math.round((routeData.routes[0].duration / 60) * 2.5) + 1; 
-                    if (pendingRouteLine) map.removeLayer(pendingRouteLine);
-                    pendingRouteLine = L.geoJSON(routeData.routes[0].geometry, { style: { color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10' } }).addTo(map);
-                    
-                    container.innerHTML = `<div class="ride-card">
-                        <h3>راكب يطلب توصيل</h3>
-                        <p class="distance-to-rider">🚗 يبعد عنك: ${roadDist} كم (${roadTime} دقيقة)</p>
-                        <p>مشوار الراكب: <b>${ride.distance} كم</b> (الخط البنفسجي)</p>
-                        <p class="price">السعر: ${ride.price} جنيه</p>
-                        <div class="action-buttons">
-                            <button class="btn-action btn-accept" id="accept-btn-${ride.id}" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}')">قبول</button>
-                            <button class="btn-action btn-ignore" onclick="ignoreRide(${ride.id})">X</button>
-                        </div>
-                    </div>`;
-                }
-            } catch(e) {}
         }
 
         function ignoreRide(rideId) {
-            ignoredRides.push(rideId); 
-            showWaitingUI(); 
-            setTimeout(fetchSingleRide, 1000); 
-
-            setTimeout(() => {
-                const index = ignoredRides.indexOf(rideId);
-                if (index > -1) {
-                    ignoredRides.splice(index, 1); 
-                    if (!currentPendingRideId && !currentActiveRideId) {
-                        fetchSingleRide();
-                    }
-                }
-            }, 30000); // 30 ثانية
+            ignoredRides.push(rideId); showWaitingUI(); setTimeout(fetchSingleRide, 1000); 
+            setTimeout(() => { const index = ignoredRides.indexOf(rideId); if (index > -1) { ignoredRides.splice(index, 1); if (!currentPendingRideId && !currentActiveRideId) { fetchSingleRide(); } } }, 30000); 
         }
 
-        async function acceptRide(rideId, pLat, pLng, dLat, dLng, rName) {
+        async function acceptRide(rideId, pLat, pLng, dLat, dLng, rName, sLat, sLng) {
             const btn = document.getElementById(`accept-btn-${rideId}`);
             if(btn) { btn.innerText = 'جاري القبول...'; btn.disabled = true; }
-
-            const { data: updatedData, error } = await supabaseClient
-                .from('rides')
-                .update({ status: 'accepted', driver_name: user.name, driver_phone: user.phone })
-                .eq('id', rideId)
-                .eq('status', 'pending') 
-                .select();
-
-            if (error) {
-                alert('حدث خطأ في الاتصال.');
-                if(btn) { btn.innerText = 'قبول'; btn.disabled = false; }
-                return;
-            }
-
-            if (!updatedData || updatedData.length === 0) {
-                alert('عذراً، هذا الطلب تم قبوله من كابتن آخر للتو.');
-                ignoreRide(rideId); 
-                return;
-            }
+            const { data: updatedData, error } = await supabaseClient.from('rides').update({ status: 'accepted', driver_name: user.name, driver_phone: user.phone }).eq('id', rideId).eq('status', 'pending').select();
+            if (error) { alert('حدث خطأ في الاتصال.'); if(btn) { btn.innerText = 'قبول'; btn.disabled = false; } return; }
+            if (!updatedData || updatedData.length === 0) { alert('عذراً، هذا الطلب تم قبوله من كابتن آخر للتو.'); ignoreRide(rideId); return; }
 
             currentActiveRideId = rideId; currentRiderName = rName; isAlertPlaying = false; 
             currentPickupPoint = [pLat, pLng]; 
             currentDestPoint = [dLat, dLng]; 
+            currentStopPoint = sLat && sLng ? [sLat, sLng] : null;
             
             if (currentRiderMarker) { map.removeLayer(currentRiderMarker); currentRiderMarker = null; }
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
@@ -497,6 +267,13 @@
             document.getElementById('link-rider').href = `https://www.google.com/maps?q=${pLat},${pLng}`;
             document.getElementById('link-dest').href = `https://www.google.com/maps?q=${dLat},${dLng}`;
             
+            if (currentStopPoint) {
+                document.getElementById('link-stop').style.display = 'block';
+                document.getElementById('link-stop').href = `https://www.google.com/maps?q=${currentStopPoint[0]},${currentStopPoint[1]}`;
+            } else {
+                document.getElementById('link-stop').style.display = 'none';
+            }
+
             if (destRouteLine) { map.removeLayer(destRouteLine); destRouteLine = null; }
             drawRouteToRider(pLat, pLng);
         }
@@ -504,13 +281,6 @@
         async function drawRouteToRider(pLat, pLng) {
             if (!driverMarker) return;
             const startPoint = driverMarker.getLatLng();
-            const distDirect = map.distance(startPoint, [pLat, pLng]) / 1000;
-            if (distDirect < 0.1) {
-                document.getElementById('driver-to-rider-distance').innerText = "0.0";
-                document.getElementById('driver-to-rider-time').innerText = "0";
-                map.flyTo([pLat, pLng], 17);
-                return;
-            }
             const url = `https://router.project-osrm.org/route/v1/driving/${startPoint.lng},${startPoint.lat};${pLng},${pLat}?overview=full&geometries=geojson`;
             if (routeLine) { map.removeLayer(routeLine); }
             try {
@@ -522,107 +292,56 @@
                     document.getElementById('driver-to-rider-distance').innerText = (route.distance / 1000).toFixed(2);
                     document.getElementById('driver-to-rider-time').innerText = Math.round((route.duration / 60) * 2.5) + 1;
                 }
-            } catch (e) {
-                routeLine = L.polyline([startPoint, [pLat, pLng]], { color: '#28a745', weight: 6, opacity: 0.6, dashArray: '10, 10' }).addTo(map);
-                map.fitBounds(routeLine.getBounds(), mapPadding);
-                document.getElementById('driver-to-rider-distance').innerText = distDirect.toFixed(2);
-                document.getElementById('driver-to-rider-time').innerText = Math.round((distDirect / 30) * 60) + 1;
-            }
+            } catch (e) {}
         }
 
         async function arriveAtRider() {
             if (!currentActiveRideId || !currentPickupPoint || !driverMarker) return;
-            
-            const currentPos = driverMarker.getLatLng();
-            const pickupLatLng = L.latLng(currentPickupPoint[0], currentPickupPoint[1]);
-            const distanceInMeters = currentPos.distanceTo(pickupLatLng);
-
-            if (distanceInMeters > 150) {
-                alert(`أنت بعيد عن نقطة الانطلاق بحوالي ${Math.round(distanceInMeters)} متر. برجاء الاقتراب.`);
-                return;
-            }
-            
+            const currentPos = driverMarker.getLatLng(); const pickupLatLng = L.latLng(currentPickupPoint[0], currentPickupPoint[1]); const distanceInMeters = currentPos.distanceTo(pickupLatLng);
+            if (distanceInMeters > 150) { alert(`أنت بعيد عن نقطة الانطلاق بحوالي ${Math.round(distanceInMeters)} متر. برجاء الاقتراب.`); return; }
             const { error } = await supabaseClient.from('rides').update({ driver_arrived_at: new Date().toISOString() }).eq('id', currentActiveRideId);
-            
             if (!error) {
-                document.getElementById('arrived-btn').style.display = 'none';
-                document.getElementById('wait-timer-ui').style.display = 'block';
-                document.getElementById('active-ride-header').innerText = "في انتظار الراكب...";
-                document.getElementById('active-ride-distance-text').style.display = 'none';
-                document.getElementById('active-ride-time-text').style.display = 'none';
-                
+                document.getElementById('arrived-btn').style.display = 'none'; document.getElementById('wait-timer-ui').style.display = 'block';
+                document.getElementById('active-ride-header').innerText = "في انتظار الراكب..."; document.getElementById('active-ride-distance-text').style.display = 'none'; document.getElementById('active-ride-time-text').style.display = 'none';
                 startWaitTimer();
-                
-                document.getElementById('finish-btn').style.display = 'block';
-                document.getElementById('finish-btn').innerText = "بدء الرحلة (إدخال الرقم السري)";
-                document.getElementById('finish-btn').style.backgroundColor = "#28a745"; 
-                document.getElementById('finish-btn').setAttribute('onclick', 'openPinModal()');
+                document.getElementById('finish-btn').style.display = 'block'; document.getElementById('finish-btn').innerText = "بدء الرحلة (إدخال الرقم السري)"; document.getElementById('finish-btn').style.backgroundColor = "#28a745"; document.getElementById('finish-btn').setAttribute('onclick', 'openPinModal()');
             }
         }
 
-        function startWaitTimer() {
-            waitSeconds = 0;
-            clearInterval(waitTimer);
-            waitTimer = setInterval(() => {
-                waitSeconds++;
-                const mins = String(Math.floor(waitSeconds / 60)).padStart(2, '0');
-                const secs = String(waitSeconds % 60).padStart(2, '0');
-                document.getElementById('timer-text').innerText = `${mins}:${secs}`;
-            }, 1000);
-        }
-
-        function openPinModal() {
-            document.getElementById('pin-input').value = "";
-            document.getElementById('pin-modal').style.display = 'flex';
-            document.getElementById('pin-input').focus();
-        }
-
-        function closePinModal() {
-            document.getElementById('pin-modal').style.display = 'none';
-        }
+        function startWaitTimer() { waitSeconds = 0; clearInterval(waitTimer); waitTimer = setInterval(() => { waitSeconds++; const mins = String(Math.floor(waitSeconds / 60)).padStart(2, '0'); const secs = String(waitSeconds % 60).padStart(2, '0'); document.getElementById('timer-text').innerText = `${mins}:${secs}`; }, 1000); }
+        function openPinModal() { document.getElementById('pin-input').value = ""; document.getElementById('pin-modal').style.display = 'flex'; document.getElementById('pin-input').focus(); }
+        function closePinModal() { document.getElementById('pin-modal').style.display = 'none'; }
 
         async function verifyPin() {
             const enteredPin = document.getElementById('pin-input').value.trim();
-            
             if (!enteredPin) { alert('برجاء إدخال الرقم السري.'); return; }
-
             if (enteredPin === currentRidePin) {
-                closePinModal();
-                clearInterval(waitTimer); 
-                document.getElementById('wait-timer-ui').style.display = 'none';
-
+                closePinModal(); clearInterval(waitTimer); document.getElementById('wait-timer-ui').style.display = 'none';
                 const { error } = await supabaseClient.from('rides').update({ ride_started_at: new Date().toISOString() }).eq('id', currentActiveRideId);
-                
                 if (!error) {
-                    document.getElementById('active-ride-header').innerText = "في الطريق إلى الوجهة 🏁";
-                    document.getElementById('active-ride-distance-text').style.display = 'block';
-                    document.getElementById('active-ride-time-text').style.display = 'block';
-                    
-                    const finishBtn = document.getElementById('finish-btn');
-                    finishBtn.innerText = "إنهاء الرحلة (وصلت للوجهة)";
-                    finishBtn.style.backgroundColor = "#dc3545"; 
-                    finishBtn.setAttribute('onclick', 'finishRide()'); 
-                    
+                    document.getElementById('active-ride-header').innerText = "في الطريق إلى الوجهة 🏁"; document.getElementById('active-ride-distance-text').style.display = 'block'; document.getElementById('active-ride-time-text').style.display = 'block';
+                    const finishBtn = document.getElementById('finish-btn'); finishBtn.innerText = "إنهاء الرحلة (وصلت للوجهة)"; finishBtn.style.backgroundColor = "#dc3545"; finishBtn.setAttribute('onclick', 'finishRide()'); 
                     if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-                    if (currentDestPoint) {
-                        drawRouteToDestination(currentDestPoint[0], currentDestPoint[1]);
-                    }
+                    if (currentDestPoint) { drawRouteToDestination(currentDestPoint[0], currentDestPoint[1]); }
                 }
-            } else {
-                alert('الرقم السري غير صحيح. برجاء التأكد من الراكب.');
-            }
+            } else { alert('الرقم السري غير صحيح. برجاء التأكد من الراكب.'); }
         }
 
         async function drawRouteToDestination(dLat, dLng) {
             if (!driverMarker) return;
             const startPoint = driverMarker.getLatLng();
-            const url = `https://router.project-osrm.org/route/v1/driving/${startPoint.lng},${startPoint.lat};${dLng},${dLat}?overview=full&geometries=geojson`;
             
+            // لو في نقطة توقف، بنمر عليها الأول
+            let coords = `${startPoint.lng},${startPoint.lat}`;
+            if (currentStopPoint) coords += `;${currentStopPoint[1]},${currentStopPoint[0]}`;
+            coords += `;${dLng},${dLat}`;
+            
+            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
             try {
                 const response = await fetch(url); const data = await response.json();
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const route = data.routes[0];
-                    routeLine = L.geoJSON(route.geometry, { style: { color: '#9C27B0', weight: 6, opacity: 0.9 } }).addTo(map);
+                    routeLine = L.geoJSON(route.geometry, { style: { color: '#1A237E', weight: 6, opacity: 0.9 } }).addTo(map);
                     map.fitBounds(routeLine.getBounds(), mapPadding);
                     document.getElementById('driver-to-rider-distance').innerText = (route.distance / 1000).toFixed(2);
                     document.getElementById('driver-to-rider-time').innerText = Math.round((route.duration / 60) * 2.5) + 1;
@@ -633,69 +352,29 @@
         async function finishRide() {
             if (!currentActiveRideId) return;
             if (!confirm('هل وصلت بالراكب للوجهة؟')) return;
-            
             const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', currentActiveRideId);
             if (!error) {
-                clearInterval(liveLocationInterval); liveLocationInterval = null;
-                clearInterval(waitTimer); waitTimer = null; 
-                
-                document.getElementById('active-ride-ui').style.display = 'none';
-                if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-                
-                document.getElementById('rating-modal').style.display = 'flex';
-                document.getElementById('rate-rider-name').innerText = currentRiderName || 'الراكب';
+                clearInterval(liveLocationInterval); liveLocationInterval = null; clearInterval(waitTimer); waitTimer = null; 
+                document.getElementById('active-ride-ui').style.display = 'none'; if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+                document.getElementById('rating-modal').style.display = 'flex'; document.getElementById('rate-rider-name').innerText = currentRiderName || 'الراكب';
             }
         }
 
         async function openProfile() { /* كود البروفايل زي ما هو */ }
         function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
-        let selectedRating = 5; 
-        function setRating(rating) { selectedRating = rating; const stars = document.querySelectorAll('#star-container span'); stars.forEach((star, index) => { if (index < rating) star.classList.add('active'); else star.classList.remove('active'); }); }
-        async function submitRating() { 
-            if (!currentActiveRideId) return; 
-            const { error } = await supabaseClient.from('rides').update({ rating_by_driver: selectedRating }).eq('id', currentActiveRideId); 
-            if (!error) { 
-                alert('شكراً لتقييمك!'); 
-                document.getElementById('rating-modal').style.display = 'none'; 
-                currentActiveRideId = null; 
-                isFollowingUser = true;
-                showWaitingUI();
-                fetchSingleRide(); 
-            } 
-        }
+        let selectedRating = 5; function setRating(rating) { selectedRating = rating; const stars = document.querySelectorAll('#star-container span'); stars.forEach((star, index) => { if (index < rating) star.classList.add('active'); else star.classList.remove('active'); }); }
+        async function submitRating() { if (!currentActiveRideId) return; const { error } = await supabaseClient.from('rides').update({ rating_by_driver: selectedRating }).eq('id', currentActiveRideId); if (!error) { alert('شكراً لتقييمك!'); document.getElementById('rating-modal').style.display = 'none'; currentActiveRideId = null; isFollowingUser = true; showWaitingUI(); fetchSingleRide(); } }
         setRating(5);
 
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
-            
-            // 1. لو في طلب أنا شايفه (معلق) وحد تاني قبله
-            if (payload.new && payload.new.status === 'accepted') {
-                if (currentPendingRideId === payload.new.id) {
-                    alert('عذراً، تم قبول هذا الطلب من كابتن آخر.');
-                    currentPendingRideId = null;
-                    showWaitingUI();
-                    fetchSingleRide();
-                }
-            }
-
-            // 2. لو الطلب اتلغى من الراكب
+            if (payload.new && payload.new.status === 'accepted') { if (currentPendingRideId === payload.new.id) { alert('عذراً، تم قبول هذا الطلب من كابتن آخر.'); currentPendingRideId = null; showWaitingUI(); fetchSingleRide(); } }
             if (payload.new && payload.new.status === 'cancelled') {
-                if (currentPendingRideId === payload.new.id) {
-                    currentPendingRideId = null;
-                    showWaitingUI(); 
-                    fetchSingleRide(); 
-                    return;
-                }
+                if (currentPendingRideId === payload.new.id) { currentPendingRideId = null; showWaitingUI(); fetchSingleRide(); return; }
                 if (currentActiveRideId === payload.new.id) {
-                    alert('عذراً، الراكب قام بإلغاء الرحلة.');
-                    currentActiveRideId = null; clearInterval(liveLocationInterval); liveLocationInterval = null; clearInterval(waitTimer); waitTimer = null;
-                    document.getElementById('active-ride-ui').style.display = 'none'; 
-                    if (routeLine) { map.removeLayer(routeLine); routeLine = null; } 
-                    isFollowingUser = true;
-                    showWaitingUI();
-                    fetchSingleRide();
+                    alert('عذراً، الراكب قام بإلغاء الرحلة.'); currentActiveRideId = null; clearInterval(liveLocationInterval); liveLocationInterval = null; clearInterval(waitTimer); waitTimer = null;
+                    document.getElementById('active-ride-ui').style.display = 'none'; if (routeLine) { map.removeLayer(routeLine); routeLine = null; } isFollowingUser = true; showWaitingUI(); fetchSingleRide();
                 }
             }
-            
             if (!currentActiveRideId) { fetchSingleRide(); }
         }).subscribe();
         
