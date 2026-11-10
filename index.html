@@ -84,7 +84,7 @@
     <!-- Map Container -->
     <div id="map"></div>
 
-    <!-- Center Pin (NOW AT 30% FROM TOP TO AVOID BOTTOM SHEET) -->
+    <!-- Center Pin -->
     <div id="centerPin" class="fixed top-[30%] left-1/2 -translate-x-1/2 -translate-y-full z-10 pointer-events-none flex flex-col items-center">
         <div class="pin-bounce flex flex-col items-center">
             <div id="pinLabel" class="bg-gray-900/90 text-amber-400 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-bold shadow-xl mb-1 whitespace-nowrap">
@@ -406,9 +406,8 @@
                 
                 clearTimeout(mapMoveTimeout);
                 mapMoveTimeout = setTimeout(async () => {
-                    // Get the exact pixel coordinates of the pin based on the screen size
                     const size = map.getSize();
-                    const pinPoint = map.containerPointToLatLng([size.x / 2, size.y * 0.30]); // 30% matches the CSS top-[30%]
+                    const pinPoint = map.containerPointToLatLng([size.x / 2, size.y * 0.30]);
                     const lat = pinPoint.lat;
                     const lng = pinPoint.lng;
                     
@@ -425,10 +424,9 @@
                         document.getElementById('dropoffAddressText').innerText = addr;
                         document.getElementById('dropoffInput').value = addr;
                     }
-                }, 600); // 600ms delay to prevent rate-limiting on fast drags
+                }, 600);
             });
 
-            // Get User Location on start
             goToMyLocation();
         }
 
@@ -440,7 +438,6 @@
             if (mode === 'night') mapElement.classList.add('dark-map');
             else mapElement.classList.remove('dark-map');
             
-            // Keep markers on top
             if(pickupMarker) pickupMarker.addTo(map);
             if(dropoffMarker) dropoffMarker.addTo(map);
             if(routePolyline) routePolyline.addTo(map);
@@ -466,7 +463,6 @@
                         if (userLocationMarker) map.removeLayer(userLocationMarker);
                         userLocationMarker = L.circleMarker([lat, lng], { radius: 8, fillColor: '#3b82f6', color: '#ffffff', weight: 3, fillOpacity: 1 }).addTo(map);
                         
-                        // Trigger moveend to get the address
                         setTimeout(() => { map.fire('moveend'); }, 400);
                     },
                     (err) => showToast("تعذر جلب موقعك، تأكد من تشغيل الـ GPS")
@@ -511,7 +507,6 @@
                         stopMarker = L.marker(stopCoords, { icon: icons.stop }).addTo(map);
                         map.flyTo([lat, lon], 16);
                     } else {
-                        // Fly to location, then trigger moveend to update text from the pin
                         map.flyTo([lat, lon], 17, { animate: true, duration: 1.5 });
                     }
                 } else {
@@ -592,17 +587,20 @@
                     routeDistanceKm = parseFloat((route.distance / 1000).toFixed(1));
                     routeDurationMin = Math.ceil(route.duration / 60);
                     
-                    // Pad bottom heavily so route isn't hidden by bottom sheet
+                    // Updated FitBounds to heavily pad the bottom, forcing map to zoom out so route is visible above the sheet.
                     map.fitBounds(routePolyline.getBounds(), { 
-                        paddingTopLeft: [50, 100], 
-                        paddingBottomRight: [50, window.innerHeight * 0.45] 
+                        paddingTopLeft: [30, 50], 
+                        paddingBottomRight: [30, window.innerHeight * 0.65] // Increased to 65% of screen height
                     });
                 } else { throw new Error(); }
             } catch(e) {
                 routePolyline = L.polyline([pickupCoords, dropoffCoords], { color: '#fadb14', weight: 4, dashArray: '8, 8' }).addTo(map);
                 routeDistanceKm = parseFloat((map.distance(pickupCoords, dropoffCoords) / 1000).toFixed(1));
                 routeDurationMin = Math.ceil((routeDistanceKm / 35) * 60);
-                map.fitBounds(routePolyline.getBounds(), { paddingBottomRight: [50, window.innerHeight * 0.45] });
+                map.fitBounds(routePolyline.getBounds(), { 
+                    paddingTopLeft: [30, 50], 
+                    paddingBottomRight: [30, window.innerHeight * 0.65] 
+                });
             }
 
             document.getElementById('routeDistanceText').innerText = routeDistanceKm;
