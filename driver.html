@@ -15,22 +15,36 @@
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; }
-        .logout-btn { position: absolute; left: 15px; top: 18px; background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; }
+        
+        .header { background-color: #1A237E; color: white; padding: 12px; font-size: 18px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; }
+        .logout-btn { position: absolute; left: 15px; top: 15px; background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 5px; text-decoration: none; font-size: 12px; }
+
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
-        .bottom-panel { background: white; border-radius: 20px 20px 0 0; padding: 20px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
-        .instruction-text { font-size: 16px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 5px; }
-        .ride-card { background: #f8f9fa; padding: 15px; border-radius: 10px; border-right: 5px solid #FFC107; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .ride-card h3 { color: #1A237E; font-size: 18px; margin-bottom: 8px; }
-        .ride-card p { color: #555; font-size: 14px; margin-bottom: 5px; }
-        .ride-card .price { color: #28a745; font-weight: bold; font-size: 18px; }
-        .btn-action { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); transition: 0.2s; }
+
+        /* تصغير اللوحة السفلية عشان الخريطة تبان */
+        .bottom-panel {
+            background: white; border-radius: 20px 20px 0 0;
+            padding: 12px 15px; position: absolute; bottom: 0; left: 0; right: 0;
+            z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; gap: 8px; max-height: 40vh; overflow-y: auto;
+        }
+
+        .instruction-text { font-size: 15px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 3px; }
+        
+        .ride-card { background: #f8f9fa; padding: 12px; border-radius: 10px; border-right: 4px solid #FFC107; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .ride-card h3 { color: #1A237E; font-size: 16px; margin-bottom: 5px; }
+        .ride-card p { color: #555; font-size: 14px; margin-bottom: 4px; }
+        .ride-card .price { color: #28a745; font-weight: bold; font-size: 16px; }
+        
+        .btn-action { background-color: #28a745; color: white; padding: 12px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); transition: 0.2s; margin-top: 5px; }
         .btn-action:active { transform: scale(0.98); }
-        .btn-finish { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); margin-top: 10px; }
+        .btn-finish { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
         .btn-subscribe { background-color: #ffc107; color: #333; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
-        #subscription-box { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; border: 2px solid #dc3545; }
-        #subscription-box h3 { color: #dc3545; margin-bottom: 10px; }
-        .map-links a { display: block; margin: 5px 0; background: #e3f2fd; padding: 8px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold; font-size: 14px;}
+
+        #subscription-box { display: none; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; border: 2px solid #dc3545; text-align: center;}
+        #subscription-box h3 { color: #dc3545; margin-bottom: 8px; font-size: 16px;}
+        
+        .map-links a { display: block; margin: 4px 0; background: #e3f2fd; padding: 6px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold; font-size: 13px;}
     </style>
 </head>
 <body>
@@ -38,35 +52,42 @@
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'driver') { window.location.href = 'login.html'; }
     </script>
+    
     <div class="header">لوحة الكابتن <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
+    
     <div id="map"></div>
+    
     <div class="bottom-panel">
         <div id="subscription-box">
             <h3>عذراً، اشتراكك غير نشط!</h3>
-            <p style="font-size:14px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري (مجاناً بدون أي عمولة).</p>
+            <p style="font-size:13px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري.</p>
             <button class="btn-action btn-subscribe" onclick="activateMockSubscription()">تفعيل الاشتراك (تجريبي)</button>
         </div>
+
         <div id="waiting-ui" style="display: none;">
             <div class="instruction-text">⏳ جاري البحث عن طلبات...</div>
-            <p style="text-align:center; font-size:14px; color:#777;">أول ما راكب يطلب، هيظهرلك هنا فوراً.</p>
+            <p style="text-align:center; font-size:13px; color:#777;">أول ما راكب يطلب، هيظهرلك هنا فوراً.</p>
         </div>
+
         <div id="requests-ui" style="display: none;">
             <div class="instruction-text">🔔 وصلك طلب جديد!</div>
             <div id="requests-container"></div>
         </div>
+
         <div id="active-ride-ui" style="display: none;">
             <div class="instruction-text" style="color: #28a745;">🚗 أنت في رحلة الآن</div>
             <div class="ride-card" style="border-right-color: #28a745;">
                 <h3>توجه إلى الراكب</h3>
                 <p>المسافة للراكب: <span id="driver-to-rider-distance">...</span> كم</p>
                 <div class="map-links">
-                    <a href="#" id="link-rider" target="_blank">📍 مكان الراكب</a>
-                    <a href="#" id="link-dest" target="_blank">🏁 الوجهة</a>
+                    <a href="#" id="link-rider" target="_blank">📍 فتح مكان الراكب</a>
+                    <a href="#" id="link-dest" target="_blank">🏁 فتح الوجهة</a>
                 </div>
             </div>
             <button class="btn-action btn-finish" onclick="finishRide()">إنهاء الرحلة (وصلت)</button>
         </div>
     </div>
+
     <script>
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
@@ -82,7 +103,10 @@
         var riderMarker = null;
         var routeLine = null;
         var isFollowingUser = true;
-        var liveLocationInterval = null; // متغير عشان نبعت الموقع كل فترة
+        var liveLocationInterval = null; 
+
+        // إعدادات الزوم عشان نرفع الخريطة فوق اللوحة السفلية
+        const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
 
         function checkSubscription() {
             const now = new Date();
@@ -138,7 +162,6 @@
                     }
                     if (isFollowingUser && !currentActiveRideId) { map.panTo([lat, lng], {animate: true, duration: 1}); }
                     
-                    // لو في رحلة شغالة، بنبعت الموقع للداتابيز كل 5 ثواني
                     if(currentActiveRideId && liveLocationInterval === null) {
                         liveLocationInterval = setInterval(() => {
                             if(driverMarker) {
@@ -172,11 +195,17 @@
                             <a href="https://www.google.com/maps?q=${ride.pickup_lat},${ride.pickup_lng}" target="_blank">📍 مكان الراكب</a>
                             <a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">🏁 الوجهة</a>
                         </div>
-                        <button class="btn-action" style="margin-top:10px;" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng})">قبول المشوار</button>
+                        <button class="btn-action" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng})">قبول المشوار</button>
                     </div>`;
+                
                 if (!riderMarker) {
                     riderMarker = L.marker([ride.pickup_lat, ride.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
-                    map.flyTo([ride.pickup_lat, ride.pickup_lng], 15);
+                    
+                    // الزوم الذكي عشان يشوف مكانه ومكان الراكب مع بعض
+                    let bounds = L.latLngBounds([]);
+                    if(driverMarker) bounds.extend(driverMarker.getLatLng());
+                    bounds.extend([ride.pickup_lat, ride.pickup_lng]);
+                    map.flyToBounds(bounds, mapPadding);
                 }
             } else {
                 if (!currentActiveRideId) {
@@ -195,6 +224,10 @@
             document.getElementById('active-ride-ui').style.display = 'block';
             document.getElementById('link-rider').href = `https://www.google.com/maps?q=${pLat},${pLng}`;
             document.getElementById('link-dest').href = `https://www.google.com/maps?q=${dLat},${dLng}`;
+            
+            // مسح ماركر الراكب القديم عشان نرسم مسار جديد
+            if(riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
+            
             drawRouteToRider(pLat, pLng);
         }
 
@@ -209,7 +242,10 @@
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const route = data.routes[0];
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#28a745', weight: 6, opacity: 0.8 } }).addTo(map);
-                    map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+                    
+                    // ** التعديل المهم هنا: الزوم مع مسافة أمان من تحت **
+                    map.fitBounds(routeLine.getBounds(), mapPadding);
+                    
                     document.getElementById('driver-to-rider-distance').innerText = (route.distance / 1000).toFixed(2);
                 }
             } catch (e) {}
@@ -221,7 +257,7 @@
             const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', currentActiveRideId);
             if (!error) {
                 currentActiveRideId = null;
-                clearInterval(liveLocationInterval); // وقفنا إرسال الموقع
+                clearInterval(liveLocationInterval); 
                 liveLocationInterval = null;
                 document.getElementById('active-ride-ui').style.display = 'none';
                 document.getElementById('waiting-ui').style.display = 'block';
@@ -235,6 +271,7 @@
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
             if (!currentActiveRideId) { fetchPendingRide(); }
         }).subscribe();
+        
         checkSubscription();
     </script>
 </body>
