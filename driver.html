@@ -2,48 +2,101 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>تطبيق مشاركة - الكابتن</title>
     <link rel="manifest" href="manifest-driver.json">
     <meta name="theme-color" content="#1A237E">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-        body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; text-align: center; }
-        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 22px; font-weight: bold; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
-        .profile-box { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: none; }
-        .ride-card { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-bottom: 15px; text-align: right; border-right: 6px solid #FFC107; transition: 0.3s; }
-        .ride-card.accepted { border-right-color: #28a745; background-color: #f0fff4; }
-        .ride-card h3 { margin: 0 0 10px 0; color: #1A237E; }
-        .ride-card p { margin: 8px 0; color: #555; font-size: 16px; }
-        .price { color: #28a745; font-weight: bold; font-size: 20px; }
-        .btn-accept { background-color: #28a745; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
-        .btn-finish { background-color: #dc3545; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; font-family: 'Cairo', sans-serif; }
-        .map-links a { display: block; margin: 5px 0; background: #e3f2fd; padding: 10px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold;}
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; }
         .logout-btn { position: absolute; left: 15px; top: 18px; background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; }
+
+        #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
+
+        .bottom-panel {
+            background: white; border-radius: 20px 20px 0 0;
+            padding: 20px; position: absolute; bottom: 0; left: 0; right: 0;
+            z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto;
+        }
+
+        .instruction-text { font-size: 16px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 5px; }
+        
+        /* كارت الطلب */
+        .ride-card { background: #f8f9fa; padding: 15px; border-radius: 10px; border-right: 5px solid #FFC107; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .ride-card h3 { color: #1A237E; font-size: 18px; margin-bottom: 8px; }
+        .ride-card p { color: #555; font-size: 14px; margin-bottom: 5px; }
+        .ride-card .price { color: #28a745; font-weight: bold; font-size: 18px; }
+        
+        .btn-action { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); transition: 0.2s; }
+        .btn-action:active { transform: scale(0.98); }
+        .btn-finish { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); margin-top: 10px; }
+        .btn-subscribe { background-color: #ffc107; color: #333; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
+
+        #subscription-box { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; border: 2px solid #dc3545; }
+        #subscription-box h3 { color: #dc3545; margin-bottom: 10px; }
+        
+        .map-links a { display: block; margin: 5px 0; background: #e3f2fd; padding: 8px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold; font-size: 14px;}
     </style>
 </head>
 <body>
 
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || user.role !== 'driver') {
-            window.location.href = 'login.html';
-        }
+        if (!user || user.role !== 'driver') { window.location.href = 'login.html'; }
     </script>
 
     <div class="header">
         لوحة الكابتن
         <a href="#" onclick="logout()" class="logout-btn">خروج</a>
     </div>
-    
-    <div class="profile-box" id="profileBox">
-        <input type="hidden" id="driverName">
-        <input type="hidden" id="driverPhone">
-    </div>
 
-    <div id="orders-container">
-        <p>جاري تحميل الطلبات...</p>
+    <div id="map"></div>
+
+    <div class="bottom-panel">
+        
+        <!-- قسم الاشتراك -->
+        <div id="subscription-box">
+            <h3>عذراً، اشتراكك غير نشط!</h3>
+            <p style="font-size:14px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري (مجاناً بدون أي عمولة على مشاويرك).</p>
+            <button class="btn-action btn-subscribe" onclick="activateMockSubscription()">تفعيل الاشتراك (تجريبي)</button>
+        </div>
+
+        <!-- قسم الانتظار -->
+        <div id="waiting-ui" style="display: none;">
+            <div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div>
+            <p style="text-align:center; font-size:14px; color:#777;">أول ما راكب يطلب، هيظهرلك هنا فوراً.</p>
+        </div>
+
+        <!-- قسم الطلبات الجديدة -->
+        <div id="requests-ui" style="display: none;">
+            <div class="instruction-text">🔔 وصلك طلب جديد!</div>
+            <div id="requests-container"></div>
+        </div>
+
+        <!-- قسم الرحلة الحالية -->
+        <div id="active-ride-ui" style="display: none;">
+            <div class="instruction-text" style="color: #28a745;">🚗 أنت في رحلة الآن</div>
+            <div class="ride-card" style="border-right-color: #28a745;">
+                <h3>توجه إلى الراكب</h3>
+                <p>المسافة للراكب: <span id="driver-to-rider-distance">...</span> كم</p>
+                <div class="map-links">
+                    <a href="#" id="link-rider" target="_blank">📍 فتح مكان الراكب في جوجل ماب</a>
+                    <a href="#" id="link-dest" target="_blank">🏁 فتح الوجهة في جوجل ماب</a>
+                </div>
+            </div>
+            <button class="btn-action btn-finish" onclick="finishRide()">إنهاء الرحلة (وصلت)</button>
+        </div>
+
     </div>
 
     <script>
@@ -51,74 +104,211 @@
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        document.getElementById('driverName').value = user.name;
-        document.getElementById('driverPhone').value = user.phone;
+        function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
 
-        function logout() {
-            localStorage.removeItem('user');
-            window.location.href = 'login.html';
+        // 1. إعداد الخريطة
+        var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+
+        var currentActiveRideId = null;
+        var currentRideData = null;
+        var driverMarker = null;
+        var riderMarker = null;
+        var destMarker = null;
+        var routeLine = null;
+        var isFollowingUser = true;
+
+        // 2. فحص الاشتراك
+        function checkSubscription() {
+            const now = new Date();
+            const subEnd = user.sub_end_date ? new Date(user.sub_end_date) : null;
+
+            if (subEnd && subEnd > now) {
+                document.getElementById('subscription-box').style.display = 'none';
+                document.getElementById('waiting-ui').style.display = 'block';
+                startTrackingAndListening();
+            } else {
+                document.getElementById('subscription-box').style.display = 'block';
+                document.getElementById('waiting-ui').style.display = 'none';
+                document.getElementById('requests-ui').style.display = 'none';
+                document.getElementById('active-ride-ui').style.display = 'none';
+            }
         }
 
-        async function fetchOrders() {
-            const { data, error } = await supabaseClient
-                .from('rides')
-                .select('*')
-                .in('status', ['pending', 'accepted'])
-                .order('created_at', { ascending: false });
+        async function activateMockSubscription() {
+            const nextMonth = new Date();
+            nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-            const container = document.getElementById('orders-container');
+            const { error } = await supabaseClient.from('users').update({ sub_end_date: nextMonth.toISOString() }).eq('id', user.id);
+
+            if (error) { alert('حدث خطأ، حاول مرة أخرى'); } else {
+                alert('تم تفعيل الاشتراك بنجاح لمدة شهر!');
+                user.sub_end_date = nextMonth.toISOString();
+                localStorage.setItem('user', JSON.stringify(user));
+                checkSubscription();
+            }
+        }
+
+        // 3. تتبع الكابتن
+        function startTrackingAndListening() {
+            if (navigator.geolocation) {
+                const carIcon = L.divIcon({
+                    className: 'driver-car',
+                    html: `<svg width="35" height="35" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;">
+                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/>
+                           </svg>`,
+                    iconSize: [35, 35],
+                    iconAnchor: [17, 17]
+                });
+
+                navigator.geolocation.watchPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    let heading = position.coords.heading;
+
+                    if (driverMarker) {
+                        driverMarker.setLatLng([lat, lng]);
+                        if(heading !== null && !isNaN(heading)) {
+                            const svgElement = driverMarker.getElement().querySelector('svg');
+                            if(svgElement) svgElement.style.transform = `rotate(${heading}deg)`;
+                        }
+                    } else {
+                        driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
+                    }
+
+                    if (isFollowingUser && !currentActiveRideId) {
+                        map.panTo([lat, lng], {animate: true, duration: 1});
+                    }
+                }, function(error) {}, { enableHighAccuracy: true });
+            }
+
+            fetchPendingRide();
+        }
+
+        map.on('dragstart', function() { isFollowingUser = false; });
+
+        // 4. جلب الطلبات المعلقة
+        async function fetchPendingRide() {
+            const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending').order('created_at', { ascending: false }).limit(1);
+
+            if (error) return;
+
+            const container = document.getElementById('requests-container');
             
-            if (error) { container.innerHTML = '<p>حدث خطأ في جلب البيانات</p>'; return; }
-            if (data.length === 0) { container.innerHTML = '<p style="color:#777;">لا توجد طلبات جديدة حالياً.</p>'; return; }
-
-            container.innerHTML = '';
-            data.forEach(ride => {
-                const pLat = ride.pickup_lat || 0;
-                const pLng = ride.pickup_lng || 0;
-                const isAccepted = ride.status === 'accepted';
-
-                container.innerHTML += `
-                    <div class="ride-card ${isAccepted ? 'accepted' : ''}" id="card-${ride.id}">
-                        <h3>${isAccepted ? 'مشوار جاري 🚗' : 'طلب مشوار جديد'}</h3>
+            if (data && data.length > 0) {
+                // لو في طلب معلق
+                const ride = data[0];
+                document.getElementById('waiting-ui').style.display = 'none';
+                document.getElementById('requests-ui').style.display = 'block';
+                
+                container.innerHTML = `
+                    <div class="ride-card">
+                        <h3>راكب يطلب توصيل</h3>
                         <p>المسافة: <b>${ride.distance} كم</b></p>
                         <p class="price">السعر: ${ride.price} جنيه</p>
-                        
                         <div class="map-links">
-                            <a href="https://www.google.com/maps?q=${pLat},${pLng}" target="_blank">📍 مكان الراكب</a>
-                            <a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">🏁 مكان الوجهة</a>
+                            <a href="https://www.google.com/maps?q=${ride.pickup_lat},${ride.pickup_lng}" target="_blank">📍 مكان الراكب</a>
+                            <a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">🏁 الوجهة</a>
                         </div>
-
-                        ${isAccepted 
-                            ? `<button class="btn-finish" onclick="finishRide(${ride.id})">إنهاء الرحلة</button>` 
-                            : `<button class="btn-accept" onclick="acceptRide(${ride.id})">قبول المشوار</button>`
-                        }
+                        <button class="btn-action" style="margin-top:10px;" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng})">قبول المشوار</button>
                     </div>
                 `;
-            });
+                
+                // حط ماركر على مكان الراكب
+                if (!riderMarker) {
+                    riderMarker = L.marker([ride.pickup_lat, ride.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
+                    map.flyTo([ride.pickup_lat, ride.pickup_lng], 15);
+                }
+
+            } else {
+                // مفيش طلبات
+                if (!currentActiveRideId) {
+                    document.getElementById('waiting-ui').style.display = 'block';
+                    document.getElementById('requests-ui').style.display = 'none';
+                    if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
+                }
+            }
         }
 
-        async function acceptRide(rideId) {
-            const dName = document.getElementById('driverName').value;
-            const dPhone = document.getElementById('driverPhone').value;
+        // 5. قبول المشوار
+        async function acceptRide(rideId, pLat, pLng, dLat, dLng) {
+            const dName = user.name;
+            const dPhone = user.phone;
 
-            const { error } = await supabaseClient
-                .from('rides')
-                .update({ status: 'accepted', driver_name: dName, driver_phone: dPhone })
-                .eq('id', rideId);
+            const { error } = await supabaseClient.from('rides').update({ 
+                status: 'accepted', driver_name: dName, driver_phone: dPhone 
+            }).eq('id', rideId);
 
-            if (error) { alert('حدث خطأ، حاول مرة أخرى.'); }
-            fetchOrders(); 
+            if (error) { alert('حدث خطأ.'); return; }
+
+            currentActiveRideId = rideId;
+            
+            // تحديث الواجهة
+            document.getElementById('requests-ui').style.display = 'none';
+            document.getElementById('active-ride-ui').style.display = 'block';
+
+            // تجهيز لينكات جوجل ماب
+            document.getElementById('link-rider').href = `https://www.google.com/maps?q=${pLat},${pLng}`;
+            document.getElementById('link-dest').href = `https://www.google.com/maps?q=${dLat},${dLng}`;
+
+            // رسم المسار للراكب
+            drawRouteToRider(pLat, pLng);
         }
 
-        async function finishRide(rideId) {
-            if(!confirm('هل أنت متأكد من إنهاء الرحلة؟')) return;
-            const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', rideId);
-            if (error) { alert('حدث خطأ.'); }
-            fetchOrders();
+        // 6. رسم المسار من الكابتن للراكب
+        async function drawRouteToRider(pLat, pLng) {
+            if (!driverMarker) return;
+
+            const startPoint = driverMarker.getLatLng();
+            const url = `https://router.project-osrm.org/route/v1/driving/${startPoint.lng},${startPoint.lat};${pLng},${pLat}?overview=full&geometries=geojson`;
+
+            if (routeLine) { map.removeLayer(routeLine); }
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.code === 'Ok' && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    routeLine = L.geoJSON(route.geometry, { style: { color: '#28a745', weight: 6, opacity: 0.8 } }).addTo(map);
+                    map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+                    
+                    const dist = (route.distance / 1000).toFixed(2);
+                    document.getElementById('driver-to-rider-distance').innerText = dist;
+                }
+            } catch (e) {}
         }
 
-        fetchOrders();
-        supabaseClient.channel('driver-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, () => { fetchOrders(); }).subscribe();
+        // 7. إنهاء الرحلة
+        async function finishRide() {
+            if (!currentActiveRideId) return;
+            if (!confirm('هل وصلت بالراكب للوجهة؟')) return;
+
+            const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', currentActiveRideId);
+
+            if (!error) {
+                currentActiveRideId = null;
+                document.getElementById('active-ride-ui').style.display = 'none';
+                document.getElementById('waiting-ui').style.display = 'block';
+                
+                // تنظيف الخريطة
+                if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
+                if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+                
+                isFollowingUser = true;
+                fetchPendingRide();
+            }
+        }
+
+        // الاستماع لايف لأي طلبات جديدة في الداتا بيز
+        supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
+            if (!currentActiveRideId) {
+                fetchPendingRide();
+            }
+        }).subscribe();
+
+        // تشغيل النظام
+        checkSubscription();
+
     </script>
 </body>
 </html>
