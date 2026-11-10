@@ -31,7 +31,6 @@
 
         .instruction-text { font-size: 16px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 5px; }
         
-        /* كارت الطلب */
         .ride-card { background: #f8f9fa; padding: 15px; border-radius: 10px; border-right: 5px solid #FFC107; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .ride-card h3 { color: #1A237E; font-size: 18px; margin-bottom: 8px; }
         .ride-card p { color: #555; font-size: 14px; margin-bottom: 5px; }
@@ -64,26 +63,22 @@
 
     <div class="bottom-panel">
         
-        <!-- قسم الاشتراك -->
         <div id="subscription-box">
             <h3>عذراً، اشتراكك غير نشط!</h3>
             <p style="font-size:14px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري (مجاناً بدون أي عمولة على مشاويرك).</p>
             <button class="btn-action btn-subscribe" onclick="activateMockSubscription()">تفعيل الاشتراك (تجريبي)</button>
         </div>
 
-        <!-- قسم الانتظار -->
         <div id="waiting-ui" style="display: none;">
             <div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div>
             <p style="text-align:center; font-size:14px; color:#777;">أول ما راكب يطلب، هيظهرلك هنا فوراً.</p>
         </div>
 
-        <!-- قسم الطلبات الجديدة -->
         <div id="requests-ui" style="display: none;">
             <div class="instruction-text">🔔 وصلك طلب جديد!</div>
             <div id="requests-container"></div>
         </div>
 
-        <!-- قسم الرحلة الحالية -->
         <div id="active-ride-ui" style="display: none;">
             <div class="instruction-text" style="color: #28a745;">🚗 أنت في رحلة الآن</div>
             <div class="ride-card" style="border-right-color: #28a745;">
@@ -106,19 +101,15 @@
 
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
 
-        // 1. إعداد الخريطة
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
         var currentActiveRideId = null;
-        var currentRideData = null;
         var driverMarker = null;
         var riderMarker = null;
-        var destMarker = null;
         var routeLine = null;
         var isFollowingUser = true;
 
-        // 2. فحص الاشتراك
         function checkSubscription() {
             const now = new Date();
             const subEnd = user.sub_end_date ? new Date(user.sub_end_date) : null;
@@ -139,9 +130,14 @@
             const nextMonth = new Date();
             nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-            const { error } = await supabaseClient.from('users').update({ sub_end_date: nextMonth.toISOString() }).eq('id', user.id);
+            const { error } = await supabaseClient
+                .from('users')
+                .update({ sub_end_date: nextMonth.toISOString() })
+                .eq('id', user.id);
 
-            if (error) { alert('حدث خطأ، حاول مرة أخرى'); } else {
+            if (error) {
+                alert('حدث خطأ: ' + error.message); 
+            } else {
                 alert('تم تفعيل الاشتراك بنجاح لمدة شهر!');
                 user.sub_end_date = nextMonth.toISOString();
                 localStorage.setItem('user', JSON.stringify(user));
@@ -149,7 +145,6 @@
             }
         }
 
-        // 3. تتبع الكابتن
         function startTrackingAndListening() {
             if (navigator.geolocation) {
                 const carIcon = L.divIcon({
@@ -187,7 +182,6 @@
 
         map.on('dragstart', function() { isFollowingUser = false; });
 
-        // 4. جلب الطلبات المعلقة
         async function fetchPendingRide() {
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending').order('created_at', { ascending: false }).limit(1);
 
@@ -196,7 +190,6 @@
             const container = document.getElementById('requests-container');
             
             if (data && data.length > 0) {
-                // لو في طلب معلق
                 const ride = data[0];
                 document.getElementById('waiting-ui').style.display = 'none';
                 document.getElementById('requests-ui').style.display = 'block';
@@ -214,14 +207,12 @@
                     </div>
                 `;
                 
-                // حط ماركر على مكان الراكب
                 if (!riderMarker) {
                     riderMarker = L.marker([ride.pickup_lat, ride.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
                     map.flyTo([ride.pickup_lat, ride.pickup_lng], 15);
                 }
 
             } else {
-                // مفيش طلبات
                 if (!currentActiveRideId) {
                     document.getElementById('waiting-ui').style.display = 'block';
                     document.getElementById('requests-ui').style.display = 'none';
@@ -230,7 +221,6 @@
             }
         }
 
-        // 5. قبول المشوار
         async function acceptRide(rideId, pLat, pLng, dLat, dLng) {
             const dName = user.name;
             const dPhone = user.phone;
@@ -243,19 +233,15 @@
 
             currentActiveRideId = rideId;
             
-            // تحديث الواجهة
             document.getElementById('requests-ui').style.display = 'none';
             document.getElementById('active-ride-ui').style.display = 'block';
 
-            // تجهيز لينكات جوجل ماب
             document.getElementById('link-rider').href = `https://www.google.com/maps?q=${pLat},${pLng}`;
             document.getElementById('link-dest').href = `https://www.google.com/maps?q=${dLat},${dLng}`;
 
-            // رسم المسار للراكب
             drawRouteToRider(pLat, pLng);
         }
 
-        // 6. رسم المسار من الكابتن للراكب
         async function drawRouteToRider(pLat, pLng) {
             if (!driverMarker) return;
 
@@ -278,7 +264,6 @@
             } catch (e) {}
         }
 
-        // 7. إنهاء الرحلة
         async function finishRide() {
             if (!currentActiveRideId) return;
             if (!confirm('هل وصلت بالراكب للوجهة؟')) return;
@@ -290,7 +275,6 @@
                 document.getElementById('active-ride-ui').style.display = 'none';
                 document.getElementById('waiting-ui').style.display = 'block';
                 
-                // تنظيف الخريطة
                 if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
                 if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
                 
@@ -299,14 +283,12 @@
             }
         }
 
-        // الاستماع لايف لأي طلبات جديدة في الداتا بيز
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
             if (!currentActiveRideId) {
                 fetchPendingRide();
             }
         }).subscribe();
 
-        // تشغيل النظام
         checkSubscription();
 
     </script>
