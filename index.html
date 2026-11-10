@@ -46,7 +46,6 @@
         #driver-details h3 { color: #2196f3; margin-bottom: 5px; font-size: 18px;}
         .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; background: rgba(211, 47, 47, 0.1); padding: 5px; border-radius: 5px;}
         
-        /* كارت الـ PIN */
         .pin-box { background-color: #fff3cd; border: 2px dashed #ffc107; padding: 10px; border-radius: 10px; margin: 10px 0; }
         .pin-box h4 { color: #856404; margin-bottom: 5px; font-size: 14px; }
         .pin-code-text { font-size: 32px; font-weight: bold; color: #333; letter-spacing: 5px; }
@@ -130,7 +129,6 @@
                 <p>اسم الكابتن: <b id="d-name"></b></p>
                 <div class="driver-distance-info" id="driver-eta-text">جاري تحديد موقع الكابتن...</div>
                 
-                <!-- كارت الـ PIN -->
                 <div class="pin-box" id="pin-box" style="display:none;">
                     <h4>الرقم السري للرحلة (اعطه للكابتن):</h4>
                     <div class="pin-code-text" id="rider-pin-display">----</div>
@@ -157,6 +155,7 @@
         var currentStep = 'pickup'; 
         var routeLine = null, driverCarMarker = null; 
         var watchId = null, userMarker = null, lastPosition = null, isFollowingUser = true, moveEndTimeout;
+        var rideTimeoutTimer = null; // مؤقت إلغاء الطلب
 
         async function getAddress(lat, lng) {
             try {
@@ -236,8 +235,6 @@
 
         document.getElementById('request-btn').addEventListener('click', async function() {
             this.innerText = 'جاري إرسال الطلب...'; this.disabled = true;
-            
-            // توليد رقم PIN عشوائي من 4 أرقام
             const generatedPin = Math.floor(1000 + Math.random() * 9000).toString();
 
             try {
@@ -247,12 +244,26 @@
                 if (error) throw error; 
                 currentRideId = data[0].id; 
                 
-                // عرض الرقم للراكب
                 document.getElementById('rider-pin-display').innerText = generatedPin;
                 document.getElementById('pin-box').style.display = 'block';
 
                 this.innerText = 'في انتظار قبول الكابتن...'; this.style.backgroundColor = '#ffc107'; this.style.color = '#333';
                 document.getElementById('cancel-btn').style.display = 'block';
+
+                // ** بدء مؤقت الـ 5 دقايق **
+                clearTimeout(rideTimeoutTimer);
+                rideTimeoutTimer = setTimeout(async () => {
+                    if (!currentRideId) return;
+                    
+                    // التأكد إن الطلب لسه pending
+                    const { data: checkRide } = await supabaseClient.from('rides').select('status').eq('id', currentRideId).single();
+                    if (checkRide && checkRide.status === 'pending') {
+                        await supabaseClient.from('rides').update({ status: 'cancelled' }).eq('id', currentRideId);
+                        alert('عذراً، لا يوجد كباتن متاحين في الوقت الحالي. برجاء المحاولة مرة أخرى بعد قليل.');
+                        location.reload();
+                    }
+                }, 5 * 60 * 1000); // 5 دقائق
+
             } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب التوصيل الآن'; this.disabled = false; }
         });
 
@@ -269,6 +280,7 @@
             if (currentRideId && payload.new.id === currentRideId) {
                 
                 if (payload.new.status === 'accepted') {
+                    clearTimeout(rideTimeoutTimer); // إلغاء المؤقت لو الكابتن قبل
                     document.getElementById('request-btn').innerText = 'تم قبول الطلب'; document.getElementById('request-btn').style.backgroundColor = '#6c757d';
                     document.getElementById('cancel-btn').style.display = 'none'; 
                     document.getElementById('driver-details').style.display = 'block';
@@ -282,12 +294,11 @@
                     document.getElementById('driver-eta-text').style.color = "#dc3545";
                 }
 
-                // لو الكابتن بدأ الرحلة بالـ PIN
                 if (payload.new.ride_started_at) {
                     document.getElementById('driver-eta-text').innerText = "🚗 الرحلة بدأت، في أمان الله!";
                     document.getElementById('driver-eta-text').style.backgroundColor = "#e8f5e9";
                     document.getElementById('driver-eta-text').style.color = "#2e7d32";
-                    document.getElementById('pin-box').style.display = 'none'; // اخفاء الرقم
+                    document.getElementById('pin-box').style.display = 'none'; 
                 }
 
                 if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') { updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng); }
