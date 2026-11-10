@@ -34,6 +34,17 @@
         .profile-btn { right: 15px; background-color: #2196f3; }
         
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
+
+        /* زرار موقعي الحالي العايم */
+        .fab-locate {
+            position: absolute; bottom: 250px; left: 15px; z-index: 1000;
+            background-color: white; color: #1A237E; border: 2px solid #1A237E;
+            width: 45px; height: 45px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer;
+            transition: 0.2s;
+        }
+        .fab-locate:active { background-color: #e3f2fd; transform: scale(0.9); }
         
         .bottom-panel { background: var(--panel-bg); border-radius: 20px 20px 0 0; padding: 10px 15px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; transition: 0.5s; color: var(--text-color); }
         .instruction-text { font-size: 15px; font-weight: bold; color: var(--text-color); text-align: center; margin-bottom: 2px; }
@@ -104,11 +115,9 @@
                 <p><b>الموبايل:</b> <span id="p-phone"></span></p>
                 <p><b>حالة الاشتراك:</b> <span id="p-sub" style="font-weight:bold;"></span></p>
             </div>
-            
             <div class="earnings-box">
                 إجمالي الأرباح: <span id="p-earnings">0</span> جنيه
             </div>
-
             <h4>سجل المشاوير المكتملة:</h4>
             <div class="history-list" id="history-list">
                 <p style="text-align:center;">جاري التحميل...</p>
@@ -138,6 +147,7 @@
     </div>
     
     <div id="map"></div>
+    <button class="fab-locate" onclick="centerToMyLocation()">🎯</button>
     <div class="bottom-panel">
         
         <button id="enable-alerts-btn" onclick="enableAlerts()">🔔 اضغط هنا لتفعيل صوت التنبيهات</button>
@@ -203,6 +213,7 @@
         var isFollowingUser = true;
         var liveLocationInterval = null; 
         var isAlertPlaying = false;
+        var lastDriverPos = null; // لتتبع حركة الكابتن
 
         const MAX_DISTANCE_KM = 15; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
@@ -211,6 +222,14 @@
             var targetPoint = map.project([lat, lng], map.getZoom()).subtract([0, 120]); 
             var targetLatLng = map.unproject(targetPoint, map.getZoom());
             map.panTo(targetLatLng, {animate: true, duration: 1});
+        }
+
+        // زرار الرجوع لموقعي
+        function centerToMyLocation() {
+            isFollowingUser = true;
+            if (driverMarker) {
+                map.flyTo(driverMarker.getLatLng(), 16);
+            }
         }
 
         function playNewOrderAlert() {
@@ -265,18 +284,28 @@
                     const lng = position.coords.longitude;
                     let heading = position.coords.heading;
 
-                    if (driverMarker) {
-                        driverMarker.setLatLng([lat, lng]);
-                        if(heading !== null && !isNaN(heading)) {
-                            const svgElement = driverMarker.getElement().querySelector('svg');
-                            if(svgElement) svgElement.style.transform = `rotate(${heading}deg)`;
+                    const newPos = L.latLng(lat, lng);
+                    // لو دي أول مرة، أو العربية اتحركت مسافة
+                    if (!lastDriverPos || lastDriverPos.distanceTo(newPos) > 2) {
+                        lastDriverPos = newPos;
+
+                        if (driverMarker) {
+                            driverMarker.setLatLng([lat, lng]);
+                            if(heading !== null && !isNaN(heading)) {
+                                const svgElement = driverMarker.getElement().querySelector('svg');
+                                if(svgElement) svgElement.style.transform = `rotate(${heading}deg)`;
+                            }
+                        } else {
+                            driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
                         }
-                    } else {
-                        driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
+                        
+                        // لو إحنا في وضع المتابعة، الخريطة تتحرك مع العربية
+                        if (isFollowingUser && !currentActiveRideId) { 
+                            panToDriverWithOffset(lat, lng); 
+                        }
                     }
                     
-                    if (isFollowingUser && !currentActiveRideId) { panToDriverWithOffset(lat, lng); }
-                    
+                    // إرسال الموقع للداتا بيز لو في رحلة نشطة
                     if(currentActiveRideId && liveLocationInterval === null) {
                         liveLocationInterval = setInterval(() => {
                             if(driverMarker) {
@@ -311,7 +340,10 @@
                 });
 
                 if (closestRide) {
-                    if (currentPendingRideId === closestRide.id) return;
+                    // التعديل هنا: لو نفس الطلب اللي معروض، بنحدث المسافة بس ومش بنعيد تشغيل الصوت
+                    if (currentPendingRideId === closestRide.id) {
+                        return; 
+                    }
 
                     currentPendingRideId = closestRide.id; 
                     
@@ -319,7 +351,6 @@
                     document.getElementById('requests-ui').style.display = 'block';
                     container.innerHTML = `<p style="text-align:center;">جاري حساب المسافة الحقيقية للراكب...</p>`;
 
-                    // تعديل: لو المسافة صفر أو قريبة جداً
                     if (minDistance < 0.1) {
                         container.innerHTML = `
                             <div class="ride-card">
@@ -334,7 +365,6 @@
                                 <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button>
                             </div>`;
                         
-                        // تأخير الصوت بعد ما الكارت يظهر
                         setTimeout(() => { playNewOrderAlert(); }, 500);
 
                         if (!riderMarker) {
@@ -343,7 +373,6 @@
                         }
 
                     } else {
-                        // لو المسافة طبيعية، بنجيب المسار الحقيقي
                         const url = `https://router.project-osrm.org/route/v1/driving/${dPos.lng},${dPos.lat};${closestRide.pickup_lng},${closestRide.pickup_lat}?overview=full&geometries=geojson`;
                         
                         try {
@@ -371,7 +400,6 @@
                                     <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng}, '${closestRide.rider_name}')">قبول المشوار</button>
                                 </div>`;
                             
-                            // تأخير الصوت بعد ما الكارت يظهر
                             setTimeout(() => { playNewOrderAlert(); }, 500);
 
                         } catch(e) {
@@ -450,7 +478,6 @@
             if (!driverMarker) return;
             const startPoint = driverMarker.getLatLng();
             
-            // لو المسافة بينهم صفر، منعملش مسار
             const distDirect = map.distance(startPoint, [pLat, pLng]) / 1000;
             if (distDirect < 0.1) {
                 document.getElementById('driver-to-rider-distance').innerText = "0.0";
@@ -560,7 +587,6 @@
 
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
             
-            // لو الراكب لغى
             if (payload.new && payload.new.status === 'cancelled') {
                 if (currentActiveRideId && payload.new.id === currentActiveRideId) {
                     alert('عذراً، الراكب قام بإلغاء الرحلة.');
