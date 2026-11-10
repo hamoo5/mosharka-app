@@ -26,16 +26,25 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.5s; }
         
-        .header { background-color: var(--header-bg); color: var(--header-text); padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; transition: 0.5s; }
-        .header-btn { position: absolute; top: 15px; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 14px; cursor: pointer; }
-        .logout-btn { left: 15px; background-color: #dc3545; }
-        .profile-btn { right: 15px; background-color: #2196f3; }
+        .header { background-color: var(--header-bg); color: var(--header-text); padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; transition: 0.5s; display: flex; justify-content: space-between; align-items: center;}
+        .header-title { flex-grow: 1; text-align: center; }
+        .header-btn { color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 14px; cursor: pointer; background: rgba(255,255,255,0.2);}
+        .header-btn:hover { background: rgba(255,255,255,0.3);}
         
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
         
-        .sos-btn { position: absolute; bottom: 300px; right: 15px; z-index: 1000; background-color: #dc3545; color: white; border: 3px solid white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4); cursor: pointer; animation: pulse-red 1.5s infinite; }
+        /* زرار الطوارئ SOS */
+        .sos-btn {
+            position: absolute; bottom: 350px; right: 15px; z-index: 1000;
+            background-color: #dc3545; color: white; border: 3px solid white;
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4); cursor: pointer;
+            animation: pulse-red 1.5s infinite;
+        }
         @keyframes pulse-red { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); } }
-        .fab-locate { position: absolute; bottom: 380px; left: 15px; z-index: 1000; background-color: var(--panel-bg); color: var(--header-bg); border: 2px solid var(--header-bg); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
+
+        .fab-locate { position: absolute; bottom: 420px; left: 15px; z-index: 1000; background-color: var(--panel-bg); color: var(--header-bg); border: 2px solid var(--header-bg); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
         
         .center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -15px; }
         .pin-svg { width: 40px; height: 40px; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
@@ -44,7 +53,8 @@
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes shadow-scale { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(0.7); opacity: 0.2; } }
         
-        .bottom-panel { background: var(--panel-bg); border-radius: 20px 20px 0 0; padding: 20px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 10px; transition: 0.5s; color: var(--text-color); max-height: 60vh; overflow-y: auto; }
+        .bottom-panel { background: var(--panel-bg); border-radius: 20px 20px 0 0; padding: 20px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 10px; transition: 0.5s; color: var(--text-color); max-height: 65vh; overflow-y: auto; }
+        
         .instruction-text { font-size: 16px; font-weight: bold; color: var(--text-color); text-align: center; margin-bottom: 5px; }
         .search-box { position: relative; width: 100%; display: flex; align-items: center; margin-bottom: 5px; }
         .search-box input { width: 100%; padding: 12px 15px 12px 50px; border: 2px solid var(--border-color); border-radius: 12px; font-family: 'Cairo', sans-serif; font-size: 16px; outline: none; background-color: var(--input-bg); color: var(--text-color); transition: 0.3s; }
@@ -66,24 +76,33 @@
         .btn-cancel { background-color: #dc3545; margin-top: 10px; display: none; }
         .btn-back { background: none; border: none; color: #007bff; font-weight: bold; font-size: 14px; cursor: pointer; text-align: right; margin-bottom: 10px; font-family: 'Cairo', sans-serif; }
 
-        #driver-details { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 15px; border: 1px solid var(--border-color); margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.5s; }
-        .driver-header { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; }
+        /* --- تصميم شاشة التتبع الجديدة (TruRout Style) --- */
+        #driver-details { display: none; background-color: var(--card-bg); transition: 0.5s; }
+        
+        .priority-bar { display: flex; justify-content: space-between; background: #e3f2fd; color: #1A237E; padding: 10px 15px; border-radius: 10px; font-weight: bold; font-size: 15px; margin-bottom: 15px; border: 1px solid #bbdefb;}
+        body.dark-mode .priority-bar { background: #1a237e; color: white; border: none;}
+        
+        .driver-card-main { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; background: var(--input-bg); padding: 12px; border-radius: 12px; border: 1px solid var(--border-color);}
         .avatar { width: 60px; height: 60px; background-color: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; border: 2px solid #1A237E; }
         body.dark-mode .avatar { background-color: #444; border-color: #fff; }
-        .driver-info-text h3 { color: var(--text-color); font-size: 18px; margin-bottom: 2px; }
-        .driver-info-text p { color: #888; font-size: 13px; margin-bottom: 2px; display: flex; align-items: center; gap: 5px; }
-        .rating-star { color: #ffc107; font-weight: bold; }
-        .car-info { background-color: var(--input-bg); padding: 8px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 14px; color: var(--text-color); margin-bottom: 15px; border: 1px solid var(--border-color);}
+        
+        .driver-text-info { flex-grow: 1;}
+        .driver-text-info h3 { font-size: 16px; color: var(--text-color); margin-bottom: 3px; display: flex; justify-content: space-between;}
+        .driver-text-info h3 span { color: #ffc107; font-size: 14px;}
+        .driver-text-info p { font-size: 13px; color: #777; margin-bottom: 2px;}
+        .car-plate { background: #333; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-family: monospace; margin-top: 5px; display: inline-block; letter-spacing: 2px;}
+        
         .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 15px; background: rgba(211, 47, 47, 0.1); padding: 8px; border-radius: 8px; text-align: center;}
         
-        .contact-buttons { display: flex; gap: 10px; margin-top: 10px; }
-        .contact-buttons a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background-color: #2196f3; color: white; padding: 12px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 16px; transition: 0.2s;}
+        .contact-buttons { display: flex; gap: 10px; margin-bottom: 15px;}
+        .contact-buttons a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background-color: #1A237E; color: white; padding: 12px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 15px; transition: 0.2s;}
         .contact-buttons .msg-btn { background-color: #25D366; } 
-        .share-btn { background-color: #6c757d; color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; font-family: 'Cairo', sans-serif; margin-top: 10px; cursor: pointer; display: flex; justify-content: center; gap: 8px;}
-
-        .pin-box { background-color: #fff3cd; border: 2px dashed #ffc107; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; position: relative; }
-        .pin-box h4 { color: #856404; margin-bottom: 10px; font-size: 15px; }
-        .pin-code-text { font-size: 40px; font-weight: bold; color: #333; letter-spacing: 10px; padding-right: 10px; }
+        
+        .fare-box { display: flex; justify-content: space-between; align-items: center; background: var(--input-bg); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 15px; font-weight: bold; font-size: 15px;}
+        
+        .pin-box { background-color: #fff3cd; border: 2px dashed #ffc107; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; position: relative; display: flex; justify-content: space-between; align-items: center;}
+        .pin-box h4 { color: #856404; margin: 0; font-size: 14px; }
+        .pin-code-text { font-size: 24px; font-weight: bold; color: #333; letter-spacing: 3px; }
         body.dark-mode .pin-box { background-color: #3e2723; border-color: #ffb300; }
         body.dark-mode .pin-code-text { color: #fff; }
         body.dark-mode .pin-box h4 { color: #ffca28; }
@@ -134,9 +153,9 @@
     </script>
     
     <div class="header">
-        توصيل مشاركة 
-        <a href="#" onclick="logout()" class="logout-btn header-btn">خروج</a>
-        <a onclick="openProfile()" class="profile-btn header-btn">👤 حسابي</a>
+        <a href="#" onclick="logout()" class="header-btn">خروج</a>
+        <div class="header-title">توصيل مشاركة</div>
+        <a href="#" onclick="shareTrip()" class="header-btn">مشاركة</a>
     </div>
     
     <div id="map"></div>
@@ -198,33 +217,43 @@
             <button id="request-btn" class="btn-action" style="background-color: #28a745;">اطلب التوصيل الآن</button>
         </div>
         
+        <!-- ** شاشة التتبع الجديدة (TruRout Style) ** -->
         <div id="ui-ride" style="display: none;">
             <div id="driver-details">
-                <div class="driver-header">
+                
+                <!-- شريط الأولوية (الوقت والـ PIN) -->
+                <div class="priority-bar">
+                    <div>الوصول خلال: <span id="eta-time">...</span> دقيقة</div>
+                    <div>كود الأمان: <span id="pin-code-display">....</span></div>
+                </div>
+                
+                <!-- كارت الكابتن -->
+                <div class="driver-card-main">
                     <div class="avatar">👨‍✈️</div>
-                    <div class="driver-info-text">
-                        <h3 id="d-name">اسم الكابتن</h3>
-                        <p><span class="rating-star">★ 4.9</span> • كابتن متميز</p>
+                    <div class="driver-text-info">
+                        <h3><span id="d-name">أحمد محمود</span> <span>★ 4.9</span></h3>
+                        <p id="d-car-info">تويوتا - رمادي</p>
+                        <span class="car-plate" id="d-plate">أ ب ج | 1 2 3 4</span>
                     </div>
                 </div>
-                
-                <div class="car-info" id="d-car-info">🚗 سيارة ملاكي - أبيض</div>
-                <div class="driver-distance-info" id="driver-eta-text">جاري تحديد موقع الكابتن...</div>
-                
-                <div class="pin-box" id="pin-box" style="display:none;">
-                    <h4>الرقم السري (اعطه للكابتن):</h4>
-                    <div class="pin-code-text" id="rider-pin-display">----</div>
-                </div>
 
+                <div class="driver-distance-info" id="driver-eta-text">جاري تحديد موقع الكابتن...</div>
+
+                <!-- أزرار التواصل -->
                 <div class="contact-buttons">
                     <a href="#" id="d-call" class="call-btn">📞 اتصال</a>
                     <a href="#" id="d-msg" class="msg-btn" target="_blank">💬 رسالة</a>
                 </div>
                 
-                <button class="share-btn" onclick="shareTrip()">🔗 مشاركة الرحلة مع أهلك</button>
+                <!-- المبلغ وطريقة الدفع -->
+                <div class="fare-box">
+                    <div>المبلغ التقديري: <span id="ride-price-text" style="color: #28a745;">45</span> ج.م</div>
+                    <div>(الدفع: كاش 💵)</div>
+                </div>
+
+                <!-- زرار الإلغاء -->
+                <button id="cancel-btn" class="btn-action btn-cancel" style="display: block; margin-top: 0;" onclick="cancelRide()">إلغاء الرحلة</button>
             </div>
-            
-            <button id="cancel-btn" class="btn-action btn-cancel" onclick="cancelRide()">إلغاء الطلب</button>
         </div>
         
     </div>
@@ -237,18 +266,8 @@
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
         function closeSos() { document.getElementById('sos-modal').style.display = 'none'; }
         
-        // ** تعريف دبابيس مخصصة (أخضر للانطلاق، أحمر للوصول) **
-        const greenIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<svg width="35" height="35" viewBox="0 0 24 24" fill="#28a745" stroke="white" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`,
-            iconSize: [35, 35], iconAnchor: [17, 35]
-        });
-
-        const redIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<svg width="35" height="35" viewBox="0 0 24 24" fill="#dc3545" stroke="white" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`,
-            iconSize: [35, 35], iconAnchor: [17, 35]
-        });
+        const greenIcon = L.divIcon({ className: 'custom-pin', html: `<svg width="35" height="35" viewBox="0 0 24 24" fill="#28a745" stroke="white" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`, iconSize: [35, 35], iconAnchor: [17, 35] });
+        const redIcon = L.divIcon({ className: 'custom-pin', html: `<svg width="35" height="35" viewBox="0 0 24 24" fill="#dc3545" stroke="white" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`, iconSize: [35, 35], iconAnchor: [17, 35] });
 
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
@@ -318,7 +337,6 @@
         function centerToMyLocation() { isFollowingUser = true; if (lastPosition) { map.flyTo([lastPosition.lat, lastPosition.lng], 16); } }
         startTracking();
 
-        // ** التعديل الأول: إضافة دبوس أخضر ثابت للانطلاق **
         function confirmPickup() {
             const center = map.getCenter(); pickupPoint = [center.lat, center.lng];
             
@@ -343,7 +361,6 @@
             map.fire('moveend');
         }
 
-        // ** التعديل الثاني: إضافة دبوس أحمر للوصول + زووم على المسار **
         async function confirmDropoff() {
             const center = map.getCenter(); dropoffPoint = [center.lat, center.lng];
             currentStep = 'vehicle'; 
@@ -377,7 +394,6 @@
                 currentTime = Math.round((currentDistance / 30) * 60) + 1;
             }
             
-            // ** التعديل الثالث: زووم عشان يشوف النقطتين والمسار بوضوح فوق اللوحة **
             map.fitBounds([pickupPoint, dropoffPoint], { paddingTopLeft: [50, 50], paddingBottomRight: [50, 350] });
             
             const basePrice = 10 + (currentDistance * 5);
@@ -416,11 +432,15 @@
                 
                 document.getElementById('ui-vehicle').style.display = 'none';
                 document.getElementById('ui-ride').style.display = 'block';
-                document.getElementById('rider-pin-display').innerText = generatedPin;
-                document.getElementById('pin-box').style.display = 'block';
-                document.getElementById('driver-details').style.display = 'block'; 
+                
+                // تحويل الواجهة لشكل التتبع الجديد
+                document.getElementById('driver-details').style.display = 'block';
                 document.getElementById('d-name').innerText = "جاري البحث عن كابتن...";
                 document.getElementById('driver-eta-text').innerText = "في انتظار القبول";
+                document.getElementById('eta-time').innerText = "...";
+                document.getElementById('pin-code-display').innerText = generatedPin;
+                document.getElementById('ride-price-text').innerText = currentPrice;
+                
                 document.getElementById('cancel-btn').style.display = 'block';
                 
             } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب التوصيل الآن'; this.disabled = false; }
@@ -448,29 +468,28 @@
             if (currentRideId && payload.new.id === currentRideId) {
                 
                 if (payload.new.status === 'accepted') {
-                    document.getElementById('driver-eta-text').innerText = "جاري تحديد موقع الكابتن...";
                     document.getElementById('d-name').innerText = payload.new.driver_name;
                     
                     let vehicleName = "سيارة ملاكي";
                     if(selectedVehicleType === 'moto') vehicleName = "دراجة نارية";
                     if(selectedVehicleType === 'suv') vehicleName = "سيارة عائلية";
-                    document.getElementById('d-car-info').innerText = `🚗 ${vehicleName} - أبيض`;
+                    document.getElementById('d-car-info').innerText = `${vehicleName} - أبيض`;
                     
                     document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
-                    document.getElementById('d-msg').href = 'https://wa.me/2' + payload.new.driver_phone + '?text=مرحباً، أنا الراكب الخاص بك.';
+                    document.getElementById('d-msg').href = 'https://wa.me/2' + payload.new.driver_phone + '?text=أنا عند المنتظر.';
                 }
 
                 if (payload.new.driver_arrived_at) {
                     document.getElementById('driver-eta-text').innerText = "🚨 الكابتن وصل وهو في انتظارك!";
                     document.getElementById('driver-eta-text').style.backgroundColor = "#ffebee";
                     document.getElementById('driver-eta-text').style.color = "#dc3545";
+                    document.getElementById('eta-time').innerText = "0";
                 }
 
                 if (payload.new.ride_started_at) {
                     document.getElementById('driver-eta-text').innerText = "🚗 الرحلة بدأت، في أمان الله!";
                     document.getElementById('driver-eta-text').style.backgroundColor = "#e8f5e9";
                     document.getElementById('driver-eta-text').style.color = "#2e7d32";
-                    document.getElementById('pin-box').style.display = 'none'; 
                 }
 
                 if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') { updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng); }
@@ -500,9 +519,10 @@
                     if (data.code === 'Ok' && data.routes.length > 0) { 
                         const roadDist = (data.routes[0].distance / 1000).toFixed(1); 
                         const roadTime = Math.round((data.routes[0].duration / 60) * 2.5) + 1; 
-                        document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${roadDist} كم (تقريباً ${roadTime} دقيقة)`; 
+                        document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${roadDist} كم`; 
+                        document.getElementById('eta-time').innerText = roadTime;
                     } else { throw new Error(); }
-                } catch (e) { const dist = map.distance([dLat, dLng], [pickupPoint[0], pickupPoint[1]]) / 1000; const eta = Math.round((dist / 30) * 60); document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${dist.toFixed(1)} كم (تقريباً ${eta} دقيقة)`; }
+                } catch (e) { const dist = map.distance([dLat, dLng], [pickupPoint[0], pickupPoint[1]]) / 1000; const eta = Math.round((dist / 30) * 60); document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${dist.toFixed(1)} كم`; document.getElementById('eta-time').innerText = eta; }
             }
         }
 
