@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>تطبيق مشاركة - الراكب</title>
+    <title>توصيل مشاركة - الراكب</title>
     <link rel="manifest" href="manifest-rider.json">
     <meta name="theme-color" content="#1A237E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -11,35 +11,64 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        
+        /* الألوان الأساسية للنهار */
+        :root {
+            --bg-color: #f0f2f5;
+            --panel-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f8f9fa;
+            --border-color: #dddddd;
+            --header-bg: #1A237E;
+            --header-text: #ffffff;
+            --card-bg: #ffffff;
+        }
+
+        /* الألوان للوضع الليلي */
+        body.dark-mode {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --border-color: #444444;
+            --header-bg: #0d133d; /* أزرق غامق جداً */
+            --header-text: #ffffff;
+            --card-bg: #2d2d2d;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.5s; }
+        
         #install-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background-color: #28a745; color: white; padding: 12px; text-align: center; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; font-weight: bold; font-size: 16px; }
-        .header { background-color: #1A237E; color: white; padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; }
+        .header { background-color: var(--header-bg); color: var(--header-text); padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; transition: 0.5s; }
         .logout-btn { position: absolute; left: 15px; top: 18px; background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; }
-        #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
-        .fab-locate { position: absolute; bottom: 260px; left: 15px; z-index: 1000; background-color: white; color: #1A237E; border: 2px solid #1A237E; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
+        
+        #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
+        
+        .fab-locate { position: absolute; bottom: 260px; left: 15px; z-index: 1000; background-color: var(--panel-bg); color: var(--header-bg); border: 2px solid var(--header-bg); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
         .center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -15px; }
         .pin-svg { width: 40px; height: 40px; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
         .pin-svg.green path { fill: #28a745; } .pin-svg.red path { fill: #dc3545; }
         .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; animation: shadow-scale 2s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes shadow-scale { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(0.7); opacity: 0.2; } }
-        .bottom-panel { background: white; border-radius: 20px 20px 0 0; padding: 20px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px; }
-        .instruction-text { font-size: 16px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 5px; }
+        
+        .bottom-panel { background: var(--panel-bg); border-radius: 20px 20px 0 0; padding: 20px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 10px; transition: 0.5s; color: var(--text-color); }
+        .instruction-text { font-size: 16px; font-weight: bold; color: var(--text-color); text-align: center; margin-bottom: 5px; }
         .search-box { position: relative; width: 100%; display: flex; align-items: center; margin-bottom: 5px; }
-        .search-box input { width: 100%; padding: 12px 15px 12px 50px; border: 2px solid #ddd; border-radius: 12px; font-family: 'Cairo', sans-serif; font-size: 16px; outline: none; transition: 0.3s; background-color: #f8f9fa; }
-        .search-box input:focus { border-color: #1A237E; background-color: #fff; }
-        .search-btn { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); background-color: #1A237E; color: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: 0.2s; }
-        .address-text { font-size: 13px; color: #555; text-align: center; background: #f8f9fa; padding: 8px; border-radius: 8px; min-height: 35px; display: flex; align-items: center; justify-content: center;}
+        .search-box input { width: 100%; padding: 12px 15px 12px 50px; border: 2px solid var(--border-color); border-radius: 12px; font-family: 'Cairo', sans-serif; font-size: 16px; outline: none; background-color: var(--input-bg); color: var(--text-color); transition: 0.3s; }
+        .search-box input:focus { border-color: #1A237E; }
+        .search-btn { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); background-color: var(--header-bg); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: 0.2s; }
+        .address-text { font-size: 13px; color: var(--text-color); text-align: center; background: var(--input-bg); padding: 8px; border-radius: 8px; min-height: 35px; display: flex; align-items: center; justify-content: center; transition: 0.5s;}
         .btn-action { background-color: #1A237E; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(26, 35, 126, 0.3); transition: 0.2s; }
         .btn-confirm-pickup { background-color: #28a745; } .btn-confirm-dropoff { background-color: #dc3545; }
         
-        #ride-info { display: none; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; text-align: center; }
+        #ride-info { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 10px; text-align: center; transition: 0.5s; }
         #ride-info h3 { color: #28a745; font-size: 26px; margin: 5px 0; }
         
-        #driver-details { display: none; background-color: #fff; padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2); }
-        #driver-details h3 { color: #1A237E; margin-bottom: 5px; font-size: 18px;}
-        .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; background: #ffebee; padding: 5px; border-radius: 5px;}
+        #driver-details { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2); transition: 0.5s; }
+        #driver-details h3 { color: #2196f3; margin-bottom: 5px; font-size: 18px;}
+        .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; background: rgba(211, 47, 47, 0.1); padding: 5px; border-radius: 5px;}
         .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 5px; }
     </style>
 </head>
@@ -48,8 +77,20 @@
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'rider') { window.location.href = 'login.html'; }
+
+        // كود الوضع الليلي والنهاري
+        function applyTheme() {
+            const hour = new Date().getHours();
+            if (hour >= 18 || hour < 6) { // من 6 مساءً لـ 6 صباحاً
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        }
+        applyTheme();
+        setInterval(applyTheme, 60000); // يفحص الوقت كل دقيقة
     </script>
-    <div class="header">تطبيق مشاركة <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
+    <div class="header">توصيل مشاركة <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
     <div id="map"></div>
     <button class="fab-locate" onclick="centerToMyLocation()">🎯</button>
     <div id="center-pin" class="center-pin">
@@ -97,8 +138,20 @@
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
+        
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+        
+        // كود الخريطة الديناميكية (نهاري / ليلي)
+        function getMapUrl() {
+            const hour = new Date().getHours();
+            if (hour >= 18 || hour < 6) {
+                return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'; // خريطة ليلية
+            } else {
+                return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'; // خريطة نهارية شيك
+            }
+        }
+        L.tileLayer(getMapUrl(), { maxZoom: 19, attribution: '© OpenStreetMap © CARTO' }).addTo(map);
+
         var pickupPoint = null, dropoffPoint = null;
         var currentDistance = 0, currentPrice = 0, currentRideId = null;
         var currentStep = 'pickup'; 
@@ -267,7 +320,6 @@
             }
         }).subscribe();
         
-        // التعديل هنا: حساب المسافة الحقيقية على الشوارع
         async function updateDriverLocation(dLat, dLng) {
             if (driverCarMarker) {
                 driverCarMarker.setLatLng([dLat, dLng]);
@@ -282,10 +334,7 @@
             
             if (pickupPoint) {
                 document.getElementById('driver-eta-text').innerText = `جاري تحديث المسافة...`;
-                
-                // بنجيب المسار الحقيقي من السيرفر
                 const url = `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${pickupPoint[1]},${pickupPoint[0]}?overview=false`;
-                
                 try {
                     const response = await fetch(url);
                     const data = await response.json();
@@ -293,11 +342,8 @@
                         const roadDist = (data.routes[0].distance / 1000).toFixed(1);
                         const roadTime = Math.round(data.routes[0].duration / 60);
                         document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${roadDist} كم (تقريباً ${roadTime} دقيقة)`;
-                    } else {
-                        throw new Error("لا يوجد مسار");
-                    }
+                    } else { throw new Error("لا يوجد مسار"); }
                 } catch (e) {
-                    // لو السيرفر وقع، بنرجع للخط المستقيم
                     const dist = map.distance([dLat, dLng], [pickupPoint[0], pickupPoint[1]]) / 1000;
                     const eta = Math.round((dist / 30) * 60);
                     document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${dist.toFixed(1)} كم (تقريباً ${eta} دقيقة)`;
