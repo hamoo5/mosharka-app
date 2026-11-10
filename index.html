@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>توصيل مشاركة - الراكب (حي)</title>
+    <title>توصيل مشاركة - الراكب</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- استدعاء مكتبة Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -23,44 +22,51 @@
             --success: #22c55e;
         }
 
+        .light-mode {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --card-border: #cbd5e1;
+            --primary: #0284c7;
+            --primary-gradient: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background 0.3s; }
 
         .top-nav { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1000; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
         .nav-left, .nav-right { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
-        .nav-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-main); text-decoration: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+        .nav-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-main); text-decoration: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .nav-btn svg { width: 18px; height: 18px; fill: currentColor; }
         
+        .mode-badge { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--primary); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .mode-dot { width: 7px; height: 7px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 10px var(--primary); }
+
         #map { flex-grow: 1; width: 100%; height: 100vh; z-index: 1; background-color: #05070a; }
-        .dark-tiles { filter: brightness(0.6) invert(1) contrast(1.3) hue-rotate(200deg) saturate(0.3); }
+        .dark-tiles { filter: brightness(0.65) invert(1) contrast(1.3) hue-rotate(200deg) saturate(0.4); }
+        .light-tiles { filter: none; }
 
         /* دبوس التحديد */
         .center-pin { position: absolute; top: 27%; left: 50%; transform: translate(-50%, -100%); z-index: 2000; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
-        .pin-icon { width: 42px; height: 42px; filter: drop-shadow(0 6px 12px rgba(0,242,254,0.5)); animation: float-pin 2s ease-in-out infinite; }
+        .pin-icon { width: 42px; height: 42px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4)); animation: float-pin 2s ease-in-out infinite; }
         @keyframes float-pin { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
-        /* تصميم سيارات الكباتن الحية */
+        /* تصميم سيارة الكابتن اللايف */
         .driver-marker-container { display: flex; flex-direction: column; align-items: center; }
         .driver-avatar-box { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--success); background: #000; box-shadow: 0 0 15px rgba(34, 197, 94, 0.6); display: flex; justify-content: center; align-items: center; }
         .driver-avatar-box img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
         .driver-rating-badge { position: absolute; bottom: -8px; background: #111827; border: 1px solid var(--card-border); color: #fadb14; font-size: 9px; font-weight: bold; padding: 2px 4px; border-radius: 8px; white-space: nowrap; }
 
-        /* شريط الذروة */
-        .surge-banner { position: absolute; top: 70px; left: 12px; right: 12px; z-index: 999; background: rgba(19, 27, 46, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 71, 87, 0.3); border-radius: 12px; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .surge-text { font-size: 13px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-        .surge-badge { background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%); color: white; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 8px; box-shadow: 0 0 10px rgba(255, 71, 87, 0.4); }
-
-        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 28px 28px 0 0; padding: 18px; z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.6); border-top: 1px solid var(--card-border); max-height: 55vh; overflow-y: auto; }
+        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 28px 28px 0 0; padding: 18px; z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.3); border-top: 1px solid var(--card-border); max-height: 55vh; overflow-y: auto; transition: background 0.3s; }
         .sheet-handle { width: 40px; height: 4px; background: var(--card-border); border-radius: 2px; margin: 0 auto 12px auto; }
         
         .title { font-size: 17px; font-weight: 800; margin-bottom: 12px; text-align: center; color: var(--text-main); }
         .input-group { display: flex; align-items: center; background: var(--bg-color); border: 1px solid var(--card-border); border-radius: 14px; margin-bottom: 10px; padding: 3px 4px 3px 10px; }
-        .input-group input { flex-grow: 1; background: transparent; border: none; padding: 10px; color: var(--text-main); font-size: 14px; outline: none; font-weight: 600; }
+        .input-group input { flex-grow: 1; background: transparent !important; border: none; padding: 10px; color: var(--text-main) !important; font-size: 14px; outline: none; font-weight: 600; }
         .search-btn { background: var(--card-border); color: var(--text-main); border: none; padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; }
-
         .my-location-btn { width: 100%; background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px dashed var(--success); padding: 8px; border-radius: 10px; font-weight: 700; font-size: 13px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
         .btn-main { width: 100%; background: var(--primary-gradient); color: #ffffff; padding: 14px; border-radius: 14px; border: none; font-size: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        
         .route-summary-box { background: var(--bg-color); border: 1px solid var(--card-border); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
         .route-step { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--text-main); }
         .dot-icon { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -71,27 +77,19 @@
 
     <div class="top-nav">
         <div class="nav-right">
-            <a href="#" onclick="logout()" class="nav-btn" title="خروج"><svg viewBox="0 0 24 24"><path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg></a>
+            <a href="#" onclick="location.reload()" class="nav-btn" title="إعادة ضبط"><svg viewBox="0 0 24 24"><path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg></a>
+            <div class="mode-badge"><div class="mode-dot"></div> <span id="mode-text">الليلي</span></div>
         </div>
         <div class="nav-left">
+            <button id="themeToggle" class="nav-btn" onclick="toggleTheme()" title="تبديل الوضع">🌙</button>
             <div class="nav-btn" onclick="alert('أحمد - الراكب')" title="الملف الشخصي">👤</div>
-        </div>
-    </div>
-
-    <!-- شريط الذروة -->
-    <div class="surge-banner" id="surgeBanner">
-        <div class="surge-text">
-            <span style="color: var(--success);">🟢</span> <span id="driverCountText">جاري البحث عن كباتن...</span>
-        </div>
-        <div class="surge-badge">
-            <span>⚡ 1.4x ذروة</span>
         </div>
     </div>
 
     <div id="map"></div>
 
     <div id="center-pin" class="center-pin">
-        <svg class="pin-icon" viewBox="0 0 24 24" fill="#00f2fe" id="pin-svg">
+        <svg class="pin-icon" viewBox="0 0 24 24" fill="#0284c7" id="pin-svg">
             <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/>
         </svg>
     </div>
@@ -101,15 +99,13 @@
         
         <!-- 1. الانطلاق -->
         <div id="ui-pickup">
-            <h2 class="title"><span style="color: var(--success);">🟢</span> من أين تبدأ رحلتك؟</h2>
+            <h2 class="title"><span style="color: #22c55e;">🟢</span> من أين تبدأ رحلتك؟</h2>
             <div class="input-group">
-                <input type="text" id="search-pickup" placeholder="ابحث عن مكان الانطلاق..." onkeypress="handleSearch(event, 'pickup')">
+                <input type="text" id="search-pickup" placeholder="ابحث عن مكان الانطلاق..." autocomplete="off" onkeypress="handleSearch(event, 'pickup')">
                 <button class="search-btn" onclick="handleSearch(null, 'pickup')">بحث</button>
             </div>
             
-            <button class="my-location-btn" onclick="goToMyLocation()">
-                📍 تحديد موقعي الحالي
-            </button>
+            <button class="my-location-btn" onclick="goToMyLocation()">📍 تحديد موقعي الحالي</button>
 
             <div class="route-summary-box">
                 <div class="route-step"><div class="dot-icon dot-green"></div><span id="pickup-address" style="color: var(--text-sub);">جاري تحديد موقعك...</span></div>
@@ -125,7 +121,7 @@
                 <div class="route-step"><div class="dot-icon dot-green"></div><span>من: <b id="confirmed-pickup-text" style="color: var(--text-main);">...</b></span></div>
             </div>
             <div class="input-group">
-                <input type="text" id="search-dropoff" placeholder="اكتب وجهتك..." onkeypress="handleSearch(event, 'dropoff')">
+                <input type="text" id="search-dropoff" placeholder="اكتب وجهتك..." autocomplete="off" onkeypress="handleSearch(event, 'dropoff')">
                 <button class="search-btn" onclick="handleSearch(null, 'dropoff')">بحث</button>
             </div>
             <div class="route-summary-box" style="margin-bottom: 8px;">
@@ -136,103 +132,100 @@
     </div>
 
     <script>
-        // === 1. إعداد Supabase (عشان نستقبل البيانات الحية) ===
+        // === إعدادات Supabase ===
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // === 2. إعداد الخريطة ===
+        // === إعداد الخريطة ===
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        let tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         document.getElementById('map').classList.add('dark-tiles');
+
+        let isDark = true;
+        function toggleTheme() {
+            isDark = !isDark;
+            const btn = document.getElementById('themeToggle');
+            const badgeText = document.getElementById('mode-text');
+            const mapDiv = document.getElementById('map');
+            
+            if (isDark) {
+                document.body.classList.remove('light-mode');
+                mapDiv.classList.add('dark-tiles');
+                mapDiv.classList.remove('light-tiles');
+                btn.textContent = '🌙';
+                badgeText.textContent = 'الليلي';
+            } else {
+                document.body.classList.add('light-mode');
+                mapDiv.classList.remove('dark-tiles');
+                mapDiv.classList.add('light-tiles');
+                btn.textContent = '☀️';
+                badgeText.textContent = 'النهاري';
+            }
+        }
 
         var pickupPoint = null, dropoffPoint = null;
         var currentStep = 'pickup'; 
         var startMarker = null, destMarker = null, userMarker = null, moveEndTimeout;
-        
-        // مصفوفة لحفظ سيارات الكباتن الحية عشان نتحكم فيها
         let liveDriversMap = {}; 
 
-        // === 3. تصميم سيارة الكابتن ===
-        const driverIcon = (name, rating, imgUrl) => L.divIcon({
+        // === تصميم سيارة الكابتن (زي اللي في الصورة) ===
+        const driverIcon = (name, rating) => L.divIcon({
             className: 'custom-driver-marker',
             html: `
                 <div class="driver-marker-container">
                     <div class="driver-avatar-box">
-                        <img src="${imgUrl || 'https://i.pravatar.cc/100?img=11'}" alt="driver">
+                        <img src="https://i.pravatar.cc/100?img=11" alt="driver">
                         <div class="driver-rating-badge">${rating || '5.0'}★</div>
                     </div>
                 </div>
             `,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
+            iconSize: [40, 40], iconAnchor: [20, 20]
         });
 
-        // === 4. دالة تحديث/إضافة سيارة كابتن على الخريطة ===
+        // === استقبال الكباتن اللايف من جدول users ===
         function updateDriverOnMap(driver) {
-            // لو الكابتن موجود بالفعل، بنحرك عربيته
             if (liveDriversMap[driver.id]) {
                 liveDriversMap[driver.id].setLatLng([driver.lat, driver.lng]);
-            } 
-            // لو كابتن جديد، بنضيف عربيته
-            else {
+            } else {
                 const marker = L.marker([driver.lat, driver.lng], { 
-                    icon: driverIcon(driver.name, driver.rating, driver.avatar_url) 
+                    icon: driverIcon(driver.name, '4.9') 
                 }).addTo(map);
                 liveDriversMap[driver.id] = marker;
             }
-            updateDriverCount();
         }
 
-        // === 5. دالة إزالة سيارة كابتن (لو قفل التطبيق أو بقى أوفلاين) ===
         function removeDriverFromMap(driverId) {
             if (liveDriversMap[driverId]) {
                 map.removeLayer(liveDriversMap[driverId]);
                 delete liveDriversMap[driverId];
             }
-            updateDriverCount();
         }
 
-        // === 6. تحديث نص عدد الكباتن في شريط الذروة ===
-        function updateDriverCount() {
-            const count = Object.keys(liveDriversMap).length;
-            document.getElementById('driverCountText').innerText = count > 0 
-                ? `${count} كباتن متاحين قريبين منك` 
-                : 'لا يوجد كباتن متاحين حالياً';
-        }
-
-        // === 7. جلب الكباتن الحاليين أول ما التطبيق يفتح ===
+        // جلب الكباتن أول ما التطبيق يفتح
         async function fetchInitialDrivers() {
-            const { data, error } = await supabaseClient
-                .from('drivers')
-                .select('*')
-                .eq('is_online', true);
-
+            // بنجيب اليوزرز اللي يكونوا driver ومتاحين (is_online = true)
+            const { data, error } = await supabaseClient.from('users').select('*').eq('role', 'driver').eq('is_online', true);
             if (!error && data) {
                 data.forEach(driver => updateDriverOnMap(driver));
             }
         }
 
-        // === 8. الاستماع الحقيقي لأي تغيير في جدول الكباتن (Realtime) ===
-        supabaseClient
-            .channel('live-drivers-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, payload => {
-                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                    // لو الكابتن أونلاين، نعرضه
-                    if (payload.new.is_online) {
-                        updateDriverOnMap(payload.new);
+        // الاستماع للحركة اللايف (Realtime)
+        supabaseClient.channel('live-drivers-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
+                const driver = payload.new;
+                // لو التغيير حصل لكابتن
+                if (driver && driver.role === 'driver') {
+                    if (driver.is_online) {
+                        updateDriverOnMap(driver);
                     } else {
-                        // لو بقى أوفلاين، نشيله
-                        removeDriverFromMap(payload.new.id);
+                        removeDriverFromMap(driver.id);
                     }
-                } 
-                else if (payload.eventType === 'DELETE') {
-                    removeDriverFromMap(payload.old.id);
                 }
-            })
-            .subscribe();
+            }).subscribe();
 
-        // === 9. تحديد الموقع الحالي للراكب ===
+        // === تحديد موقع الراكب ===
         function goToMyLocation() {
             if (navigator.geolocation) {
                 document.getElementById('pickup-address').innerText = "جاري تحديد موقعك...";
@@ -252,16 +245,15 @@
                     const newCenterLatLng = map.unproject(newCenterPoint, targetZoom);
 
                     map.flyTo(newCenterLatLng, targetZoom, { animate: true, duration: 1.5 });
-
                     setTimeout(() => { map.fire('moveend'); }, 1600);
-
                 }, () => { alert("تأكد من تشغيل الـ GPS."); });
             }
         }
 
         setTimeout(goToMyLocation, 500);
-        setTimeout(fetchInitialDrivers, 1000); // نجيب الكباتن أول ما نفتح
+        setTimeout(fetchInitialDrivers, 1500); // نجيب الكباتن بعد ثانية ونص
 
+        // === جلب اسم الشارع ===
         async function getAddress(lat, lng) {
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`);
@@ -328,7 +320,6 @@
             
             currentStep = 'dropoff';
             document.getElementById('pin-svg').setAttribute('fill', '#ff4757');
-            document.getElementById('surgeBanner').style.display = 'none'; 
             map.fire('moveend'); 
         }
 
@@ -338,8 +329,7 @@
             if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
             document.getElementById('ui-dropoff').style.display = 'none';
             document.getElementById('ui-pickup').style.display = 'block';
-            document.getElementById('pin-svg').setAttribute('fill', '#00f2fe');
-            document.getElementById('surgeBanner').style.display = 'flex';
+            document.getElementById('pin-svg').setAttribute('fill', '#0284c7');
             map.fire('moveend');
         }
 
@@ -353,12 +343,6 @@
             document.getElementById('center-pin').style.display = 'none';
 
             alert("جاري حساب المسار...");
-        }
-
-        function logout() {
-            if(confirm("هل تريد الخروج من التطبيق؟")) {
-                location.reload();
-            }
         }
     </script>
 </body>
