@@ -34,7 +34,6 @@
         .btn-action { background-color: #1A237E; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(26, 35, 126, 0.3); transition: 0.2s; }
         .btn-confirm-pickup { background-color: #28a745; } .btn-confirm-dropoff { background-color: #dc3545; }
         
-        /* كارت السعر */
         #ride-info { display: none; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; text-align: center; }
         #ride-info h3 { color: #28a745; font-size: 26px; margin: 5px 0; }
         
@@ -86,7 +85,6 @@
                 <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
             </div>
             
-            <!-- شيلنا المسافة من هنا -->
             <div id="ride-info">
                 <h3>السعر: <span id="price-text">...</span> جنيه</h3>
             </div>
@@ -229,7 +227,6 @@
                 currentDistance = (map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(2);
             }
             currentPrice = Math.round(10 + (currentDistance * 5)); 
-            // شيلنا تحديث المسافة من هنا
             document.getElementById('price-text').innerText = currentPrice;
             document.getElementById('ride-info').style.display = 'block';
         }
@@ -270,7 +267,8 @@
             }
         }).subscribe();
         
-        function updateDriverLocation(dLat, dLng) {
+        // التعديل هنا: حساب المسافة الحقيقية على الشوارع
+        async function updateDriverLocation(dLat, dLng) {
             if (driverCarMarker) {
                 driverCarMarker.setLatLng([dLat, dLng]);
             } else {
@@ -283,9 +281,27 @@
             }
             
             if (pickupPoint) {
-                const dist = map.distance([dLat, dLng], [pickupPoint[0], pickupPoint[1]]) / 1000;
-                const eta = Math.round((dist / 30) * 60);
-                document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${dist.toFixed(1)} كم (تقريباً ${eta} دقيقة)`;
+                document.getElementById('driver-eta-text').innerText = `جاري تحديث المسافة...`;
+                
+                // بنجيب المسار الحقيقي من السيرفر
+                const url = `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${pickupPoint[1]},${pickupPoint[0]}?overview=false`;
+                
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data.code === 'Ok' && data.routes.length > 0) {
+                        const roadDist = (data.routes[0].distance / 1000).toFixed(1);
+                        const roadTime = Math.round(data.routes[0].duration / 60);
+                        document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${roadDist} كم (تقريباً ${roadTime} دقيقة)`;
+                    } else {
+                        throw new Error("لا يوجد مسار");
+                    }
+                } catch (e) {
+                    // لو السيرفر وقع، بنرجع للخط المستقيم
+                    const dist = map.distance([dLat, dLng], [pickupPoint[0], pickupPoint[1]]) / 1000;
+                    const eta = Math.round((dist / 30) * 60);
+                    document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${dist.toFixed(1)} كم (تقريباً ${eta} دقيقة)`;
+                }
             }
         }
 
