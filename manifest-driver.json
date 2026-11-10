@@ -1,9 +1,9 @@
 {
-  "name": "مشاركة - كابتن",
+  "name": "توصيل مشاركة - كابتن",
   "short_name": "مشاركة كابتن",
   "start_url": "./driver.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1A237E",
-  "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/3063/3063822.png", "sizes": "512x512", "type": "image/png" }]
+  "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/3063/3063902.png", "sizes": "512x512", "type": "image/png" }]
 }
