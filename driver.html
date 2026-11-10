@@ -71,7 +71,6 @@
 
         .rider-pin-icon { background-color: #FFC107; border: 2px solid white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 16px; }
 
-        /* نافذة إدخال الـ PIN */
         #pin-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 4000; justify-content: center; align-items: center; }
         .pin-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
         .pin-content h3 { margin-bottom: 10px; color: #2196f3;}
@@ -189,8 +188,6 @@
             </div>
 
             <button id="arrived-btn" class="btn-action btn-accept" style="background-color: #007bff; width:100%;" onclick="arriveAtRider()">📍 وصلت للراكب</button>
-            
-            <!-- الزرار ده هيتحول من (بدء الرحلة بـ PIN) لـ (إنهاء الرحلة) -->
             <button id="finish-btn" class="btn-action btn-finish" style="display:none;" onclick="openPinModal()">بدء الرحلة (إدخال الرقم السري)</button>
         </div>
     </div>
@@ -385,10 +382,25 @@
             if(driverMarker) bounds.extend(driverMarker.getLatLng());
             map.fitBounds(bounds, mapPadding);
 
-            container.innerHTML = `<p style="text-align:center;">جاري حساب المسار...</p>`;
+            // عرض الكارت فوراً بالمسافة المباشرة (عشان مفيش تعليق)
+            let roadDist = minDistance.toFixed(1);
+            let roadTime = Math.round((minDistance / 30) * 60) + 1; 
+            
+            container.innerHTML = `<div class="ride-card">
+                <h3>راكب يطلب توصيل</h3>
+                <p class="distance-to-rider">🚗 يبعد عنك: ${roadDist} كم (${roadTime} دقيقة)</p>
+                <p>مشوار الراكب: <b>${ride.distance} كم</b></p>
+                <p class="price">السعر: ${ride.price} جنيه</p>
+                <div class="action-buttons">
+                    <button class="btn-action btn-accept" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}')">قبول</button>
+                    <button class="btn-action btn-ignore" onclick="ignoreRide(${ride.id})">X</button>
+                </div>
+            </div>`;
+            playNewOrderAlert();
 
-            const urlDest = `https://router.project-osrm.org/route/v1/driving/${ride.pickup_lng},${ride.pickup_lat};${ride.dest_lng},${ride.dest_lat}?overview=full&geometries=geojson`;
+            // محاولة جلب المسارات الحقيقية في الخلفية (لو فشلت مفيش مشكلة)
             try {
+                const urlDest = `https://router.project-osrm.org/route/v1/driving/${ride.pickup_lng},${ride.pickup_lat};${ride.dest_lng},${ride.dest_lat}?overview=full&geometries=geojson`;
                 const responseDest = await fetch(urlDest); const destData = await responseDest.json();
                 if (destData.code === 'Ok' && destData.routes.length > 0) {
                     if (destRouteLine) map.removeLayer(destRouteLine);
@@ -396,29 +408,16 @@
                 }
             } catch(e) {}
 
-            if (minDistance < 0.1) {
-                container.innerHTML = `<div class="ride-card">
-                    <h3>راكب يطلب توصيل</h3>
-                    <p class="distance-to-rider" style="background:#e8f5e9; color:#2e7d32;">🚗 الراكب في نفس موقعك</p>
-                    <p>مشوار الراكب: <b>${ride.distance} كم</b></p>
-                    <p class="price">السعر: ${ride.price} جنيه</p>
-                    <div class="action-buttons">
-                        <button class="btn-action btn-accept" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}')">قبول</button>
-                        <button class="btn-action btn-ignore" onclick="ignoreRide(${ride.id})">X</button>
-                    </div>
-                </div>`;
-                playNewOrderAlert();
-            } else {
+            try {
                 const url = `https://router.project-osrm.org/route/v1/driving/${driverMarker.getLatLng().lng},${driverMarker.getLatLng().lat};${ride.pickup_lng},${ride.pickup_lat}?overview=full&geometries=geojson`;
-                try {
-                    const response = await fetch(url); const routeData = await response.json();
-                    let roadDist = minDistance.toFixed(1), roadTime = Math.round((minDistance / 30) * 60) + 1;
-                    if (routeData.code === 'Ok' && routeData.routes.length > 0) {
-                        roadDist = (routeData.routes[0].distance / 1000).toFixed(1); 
-                        roadTime = Math.round((routeData.routes[0].duration / 60) * 2.5) + 1; 
-                        if (pendingRouteLine) map.removeLayer(pendingRouteLine);
-                        pendingRouteLine = L.geoJSON(routeData.routes[0].geometry, { style: { color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10' } }).addTo(map);
-                    }
+                const response = await fetch(url); const routeData = await response.json();
+                if (routeData.code === 'Ok' && routeData.routes.length > 0) {
+                    roadDist = (routeData.routes[0].distance / 1000).toFixed(1); 
+                    roadTime = Math.round((routeData.routes[0].duration / 60) * 2.5) + 1; 
+                    if (pendingRouteLine) map.removeLayer(pendingRouteLine);
+                    pendingRouteLine = L.geoJSON(routeData.routes[0].geometry, { style: { color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10' } }).addTo(map);
+                    
+                    // تحديث النص بالمسافة الحقيقية
                     container.innerHTML = `<div class="ride-card">
                         <h3>راكب يطلب توصيل</h3>
                         <p class="distance-to-rider">🚗 يبعد عنك: ${roadDist} كم (${roadTime} دقيقة)</p>
@@ -429,11 +428,8 @@
                             <button class="btn-action btn-ignore" onclick="ignoreRide(${ride.id})">X</button>
                         </div>
                     </div>`;
-                    playNewOrderAlert();
-                } catch(e) {
-                    container.innerHTML = `<p>حدث خطأ في جلب المسار.</p>`;
                 }
-            }
+            } catch(e) {}
         }
 
         function ignoreRide(rideId) {
@@ -498,7 +494,13 @@
                     document.getElementById('driver-to-rider-distance').innerText = (route.distance / 1000).toFixed(2);
                     document.getElementById('driver-to-rider-time').innerText = Math.round((route.duration / 60) * 2.5) + 1;
                 }
-            } catch (e) {}
+            } catch (e) {
+                // خطة بديلة لو السيرفر وقع
+                routeLine = L.polyline([startPoint, [pLat, pLng]], { color: '#28a745', weight: 6, opacity: 0.6, dashArray: '10, 10' }).addTo(map);
+                map.fitBounds(routeLine.getBounds(), mapPadding);
+                document.getElementById('driver-to-rider-distance').innerText = distDirect.toFixed(2);
+                document.getElementById('driver-to-rider-time').innerText = Math.round((distDirect / 30) * 60) + 1;
+            }
         }
 
         async function arriveAtRider() {
@@ -524,7 +526,6 @@
                 
                 startWaitTimer();
                 
-                // هنا بيظهر زرار بدء الرحلة (اللي بيفتح الـ PIN)
                 document.getElementById('finish-btn').style.display = 'block';
                 document.getElementById('finish-btn').innerText = "بدء الرحلة (إدخال الرقم السري)";
                 document.getElementById('finish-btn').style.backgroundColor = "#28a745"; 
@@ -571,11 +572,10 @@
                     document.getElementById('active-ride-distance-text').style.display = 'block';
                     document.getElementById('active-ride-time-text').style.display = 'block';
                     
-                    // ** التعديل الأهم هنا: تغيير الزرار لإنهاء الرحلة **
                     const finishBtn = document.getElementById('finish-btn');
                     finishBtn.innerText = "إنهاء الرحلة (وصلت للوجهة)";
-                    finishBtn.style.backgroundColor = "#dc3545"; // لون أحمر للإنهاء
-                    finishBtn.setAttribute('onclick', 'finishRide()'); // ربطه بدالة إنهاء الرحلة
+                    finishBtn.style.backgroundColor = "#dc3545"; 
+                    finishBtn.setAttribute('onclick', 'finishRide()'); 
                     
                     if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
                     if (currentDestPoint) {
@@ -640,7 +640,19 @@
         setRating(5);
 
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
+            
+            // لو الطلب اتلغى
             if (payload.new && payload.new.status === 'cancelled') {
+                
+                // لو ده الطلب اللي الكابتن شايفه حالياً (معلق)
+                if (currentPendingRideId === payload.new.id) {
+                    currentPendingRideId = null;
+                    showWaitingUI(); // قفل الشاشة ورجع للبحث
+                    fetchSingleRide(); // جيب طلب تاني
+                    return;
+                }
+
+                // لو ده الطلب النشط (الكابتن قبل وبيتحرك)
                 if (currentActiveRideId === payload.new.id) {
                     alert('عذراً، الراكب قام بإلغاء الرحلة.');
                     currentActiveRideId = null; clearInterval(liveLocationInterval); liveLocationInterval = null; clearInterval(waitTimer); waitTimer = null;
@@ -651,6 +663,7 @@
                     fetchSingleRide();
                 }
             }
+            
             if (!currentActiveRideId) { fetchSingleRide(); }
         }).subscribe();
         
