@@ -14,6 +14,7 @@
         :root { --bg-color: #f0f2f5; --panel-bg: #ffffff; --text-color: #333333; --input-bg: #f8f9fa; --border-color: #dddddd; --header-bg: #1A237E; --header-text: #ffffff; --card-bg: #ffffff; }
         body.dark-mode { --bg-color: #121212; --panel-bg: #1e1e1e; --text-color: #e0e0e0; --input-bg: #2d2d2d; --border-color: #444444; --header-bg: #0d133d; --header-text: #ffffff; --card-bg: #2d2d2d; }
         body.dark-mode .leaflet-tile-pane { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.5s; }
         #install-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background-color: #28a745; color: white; padding: 12px; text-align: center; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; font-weight: bold; font-size: 16px; }
@@ -22,6 +23,7 @@
         .logout-btn { left: 15px; background-color: #dc3545; }
         .profile-btn { right: 15px; background-color: #2196f3; }
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
+        
         .fab-locate { position: absolute; bottom: 260px; left: 15px; z-index: 1000; background-color: var(--panel-bg); color: var(--header-bg); border: 2px solid var(--header-bg); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
         .center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -15px; }
         .pin-svg { width: 40px; height: 40px; filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
@@ -29,6 +31,7 @@
         .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; animation: shadow-scale 2s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes shadow-scale { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(0.7); opacity: 0.2; } }
+        
         .bottom-panel { background: var(--panel-bg); border-radius: 20px 20px 0 0; padding: 20px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 10px; transition: 0.5s; color: var(--text-color); }
         .instruction-text { font-size: 16px; font-weight: bold; color: var(--text-color); text-align: center; margin-bottom: 5px; }
         .search-box { position: relative; width: 100%; display: flex; align-items: center; margin-bottom: 5px; }
@@ -36,11 +39,16 @@
         .search-box input:focus { border-color: #1A237E; }
         .search-btn { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); background-color: var(--header-bg); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: 0.2s; }
         .address-text { font-size: 13px; color: var(--text-color); text-align: center; background: var(--input-bg); padding: 8px; border-radius: 8px; min-height: 35px; display: flex; align-items: center; justify-content: center; transition: 0.5s;}
+        
         .btn-action { background-color: #1A237E; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(26, 35, 126, 0.3); transition: 0.2s; }
-        .btn-confirm-pickup { background-color: #28a745; } .btn-confirm-dropoff { background-color: #dc3545; }
+        .btn-confirm-pickup { background-color: #28a745; } 
+        .btn-confirm-dropoff { background-color: #007bff; } /* تم تغيير اللون للأزرق */
         .btn-cancel { background-color: #dc3545; margin-top: 10px; display: none; }
+        .btn-back { background: none; border: none; color: #007bff; font-weight: bold; font-size: 14px; cursor: pointer; text-align: right; margin-bottom: 10px; font-family: 'Cairo', sans-serif; }
+
         #ride-info { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 10px; text-align: center; transition: 0.5s; }
         #ride-info h3 { color: #28a745; font-size: 26px; margin: 5px 0; }
+        #ride-info p { color: var(--text-color); font-size: 14px; margin-bottom: 5px;}
         
         #driver-details { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2); transition: 0.5s; }
         #driver-details h3 { color: #2196f3; margin-bottom: 5px; font-size: 18px;}
@@ -54,6 +62,7 @@
         body.dark-mode .pin-box h4 { color: #ffca28; }
 
         .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 5px; }
+        
         #profile-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
@@ -66,6 +75,7 @@
         .history-item:last-child { border-bottom: none; }
         .history-item .price { color: #28a745; font-weight: bold; }
         .history-item .date { font-size: 12px; color: #888; }
+        
         #rating-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; justify-content: center; align-items: center; }
         .rating-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
         .stars { font-size: 40px; color: #ddd; cursor: pointer; margin: 15px 0; }
@@ -106,23 +116,32 @@
     
     <div id="map"></div>
     <button class="fab-locate" onclick="centerToMyLocation()">🎯</button>
+    
+    <!-- الدبوس الثابت -->
     <div id="center-pin" class="center-pin">
         <svg class="pin-svg green" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/></svg>
         <div class="pin-shadow"></div>
     </div>
+    
     <div class="bottom-panel">
+        <!-- شاشة تحديد الانطلاق -->
         <div id="ui-pickup">
             <div class="instruction-text">📍 حدد مكان الانطلاق</div>
             <div class="search-box"><input type="text" id="search-pickup" placeholder="اكتب اسم المكان..." onkeypress="handleSearch(event, 'pickup')"><button class="search-btn" onclick="handleSearch(null, 'pickup')">🔍</button></div>
             <div class="address-text" id="pickup-address">جاري تحديد الموقع...</div>
             <button class="btn-action btn-confirm-pickup" onclick="confirmPickup()">تأكيد موقع الانطلاق</button>
         </div>
+        
+        <!-- شاشة تحديد الوصول -->
         <div id="ui-dropoff" style="display: none;">
+            <button class="btn-back" onclick="goBackToPickup()">🔙 رجوع (تعديل الانطلاق)</button>
             <div class="instruction-text">🏁 حدد مكان الوصول</div>
             <div class="search-box"><input type="text" id="search-dropoff" placeholder="اكتب اسم المكان..." onkeypress="handleSearch(event, 'dropoff')"><button class="search-btn" onclick="handleSearch(null, 'dropoff')">🔍</button></div>
             <div class="address-text" id="dropoff-address">جاري تحديد الموقع...</div>
             <button class="btn-action btn-confirm-dropoff" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
         </div>
+        
+        <!-- شاشة الرحلة -->
         <div id="ui-ride" style="display: none;">
             <div id="driver-details">
                 <h3>الكابتن في الطريق إليك 🚗</h3>
@@ -136,7 +155,13 @@
 
                 <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
             </div>
-            <div id="ride-info"><h3>السعر: <span id="price-text">...</span> جنيه</h3></div>
+            
+            <!-- كارت السعر والمسافة -->
+            <div id="ride-info">
+                <p>المسافة: <span id="ride-distance-text">...</span> كم (تقريباً <span id="ride-time-text">...</span> دقيقة)</p>
+                <h3>السعر: <span id="price-text">...</span> جنيه</h3>
+            </div>
+            
             <button id="request-btn" class="btn-action" style="background-color: #28a745;">اطلب التوصيل الآن</button>
             <button id="cancel-btn" class="btn-action btn-cancel" onclick="cancelRide()">إلغاء الطلب</button>
         </div>
@@ -151,11 +176,10 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
         var pickupPoint = null, dropoffPoint = null;
-        var currentDistance = 0, currentPrice = 0, currentRideId = null;
+        var currentDistance = 0, currentTime = 0, currentPrice = 0, currentRideId = null;
         var currentStep = 'pickup'; 
-        var routeLine = null, driverCarMarker = null; 
+        var routeLine = null, driverCarMarker = null, startMarker = null; 
         var watchId = null, userMarker = null, lastPosition = null, isFollowingUser = true, moveEndTimeout;
-        var rideTimeoutTimer = null; // مؤقت إلغاء الطلب
 
         async function getAddress(lat, lng) {
             try {
@@ -208,11 +232,29 @@
         function centerToMyLocation() { isFollowingUser = true; if (lastPosition) { map.flyTo([lastPosition.lat, lastPosition.lng], 16); } }
         startTracking();
 
+        // --- التعديل الأول: إضافة دبوس أخضر لمكان الانطلاق ---
         function confirmPickup() {
             const center = map.getCenter(); pickupPoint = [center.lat, center.lng];
-            document.getElementById('ui-pickup').style.display = 'none'; document.getElementById('ui-dropoff').style.display = 'block';
+            
+            // إضافة دبوس أخضر ثابت
+            if (startMarker) map.removeLayer(startMarker);
+            startMarker = L.marker(pickupPoint, {icon: L.divIcon({html: '📍', className: 'custom-icon', iconSize: [30,30]})}).addTo(map);
+
+            document.getElementById('ui-pickup').style.display = 'none'; 
+            document.getElementById('ui-dropoff').style.display = 'block';
             const pinSvg = document.querySelector('.pin-svg'); pinSvg.classList.remove('green'); pinSvg.classList.add('red');
             currentStep = 'dropoff'; map.fire('moveend'); 
+        }
+
+        // --- التعديل الثاني: زرار الرجوع ---
+        function goBackToPickup() {
+            currentStep = 'pickup';
+            dropoffPoint = null;
+            if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+            document.getElementById('ui-dropoff').style.display = 'none';
+            document.getElementById('ui-pickup').style.display = 'block';
+            const pinSvg = document.querySelector('.pin-svg'); pinSvg.classList.remove('red'); pinSvg.classList.add('green');
+            map.fire('moveend');
         }
 
         async function confirmDropoff() {
@@ -223,14 +265,33 @@
             await drawRoute();
         }
 
+        // --- التعديل الثالث: إضافة حساب الوقت ---
         async function drawRoute() {
             if (!pickupPoint || !dropoffPoint) return; if (routeLine) { map.removeLayer(routeLine); }
             const url = `https://router.project-osrm.org/route/v1/driving/${pickupPoint[1]},${pickupPoint[0]};${dropoffPoint[1]},${dropoffPoint[0]}?overview=full&geometries=geojson`;
             try {
                 const response = await fetch(url); const data = await response.json();
-                if (data.code === 'Ok' && data.routes.length > 0) { const route = data.routes[0]; routeLine = L.geoJSON(route.geometry, { style: { color: '#1A237E', weight: 6, opacity: 0.8 } }).addTo(map); map.fitBounds(routeLine.getBounds(), { padding: [50, 50] }); currentDistance = (route.distance / 1000).toFixed(2); } else { throw new Error(); }
-            } catch (error) { routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#1A237E', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map); map.fitBounds(routeLine.getBounds(), { padding: [50, 50] }); currentDistance = (map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(2); }
-            currentPrice = Math.round(10 + (currentDistance * 5)); document.getElementById('price-text').innerText = currentPrice; document.getElementById('ride-info').style.display = 'block';
+                if (data.code === 'Ok' && data.routes.length > 0) { 
+                    const route = data.routes[0]; 
+                    routeLine = L.geoJSON(route.geometry, { style: { color: '#1A237E', weight: 6, opacity: 0.8 } }).addTo(map); 
+                    map.fitBounds(routeLine.getBounds(), { padding: [50, 50] }); 
+                    currentDistance = (route.distance / 1000).toFixed(2); 
+                    currentTime = Math.round((route.duration / 60) * 2.5) + 1; // معامل التصحيح
+                } else { throw new Error(); }
+            } catch (error) { 
+                routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#1A237E', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map); 
+                map.fitBounds(routeLine.getBounds(), { padding: [50, 50] }); 
+                currentDistance = (map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(2); 
+                currentTime = Math.round((currentDistance / 30) * 60) + 1;
+            }
+            
+            currentPrice = Math.round(10 + (currentDistance * 5)); 
+            
+            // عرض المسافة والوقت في الكارت
+            document.getElementById('ride-distance-text').innerText = currentDistance;
+            document.getElementById('ride-time-text').innerText = currentTime;
+            document.getElementById('price-text').innerText = currentPrice;
+            document.getElementById('ride-info').style.display = 'block';
         }
 
         document.getElementById('request-btn').addEventListener('click', async function() {
@@ -249,21 +310,6 @@
 
                 this.innerText = 'في انتظار قبول الكابتن...'; this.style.backgroundColor = '#ffc107'; this.style.color = '#333';
                 document.getElementById('cancel-btn').style.display = 'block';
-
-                // ** بدء مؤقت الـ 5 دقايق **
-                clearTimeout(rideTimeoutTimer);
-                rideTimeoutTimer = setTimeout(async () => {
-                    if (!currentRideId) return;
-                    
-                    // التأكد إن الطلب لسه pending
-                    const { data: checkRide } = await supabaseClient.from('rides').select('status').eq('id', currentRideId).single();
-                    if (checkRide && checkRide.status === 'pending') {
-                        await supabaseClient.from('rides').update({ status: 'cancelled' }).eq('id', currentRideId);
-                        alert('عذراً، لا يوجد كباتن متاحين في الوقت الحالي. برجاء المحاولة مرة أخرى بعد قليل.');
-                        location.reload();
-                    }
-                }, 5 * 60 * 1000); // 5 دقائق
-
             } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب التوصيل الآن'; this.disabled = false; }
         });
 
@@ -280,7 +326,6 @@
             if (currentRideId && payload.new.id === currentRideId) {
                 
                 if (payload.new.status === 'accepted') {
-                    clearTimeout(rideTimeoutTimer); // إلغاء المؤقت لو الكابتن قبل
                     document.getElementById('request-btn').innerText = 'تم قبول الطلب'; document.getElementById('request-btn').style.backgroundColor = '#6c757d';
                     document.getElementById('cancel-btn').style.display = 'none'; 
                     document.getElementById('driver-details').style.display = 'block';
