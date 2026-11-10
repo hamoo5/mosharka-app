@@ -61,11 +61,17 @@
     <!-- Top Navigation -->
     <header class="fixed top-0 left-0 right-0 z-20 px-4 py-3 flex justify-between items-center pointer-events-none">
         <div class="flex items-center gap-2 pointer-events-auto">
+            <!-- Profile Button -->
             <button onclick="openProfileModal()" class="w-10 h-10 rounded-full bg-gray-800/90 border border-gray-700 text-amber-400 flex items-center justify-center shadow-lg active:scale-95 transition-all">
                 <i class="fa-solid fa-user-gear"></i>
             </button>
+            <!-- Theme Button -->
             <button onclick="toggleThemeManual()" id="themeBtn" class="w-10 h-10 rounded-full bg-gray-800/90 border border-gray-700 text-amber-300 flex items-center justify-center shadow-lg active:scale-95 transition-all">
                 <i class="fa-solid fa-moon text-lg" id="themeIcon"></i>
+            </button>
+            <!-- EXIT Button -->
+            <button onclick="logoutRider()" class="w-10 h-10 rounded-full bg-red-900/80 border border-red-700 text-red-400 flex items-center justify-center shadow-lg active:scale-95 transition-all">
+                <i class="fa-solid fa-power-off"></i>
             </button>
         </div>
     </header>
@@ -77,15 +83,15 @@
     </button>
 
     <!-- My Location Button -->
-    <button onclick="goToMyLocation()" id="myLocationBtn" class="fixed bottom-[45vh] left-4 z-20 w-12 h-12 bg-gray-800/90 border border-gray-700 rounded-full text-amber-400 shadow-xl flex items-center justify-center active:scale-95 transition-all hidden">
+    <button onclick="goToMyLocation()" id="myLocationBtn" class="fixed top-16 left-4 z-20 w-11 h-11 bg-gray-800/90 border border-gray-700 rounded-full text-amber-400 shadow-xl flex items-center justify-center active:scale-95 transition-all">
         <i class="fa-solid fa-crosshairs text-xl"></i>
     </button>
 
     <!-- Map Container -->
     <div id="map"></div>
 
-    <!-- Center Pin -->
-    <div id="centerPin" class="fixed top-[30%] left-1/2 -translate-x-1/2 -translate-y-full z-10 pointer-events-none flex flex-col items-center">
+    <!-- Center Pin (Moved up to 25% to clear more map space) -->
+    <div id="centerPin" class="fixed top-[25%] left-1/2 -translate-x-1/2 -translate-y-full z-10 pointer-events-none flex flex-col items-center">
         <div class="pin-bounce flex flex-col items-center">
             <div id="pinLabel" class="bg-gray-900/90 text-amber-400 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-bold shadow-xl mb-1 whitespace-nowrap">
                 حرك الخريطة لتحديد الموقع
@@ -95,8 +101,8 @@
         <div class="w-3 h-1 bg-black/50 rounded-full blur-[1px] -mt-1"></div>
     </div>
 
-    <!-- Bottom Sheet -->
-    <div id="bottomSheet" class="fixed bottom-0 left-0 right-0 z-30 bg-gray-900 border-t border-gray-800 rounded-t-3xl shadow-up transition-all duration-300 max-h-[85vh] flex flex-col">
+    <!-- Bottom Sheet (Reduced max-height to 65vh) -->
+    <div id="bottomSheet" class="fixed bottom-0 left-0 right-0 z-30 bg-gray-900 border-t border-gray-800 rounded-t-3xl shadow-up transition-all duration-300 max-h-[65vh] flex flex-col">
         <div class="w-full flex justify-center py-2.5"><div class="w-12 h-1.5 bg-gray-700 rounded-full"></div></div>
 
         <div class="p-5 pt-1 overflow-y-auto no-scrollbar pb-24">
@@ -400,14 +406,14 @@
             map = L.map('map', { zoomControl: false, fadeAnimation: true }).setView([30.0444, 31.2357], 15);
             setMapStyle(mapMode);
 
-            // Update address on drag - fetching from the exact PIN POSITION (30% from top)
+            // Update address on drag - fetching from the exact PIN POSITION (25% from top)
             map.on('moveend', function() {
                 if (currentStep === 'ride' || currentStep === 'vehicle') return;
                 
                 clearTimeout(mapMoveTimeout);
                 mapMoveTimeout = setTimeout(async () => {
                     const size = map.getSize();
-                    const pinPoint = map.containerPointToLatLng([size.x / 2, size.y * 0.30]);
+                    const pinPoint = map.containerPointToLatLng([size.x / 2, size.y * 0.25]); // Matches top-[25%]
                     const lat = pinPoint.lat;
                     const lng = pinPoint.lng;
                     
@@ -522,7 +528,6 @@
 
             if (stepTarget === 'pickup' || stepTarget === 'dropoff') {
                 document.getElementById('centerPin').classList.remove('hidden');
-                document.getElementById('myLocationBtn').classList.remove('hidden');
                 
                 const pinIcon = document.getElementById('centerPinIcon');
                 if (stepTarget === 'pickup') {
@@ -532,7 +537,6 @@
                 }
             } else {
                 document.getElementById('centerPin').classList.add('hidden');
-                document.getElementById('myLocationBtn').classList.add('hidden');
             }
         }
 
@@ -587,10 +591,10 @@
                     routeDistanceKm = parseFloat((route.distance / 1000).toFixed(1));
                     routeDurationMin = Math.ceil(route.duration / 60);
                     
-                    // Updated FitBounds to heavily pad the bottom, forcing map to zoom out so route is visible above the sheet.
+                    // Push map up so route is completely visible
                     map.fitBounds(routePolyline.getBounds(), { 
                         paddingTopLeft: [30, 50], 
-                        paddingBottomRight: [30, window.innerHeight * 0.65] // Increased to 65% of screen height
+                        paddingBottomRight: [30, window.innerHeight * 0.75] 
                     });
                 } else { throw new Error(); }
             } catch(e) {
@@ -599,7 +603,7 @@
                 routeDurationMin = Math.ceil((routeDistanceKm / 35) * 60);
                 map.fitBounds(routePolyline.getBounds(), { 
                     paddingTopLeft: [30, 50], 
-                    paddingBottomRight: [30, window.innerHeight * 0.65] 
+                    paddingBottomRight: [30, window.innerHeight * 0.75] 
                 });
             }
 
