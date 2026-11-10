@@ -182,31 +182,32 @@
         var userMarker = null;
         var lastPosition = null;
         var isFollowingUser = true; 
-        var moveEndTimeout; // متغير عشان نمنع تكرار الطلبات للسيرفر
+        var moveEndTimeout; 
 
         async function getAddress(lat, lng) {
             try {
-                // ضفنا zoom=18 عشان يجيب اسم الشارع بالظبط
+                // بنجيب تفاصيل أكتر (الشارع + الحي + المدينة)
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=ar`);
                 const data = await response.json();
                 
                 if(data.error) return "موقع محدد على الخريطة";
                 
-                // ترتيب الأولويات: اسم الشارع، ثم الحي، ثم المدينة
-                const road = data.address.road || data.address.pedestrian || data.address.footway || data.address.suburb || "";
+                const road = data.address.road || data.address.pedestrian || data.address.footway || "";
+                const suburb = data.address.suburb || data.address.neighbourhood || "";
                 const city = data.address.city || data.address.town || data.address.village || "";
                 
-                if (road) {
-                    return road + (city ? '، ' + city : '');
-                }
-                
-                return data.display_name ? data.display_name.split(',')[0] : "موقع محدد على الخريطة";
+                // تجميع الاسم بشكل مفصل
+                let fullAddress = "";
+                if (road) fullAddress += road;
+                if (suburb && suburb !== road) fullAddress += (fullAddress ? '، ' : '') + suburb;
+                if (city && city !== suburb && city !== road) fullAddress += (fullAddress ? '، ' : '') + city;
+
+                return fullAddress || "موقع محدد على الخريطة";
             } catch (e) {
                 return "موقع محدد على الخريطة";
             }
         }
 
-        // 1. التحديث التلقائي لما الخريطة توقف حركة
         map.on('moveend', function() {
             clearTimeout(moveEndTimeout);
             
@@ -220,24 +221,20 @@
 
                 document.getElementById(addressTextId).innerText = "جاري تحديد اسم الشارع...";
                 
-                // بنجيب الاسم الحقيقي من الخريطة
                 const address = await getAddress(center.lat, center.lng);
-                
-                // بنكتب الاسم الحقيقي في الخانة وفي النص
                 document.getElementById(addressTextId).innerText = address;
                 
-                // بنحدث الخانة بس لو المستخدم مش بيكتب فيها دلوقتي
+                // هنحدث الخانة بالاسم التفصيلي، بس لو المستخدم مش بيكتب فيها
                 if (document.activeElement !== inputElement) {
                     inputElement.value = address;
                 }
-            }, 600); // استنى نص ثانية عشان الخريطة تستقر
+            }, 600);
         });
 
         map.on('dragstart', function() {
             isFollowingUser = false;
         });
 
-        // 2. البحث بالكتابة
         async function handleSearch(event, type) {
             if (event && event.key !== 'Enter') return;
 
@@ -253,7 +250,6 @@
             btnElement.innerText = '⏳';
 
             try {
-                // لو المستخدم كتب رقم صورة أو اسم مكان
                 const encodedQuery = encodeURIComponent(query);
                 const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=eg&accept-language=ar`);
                 const data = await response.json();
@@ -261,12 +257,7 @@
                 if (data && data.length > 0) {
                     const lat = parseFloat(data[0].lat);
                     const lon = parseFloat(data[0].lon);
-                    
-                    // بنطير للمكان
                     map.flyTo([lat, lon], 16);
-                    
-                    // لما الخريطة توصل هتوقف وهيتشغل event (moveend) اللي فوق
-                    // وهو اللي هيجيب اسم الشارع الحقيقي ويحدث الخانات
                 } else {
                     alert('لم يتم العثور على المكان. جرب اسم تاني أو حدد من الخريطة.');
                 }
@@ -279,7 +270,6 @@
             }
         }
 
-        // 3. التتبع المباشر
         function startTracking() {
             if (navigator.geolocation) {
                 if (watchId !== null) navigator.geolocation.clearWatch(watchId);
