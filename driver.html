@@ -198,7 +198,6 @@
         var waitTimer = null; 
         var waitSeconds = 0;
         
-        // متغيرات مهمة لتحديد موقع الانطلاق
         var currentPickupPoint = null; 
         var currentRiderName = "";
 
@@ -272,15 +271,14 @@
                             }
                         } else { driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map); }
                         
-                        // تحديث المسافة ديناميكياً لو كان في رحلة نشطة
                         if (currentActiveRideId && currentPickupPoint) {
                             const distToPickup = newPos.distanceTo(L.latLng(currentPickupPoint[0], currentPickupPoint[1]));
                             if (distToPickup <= 150 && document.getElementById('arrived-btn').style.display !== 'none') {
                                 document.getElementById('arrived-btn').innerText = "✅ أنت قريب، اضغط لتأكيد الوصول";
-                                document.getElementById('arrived-btn').style.backgroundColor = "#28a745"; // لون أخضر
+                                document.getElementById('arrived-btn').style.backgroundColor = "#28a745"; 
                             } else if (distToPickup > 150 && document.getElementById('arrived-btn').style.display !== 'none') {
                                 document.getElementById('arrived-btn').innerText = "📍 وصلت للراكب (اقترب أولاً)";
-                                document.getElementById('arrived-btn').style.backgroundColor = "#6c757d"; // لون رمادي
+                                document.getElementById('arrived-btn').style.backgroundColor = "#6c757d"; 
                             }
                         }
 
@@ -335,7 +333,9 @@
                             const response = await fetch(url); const routeData = await response.json();
                             let roadDist, roadTime;
                             if (routeData.code === 'Ok' && routeData.routes.length > 0) {
-                                roadDist = (routeData.routes[0].distance / 1000).toFixed(1); roadTime = Math.round(routeData.routes[0].duration / 60);
+                                roadDist = (routeData.routes[0].distance / 1000).toFixed(1); 
+                                // ** هنا معامل تصحيح الوقت **
+                                roadTime = Math.round((routeData.routes[0].duration / 60) * 2.5) + 1; 
                                 if (pendingRouteLine) map.removeLayer(pendingRouteLine);
                                 pendingRouteLine = L.geoJSON(routeData.routes[0].geometry, { style: { color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10' } }).addTo(map);
                             } else { throw new Error(); }
@@ -378,8 +378,6 @@
             if (error) { alert('حدث خطأ.'); return; }
             
             currentActiveRideId = rideId; currentRiderName = rName; isAlertPlaying = false; currentPendingRideId = null; 
-            
-            // حفظ مكان الانطلاق عشان نستخدمه في الحماية
             currentPickupPoint = [pLat, pLng]; 
             
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
@@ -422,12 +420,13 @@
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#28a745', weight: 6, opacity: 0.8 } }).addTo(map);
                     map.fitBounds(routeLine.getBounds(), mapPadding);
                     document.getElementById('driver-to-rider-distance').innerText = (route.distance / 1000).toFixed(2);
-                    document.getElementById('driver-to-rider-time').innerText = Math.round(route.duration / 60);
+                    
+                    // ** هنا معامل تصحيح الوقت للرحلة النشطة **
+                    document.getElementById('driver-to-rider-time').innerText = Math.round((route.duration / 60) * 2.5) + 1;
                 }
             } catch (e) {}
         }
 
-        // ** دالة "وصلت للراكب" مع الحماية الجغرافية **
         async function arriveAtRider() {
             if (!currentActiveRideId || !currentPickupPoint || !driverMarker) return;
             
@@ -435,13 +434,11 @@
             const pickupLatLng = L.latLng(currentPickupPoint[0], currentPickupPoint[1]);
             const distanceInMeters = currentPos.distanceTo(pickupLatLng);
 
-            // شرط الحماية: المسافة لازم تكون أقل من 150 متر
             if (distanceInMeters > 150) {
                 alert(`أنت بعيد عن نقطة الانطلاق بحوالي ${Math.round(distanceInMeters)} متر. برجاء الاقتراب من الراكب أولاً.`);
                 return;
             }
             
-            // لو قريب، نكمل عادي
             const { error } = await supabaseClient.from('rides').update({ driver_arrived_at: new Date().toISOString() }).eq('id', currentActiveRideId);
             
             if (!error) {
@@ -491,7 +488,6 @@
             }
         }
 
-        // دوال الملف الشخصي والتقييم
         async function openProfile() {
             document.getElementById('profile-modal').style.display = 'flex';
             document.getElementById('p-name').innerText = user.name; document.getElementById('p-phone').innerText = user.phone;
