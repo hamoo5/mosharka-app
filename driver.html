@@ -49,7 +49,6 @@
         .btn-finish { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
         .btn-subscribe { background-color: #ffc107; color: #333; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
         
-        /* زرار تفعيل التنبيهات */
         #enable-alerts-btn { background-color: #e91e63; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(233, 30, 99, 0.3); animation: pulse 2s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
 
@@ -79,7 +78,6 @@
     </style>
 </head>
 <body>
-    <!-- صوت التنبيه (مخفي) -->
     <audio id="notifSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
     <script>
@@ -95,7 +93,6 @@
         setInterval(applyTheme, 60000);
     </script>
     
-    <!-- نافذة الملف الشخصي -->
     <div id="profile-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -119,7 +116,6 @@
         </div>
     </div>
 
-    <!-- نافذة التقييم للكابتن -->
     <div id="rating-modal">
         <div class="rating-content">
             <h3>قيّم الراكب</h3>
@@ -144,7 +140,6 @@
     <div id="map"></div>
     <div class="bottom-panel">
         
-        <!-- زرار تفعيل التنبيهات -->
         <button id="enable-alerts-btn" onclick="enableAlerts()">🔔 اضغط هنا لتفعيل صوت التنبيهات</button>
 
         <div id="subscription-box">
@@ -182,30 +177,16 @@
 
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
 
-        // دالة تفعيل التنبيهات
         function enableAlerts() {
-            // 1. فتح قفل الصوت
             const audio = document.getElementById('notifSound');
-            audio.play().then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-            }).catch(e => console.log("Audio unlock failed", e));
-
-            // 2. طلب إذن الإشعارات
-            if ("Notification" in window) {
-                Notification.requestPermission();
-            }
-
-            // 3. اهتزاز تجريبي
+            audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => console.log("Audio unlock failed", e));
+            if ("Notification" in window) { Notification.requestPermission(); }
             if (navigator.vibrate) { navigator.vibrate(200); }
-
-            // 4. إخفاء الزرار وحفظ الحالة
             document.getElementById('enable-alerts-btn').style.display = 'none';
             localStorage.setItem('alertsEnabled', 'true');
-            alert('تم تفعيل التنبيهات بنجاح! أول ما طلب جديد ينزل هتسمع صوت وهتحس باهتزاز.');
+            alert('تم تفعيل التنبيهات بنجاح!');
         }
 
-        // لو متفعل من قبل، نخفي الزرار
         if (localStorage.getItem('alertsEnabled') === 'true') {
             document.getElementById('enable-alerts-btn').style.display = 'none';
         }
@@ -214,6 +195,7 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
         var currentActiveRideId = null;
+        var currentPendingRideId = null; // متغير جديد عشان نمنع اختفاء الطلب
         var driverMarker = null;
         var riderMarker = null;
         var routeLine = null;
@@ -222,7 +204,6 @@
         var liveLocationInterval = null; 
         var isAlertPlaying = false;
 
-        // وسعنا النطاق لـ 15 كم عشان مشاكل الـ GPS
         const MAX_DISTANCE_KM = 15; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
         
@@ -235,20 +216,11 @@
         function playNewOrderAlert() {
             if (isAlertPlaying) return;
             isAlertPlaying = true;
-
-            // تشغيل الصوت
             const audio = document.getElementById('notifSound');
             audio.play().catch(e => console.log("الصوت محتاج تفاعل من المستخدم", e));
-
-            // اهتزاز
             if (navigator.vibrate) { navigator.vibrate([500, 200, 500, 200, 500]); }
-
-            // إشعار
             if ("Notification" in window && Notification.permission === "granted") {
-                new Notification("🚗 طلب توصيل جديد!", {
-                    body: "وصلك طلب جديد على تطبيق مشاركة، افتح التطبيق للتفاصيل.",
-                    icon: "https://cdn-icons-png.flaticon.com/512/3063/3063902.png"
-                });
+                new Notification("🚗 طلب توصيل جديد!", { body: "وصلك طلب جديد على تطبيق مشاركة، افتح التطبيق للتفاصيل.", icon: "https://cdn-icons-png.flaticon.com/512/3063/3063902.png" });
             }
         }
 
@@ -280,7 +252,6 @@
             }
         }
 
-        // شكل العربية الجديد (3D)
         function startTrackingAndListening() {
             if (navigator.geolocation) {
                 const carIcon = L.divIcon({
@@ -344,9 +315,12 @@
                 });
 
                 if (closestRide) {
-                    if (document.getElementById('requests-ui').style.display === 'none') {
-                        playNewOrderAlert();
-                    }
+                    // ** التعديل المهم هنا **
+                    // لو الطلب اللي قدامنا هو نفسه اللي معروض، مفيش داعي نعيد الرسم تاني (عشان ميتخفش)
+                    if (currentPendingRideId === closestRide.id) return;
+
+                    currentPendingRideId = closestRide.id; // سجلنا رقم الطلب
+                    playNewOrderAlert();
 
                     document.getElementById('waiting-ui').style.display = 'none';
                     document.getElementById('requests-ui').style.display = 'block';
@@ -398,6 +372,8 @@
                     }
                 } else {
                     if (!currentActiveRideId) {
+                        // لو مفيش طلبات، بنصفر المتغير عشان لو طلب جديد ييجي يشتغل الصوت
+                        currentPendingRideId = null; 
                         document.getElementById('waiting-ui').style.display = 'block';
                         document.getElementById('requests-ui').style.display = 'none';
                         if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
@@ -407,6 +383,7 @@
                 }
             } else {
                 if (!currentActiveRideId) {
+                    currentPendingRideId = null; 
                     document.getElementById('waiting-ui').style.display = 'block';
                     document.getElementById('requests-ui').style.display = 'none';
                     if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
@@ -422,6 +399,7 @@
             currentActiveRideId = rideId;
             currentRiderName = rName;
             isAlertPlaying = false; 
+            currentPendingRideId = null; // صفرنا الطلب المعلق عشان خلاص قبلناه
             
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
             
@@ -547,6 +525,14 @@
         setRating(5); 
 
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
+            // لو الراكب لغى الطلب، بنحدث الشاشة
+            if (payload.new && payload.new.status === 'cancelled') {
+                currentPendingRideId = null;
+                document.getElementById('waiting-ui').style.display = 'block';
+                document.getElementById('requests-ui').style.display = 'none';
+                if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
+                if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
+            }
             if (!currentActiveRideId) { fetchPendingRide(); }
         }).subscribe();
         
