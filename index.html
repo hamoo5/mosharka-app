@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>توصيل مشاركة - الراكب</title>
+    <title>توصيل مشاركة - الراكب (حي)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- استدعاء مكتبة Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
         :root {
@@ -19,7 +21,6 @@
             --text-sub: #94a3b8;
             --danger: #ff4757;
             --success: #22c55e;
-            --warning: #ffa502;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -29,7 +30,6 @@
         .nav-left, .nav-right { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
         .nav-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-main); text-decoration: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
         .nav-btn svg { width: 18px; height: 18px; fill: currentColor; }
-        .nav-btn.exit { color: var(--danger); }
         
         #map { flex-grow: 1; width: 100%; height: 100vh; z-index: 1; background-color: #05070a; }
         .dark-tiles { filter: brightness(0.6) invert(1) contrast(1.3) hue-rotate(200deg) saturate(0.3); }
@@ -59,7 +59,6 @@
         .search-btn { background: var(--card-border); color: var(--text-main); border: none; padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; }
 
         .my-location-btn { width: 100%; background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px dashed var(--success); padding: 8px; border-radius: 10px; font-weight: 700; font-size: 13px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
-
         .btn-main { width: 100%; background: var(--primary-gradient); color: #ffffff; padding: 14px; border-radius: 14px; border: none; font-size: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         
         .route-summary-box { background: var(--bg-color); border: 1px solid var(--card-border); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
@@ -72,20 +71,20 @@
 
     <div class="top-nav">
         <div class="nav-right">
-            <a href="#" onclick="location.reload()" class="nav-btn exit" title="خروج"><svg viewBox="0 0 24 24"><path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg></a>
+            <a href="#" onclick="logout()" class="nav-btn" title="خروج"><svg viewBox="0 0 24 24"><path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg></a>
         </div>
         <div class="nav-left">
             <div class="nav-btn" onclick="alert('أحمد - الراكب')" title="الملف الشخصي">👤</div>
         </div>
     </div>
 
-    <!-- شريط الذروة الحية -->
+    <!-- شريط الذروة -->
     <div class="surge-banner" id="surgeBanner">
         <div class="surge-text">
-            <span style="color: var(--success);">🟢</span> 4 كباتن متاحين قريبين منك
+            <span style="color: var(--success);">🟢</span> <span id="driverCountText">جاري البحث عن كباتن...</span>
         </div>
         <div class="surge-badge">
-            <span>⚡ 1.4x ذروة D3</span>
+            <span>⚡ 1.4x ذروة</span>
         </div>
     </div>
 
@@ -137,7 +136,12 @@
     </div>
 
     <script>
-        // 1. إعداد الخريطة
+        // === 1. إعداد Supabase (عشان نستقبل البيانات الحية) ===
+        const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
+        const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // === 2. إعداد الخريطة ===
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         document.getElementById('map').classList.add('dark-tiles');
@@ -145,16 +149,18 @@
         var pickupPoint = null, dropoffPoint = null;
         var currentStep = 'pickup'; 
         var startMarker = null, destMarker = null, userMarker = null, moveEndTimeout;
-        var activeDrivers = []; // مصفوفة لحفظ سيارات الكباتن الحية
+        
+        // مصفوفة لحفظ سيارات الكباتن الحية عشان نتحكم فيها
+        let liveDriversMap = {}; 
 
-        // 2. تصميم سيارة الكابتن (نفس الصورة اللي بعتها)
+        // === 3. تصميم سيارة الكابتن ===
         const driverIcon = (name, rating, imgUrl) => L.divIcon({
             className: 'custom-driver-marker',
             html: `
                 <div class="driver-marker-container">
                     <div class="driver-avatar-box">
-                        <img src="${imgUrl}" alt="driver">
-                        <div class="driver-rating-badge">${rating}★</div>
+                        <img src="${imgUrl || 'https://i.pravatar.cc/100?img=11'}" alt="driver">
+                        <div class="driver-rating-badge">${rating || '5.0'}★</div>
                     </div>
                 </div>
             `,
@@ -162,35 +168,71 @@
             iconAnchor: [20, 20]
         });
 
-        // 3. دالة محاكاة سيارات الكباتن على الخريطة (عشان الخريطة تبقى "حية")
-        function simulateLiveDrivers() {
-            const driversData = [
-                { name: 'أحمد', rating: '4.94', img: 'https://i.pravatar.cc/100?img=11' },
-                { name: 'محمود', rating: '4.91', img: 'https://i.pravatar.cc/100?img=12' },
-                { name: 'مصطفى', rating: '4.88', img: 'https://i.pravatar.cc/100?img=13' },
-                { name: 'كريم', rating: '4.98', img: 'https://i.pravatar.cc/100?img=14' }
-            ];
-
-            // بنحط الكباتن دول حوالين مركز الخريطة (بمسافات وهمية)
-            const center = map.getCenter();
-            driversData.forEach((driver, index) => {
-                // إحداثيات عشوائية قريبة من المركز
-                const lat = center.lat + (Math.random() - 0.5) * 0.01;
-                const lng = center.lng + (Math.random() - 0.5) * 0.01;
-
-                const marker = L.marker([lat, lng], { icon: driverIcon(driver.name, driver.rating, driver.img) }).addTo(map);
-                activeDrivers.push(marker);
-
-                // حركة لايف للكباتن (عشان تحس إنهم بيتحركوا)
-                setInterval(() => {
-                    const newLat = marker.getLatLng().lat + (Math.random() - 0.5) * 0.0005;
-                    const newLng = marker.getLatLng().lng + (Math.random() - 0.5) * 0.0005;
-                    marker.setLatLng([newLat, newLng]);
-                }, 3000 + (index * 1000));
-            });
+        // === 4. دالة تحديث/إضافة سيارة كابتن على الخريطة ===
+        function updateDriverOnMap(driver) {
+            // لو الكابتن موجود بالفعل، بنحرك عربيته
+            if (liveDriversMap[driver.id]) {
+                liveDriversMap[driver.id].setLatLng([driver.lat, driver.lng]);
+            } 
+            // لو كابتن جديد، بنضيف عربيته
+            else {
+                const marker = L.marker([driver.lat, driver.lng], { 
+                    icon: driverIcon(driver.name, driver.rating, driver.avatar_url) 
+                }).addTo(map);
+                liveDriversMap[driver.id] = marker;
+            }
+            updateDriverCount();
         }
 
-        // 4. دالة تحديد الموقع الحالي
+        // === 5. دالة إزالة سيارة كابتن (لو قفل التطبيق أو بقى أوفلاين) ===
+        function removeDriverFromMap(driverId) {
+            if (liveDriversMap[driverId]) {
+                map.removeLayer(liveDriversMap[driverId]);
+                delete liveDriversMap[driverId];
+            }
+            updateDriverCount();
+        }
+
+        // === 6. تحديث نص عدد الكباتن في شريط الذروة ===
+        function updateDriverCount() {
+            const count = Object.keys(liveDriversMap).length;
+            document.getElementById('driverCountText').innerText = count > 0 
+                ? `${count} كباتن متاحين قريبين منك` 
+                : 'لا يوجد كباتن متاحين حالياً';
+        }
+
+        // === 7. جلب الكباتن الحاليين أول ما التطبيق يفتح ===
+        async function fetchInitialDrivers() {
+            const { data, error } = await supabaseClient
+                .from('drivers')
+                .select('*')
+                .eq('is_online', true);
+
+            if (!error && data) {
+                data.forEach(driver => updateDriverOnMap(driver));
+            }
+        }
+
+        // === 8. الاستماع الحقيقي لأي تغيير في جدول الكباتن (Realtime) ===
+        supabaseClient
+            .channel('live-drivers-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, payload => {
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    // لو الكابتن أونلاين، نعرضه
+                    if (payload.new.is_online) {
+                        updateDriverOnMap(payload.new);
+                    } else {
+                        // لو بقى أوفلاين، نشيله
+                        removeDriverFromMap(payload.new.id);
+                    }
+                } 
+                else if (payload.eventType === 'DELETE') {
+                    removeDriverFromMap(payload.old.id);
+                }
+            })
+            .subscribe();
+
+        // === 9. تحديد الموقع الحالي للراكب ===
         function goToMyLocation() {
             if (navigator.geolocation) {
                 document.getElementById('pickup-address').innerText = "جاري تحديد موقعك...";
@@ -203,7 +245,6 @@
                         userMarker.setLatLng([lat, lng]);
                     }
 
-                    // تظبيط الزوم عشان الدبوس يبقى في النص
                     const targetZoom = 15;
                     const targetPoint = map.project([lat, lng], targetZoom);
                     const offsetPixels = (0.5 - 0.27) * map.getSize().y; 
@@ -212,18 +253,15 @@
 
                     map.flyTo(newCenterLatLng, targetZoom, { animate: true, duration: 1.5 });
 
-                    setTimeout(() => { 
-                        map.fire('moveend'); 
-                        simulateLiveDrivers(); // نرسم سيارات الكباتن بعد ما نلاقي الموقع
-                    }, 1600);
+                    setTimeout(() => { map.fire('moveend'); }, 1600);
 
                 }, () => { alert("تأكد من تشغيل الـ GPS."); });
             }
         }
 
         setTimeout(goToMyLocation, 500);
+        setTimeout(fetchInitialDrivers, 1000); // نجيب الكباتن أول ما نفتح
 
-        // 5. جلب اسم الشارع
         async function getAddress(lat, lng) {
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`);
@@ -232,7 +270,6 @@
             } catch (e) { return "موقع محدد"; }
         }
 
-        // 6. لما الخريطة تتحرك، بنحدث العنوان
         map.on('moveend', function() {
             clearTimeout(moveEndTimeout);
             moveEndTimeout = setTimeout(async () => {
@@ -255,7 +292,6 @@
             }, 400);
         });
 
-        // 7. البحث
         async function handleSearch(event, type) {
             if (event && event.key !== 'Enter') return;
             const inputId = type === 'pickup' ? 'search-pickup' : 'search-dropoff';
@@ -280,7 +316,6 @@
             } catch (e) { alert('خطأ في الاتصال.'); }
         }
 
-        // 8. تأكيد الانطلاق والوجهة
         function confirmPickup() {
             const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.27]);
             if (!pickupPoint) pickupPoint = [center.lat, center.lng];
@@ -293,7 +328,7 @@
             
             currentStep = 'dropoff';
             document.getElementById('pin-svg').setAttribute('fill', '#ff4757');
-            document.getElementById('surgeBanner').style.display = 'none'; // نخفي شريط الذروة مؤقتاً
+            document.getElementById('surgeBanner').style.display = 'none'; 
             map.fire('moveend'); 
         }
 
@@ -317,7 +352,13 @@
             destMarker = L.marker(dropoffPoint, {icon: L.divIcon({ html: `<div style="width: 18px; height: 18px; background: #ff4757; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px #ff4757;"></div>`, iconSize: [18,18], iconAnchor: [9,9] })}).addTo(map);
             document.getElementById('center-pin').style.display = 'none';
 
-            alert("جاري حساب المسار وإظهار السيارات... (في التحديث القادم)");
+            alert("جاري حساب المسار...");
+        }
+
+        function logout() {
+            if(confirm("هل تريد الخروج من التطبيق؟")) {
+                location.reload();
+            }
         }
     </script>
 </body>
