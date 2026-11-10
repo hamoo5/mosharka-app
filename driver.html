@@ -206,7 +206,6 @@
             if (currentRiderMarker) map.removeLayer(currentRiderMarker);
             currentRiderMarker = L.marker([ride.pickup_lat, ride.pickup_lng], {icon: riderIcon}).addTo(map);
             
-            // عرض نقطة التوقف للكابتن لو موجودة
             if (ride.stop_lat && ride.stop_lng) {
                 if (stopMarker) map.removeLayer(stopMarker);
                 stopMarker = L.marker([ride.stop_lat, ride.stop_lng], {icon: stopIcon}).addTo(map);
@@ -331,7 +330,6 @@
             if (!driverMarker) return;
             const startPoint = driverMarker.getLatLng();
             
-            // لو في نقطة توقف، بنمر عليها الأول
             let coords = `${startPoint.lng},${startPoint.lat}`;
             if (currentStopPoint) coords += `;${currentStopPoint[1]},${currentStopPoint[0]}`;
             coords += `;${dLng},${dLat}`;
