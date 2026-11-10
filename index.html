@@ -17,7 +17,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* شريط تثبيت التطبيق */
         #install-banner {
             display: none; position: fixed; top: 0; left: 0; right: 0;
             background-color: #28a745; color: white; padding: 12px; text-align: center; z-index: 9999;
@@ -27,10 +26,8 @@
         .header { background-color: #1A237E; color: white; padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; }
         .logout-btn { position: absolute; left: 15px; top: 18px; background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; }
 
-        /* الخريطة */
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
 
-        /* الدبوس الثابت في نص الشاشة */
         .center-pin {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -100%);
@@ -45,7 +42,6 @@
         
         .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; }
 
-        /* اللوحة السفلية */
         .bottom-panel {
             background: white; border-radius: 20px 20px 0 0;
             padding: 20px; position: absolute; bottom: 0; left: 0; right: 0;
@@ -55,10 +51,9 @@
 
         .instruction-text { font-size: 16px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 5px; }
         
-        /* خانة البحث */
         .search-box { position: relative; width: 100%; margin-bottom: 5px; }
-        .search-box input { width: 100%; padding: 12px 40px 12px 15px; border: 2px solid #ddd; border-radius: 10px; font-family: 'Cairo', sans-serif; font-size: 16px; outline: none; transition: 0.3s; }
-        .search-box input:focus { border-color: #1A237E; }
+        .search-box input { width: 100%; padding: 12px 40px 12px 15px; border: 2px solid #ddd; border-radius: 10px; font-family: 'Cairo', sans-serif; font-size: 16px; outline: none; transition: 0.3s; background-color: #f8f9fa; }
+        .search-box input:focus { border-color: #1A237E; background-color: #fff; }
         .search-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-size: 18px; color: #888; }
 
         .address-text { font-size: 13px; color: #555; text-align: center; background: #f8f9fa; padding: 8px; border-radius: 8px; min-height: 35px; display: flex; align-items: center; justify-content: center;}
@@ -69,7 +64,6 @@
         .btn-confirm-pickup { background-color: #28a745; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
         .btn-confirm-dropoff { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
 
-        /* كارت السعر وبيانات الكابتن */
         #ride-info { display: none; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-top: 10px; text-align: center; }
         #ride-info h3 { color: #28a745; font-size: 24px; margin: 5px 0; }
         #driver-details { display: none; background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-top: 10px; text-align: center; }
@@ -90,10 +84,8 @@
         <a href="#" onclick="logout()" class="logout-btn">خروج</a>
     </div>
 
-    <!-- الخريطة -->
     <div id="map"></div>
 
-    <!-- الدبوس الثابت في نص الخريطة -->
     <div id="center-pin" class="center-pin">
         <svg class="pin-svg green" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/>
@@ -101,10 +93,8 @@
         <div class="pin-shadow"></div>
     </div>
 
-    <!-- اللوحة السفلية -->
     <div class="bottom-panel">
         
-        <!-- واجهة تحديد الانطلاق -->
         <div id="ui-pickup">
             <div class="instruction-text">📍 حدد مكان الانطلاق</div>
             <div class="search-box">
@@ -115,7 +105,6 @@
             <button class="btn-action btn-confirm-pickup" onclick="confirmPickup()">تأكيد موقع الانطلاق</button>
         </div>
 
-        <!-- واجهة تحديد الوصول (مخفية في البداية) -->
         <div id="ui-dropoff" style="display: none;">
             <div class="instruction-text">🏁 حدد مكان الوصول</div>
             <div class="search-box">
@@ -126,7 +115,6 @@
             <button class="btn-action btn-confirm-dropoff" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
         </div>
 
-        <!-- واجهة السعر والطلب (مخفية في البداية) -->
         <div id="ui-ride" style="display: none;">
             <div id="driver-details">
                 <h3>الكابتن في الطريق إليك 🚗</h3>
@@ -151,41 +139,48 @@
 
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
 
-        // 1. إعداد الخريطة
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
-        // 2. المتغيرات الأساسية
         var pickupPoint = null, dropoffPoint = null;
         var currentDistance = 0, currentPrice = 0, currentRideId = null;
-        var currentStep = 'pickup'; // pickup | dropoff | ride
+        var currentStep = 'pickup'; 
         var routeLine = null;
-        var isSearching = false;
+        var isMapMoving = false; // متغير عشان نمنع تحديث الخانات أثناء سحب الخريطة بالظبط
 
-        // 3. دالة جلب اسم الشارع من الإحداثيات
+        // 1. جلب اسم الشارع
         async function getAddress(lat, lng) {
             try {
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`);
                 const data = await response.json();
+                if(data.error) return "موقع محدد على الخريطة";
                 return data.display_name ? data.display_name.split(',')[0] + '، ' + (data.address.suburb || data.address.city || '') : "موقع محدد على الخريطة";
             } catch (e) {
                 return "موقع محدد على الخريطة";
             }
         }
 
-        // 4. تحديث العنوان عند تحريك الخريطة
+        // 2. السحر هنا: تحديث الخانات أوتوماتيك أول ما الخريطة توقف حركة
         map.on('moveend', async function() {
-            if (currentStep === 'ride' || isSearching) return; 
+            if (currentStep === 'ride' || isMapMoving) return; 
 
             const center = map.getCenter();
             const addressTextId = currentStep === 'pickup' ? 'pickup-address' : 'dropoff-address';
+            const inputId = currentStep === 'pickup' ? 'search-pickup' : 'search-dropoff';
+            const inputElement = document.getElementById(inputId);
+
             document.getElementById(addressTextId).innerText = "جاري تحديد اسم الشارع...";
             
             const address = await getAddress(center.lat, center.lng);
             document.getElementById(addressTextId).innerText = address;
+
+            // تحديث خانة البحث بالاسم الحقيقي للدبوس (إلا لو المستخدم بيكتب فيها دلوقتي)
+            if (document.activeElement !== inputElement) {
+                inputElement.value = address;
+            }
         });
 
-        // 5. البحث بالكتابة
+        // 3. البحث بالكتابة
         async function handleSearch(event, type) {
             if (event.key === 'Enter') {
                 const inputId = type === 'pickup' ? 'search-pickup' : 'search-dropoff';
@@ -193,42 +188,49 @@
                 if(!query) return;
 
                 document.getElementById(inputId).style.borderColor = '#ffc107';
-                isSearching = true;
+                isMapMoving = true; // بنقفل التحديث التلقائي لحد ما نلاقي المكان
 
                 try {
                     const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=eg&accept-language=ar`);
                     const data = await response.json();
                     
-                    document.getElementById(inputId).style.borderColor = '#ddd';
+                    document.getElementById(inputId).style.borderColor = '#1A237E';
 
                     if (data.length > 0) {
                         const lat = parseFloat(data[0].lat);
                         const lon = parseFloat(data[0].lon);
+                        
+                        // بنطير للمكان، ولما يوصل هيرجع يشغل التحديث التلقائي (moveend)
                         map.flyTo([lat, lon], 16);
+                        
+                        // بنستنى حركة الخريطة تخلص وبعدين نفك القفل
+                        map.once('moveend', () => { isMapMoving = false; });
+
                     } else {
                         alert('لم يتم العثور على المكان، جرب اسم تاني أو حدد من الخريطة.');
+                        isMapMoving = false;
                     }
                 } catch (e) {
                     alert('حدث خطأ في البحث');
                     document.getElementById(inputId).style.borderColor = '#ddd';
-                } finally {
-                    // بنستنى ثانية عشان الخريطة تخلص حركة وبعدين نلغي حالة البحث
-                    setTimeout(() => { isSearching = false; }, 1000);
+                    isMapMoving = false;
                 }
             }
         }
 
-        // 6. الطيران لموقع الراكب الحالي أول ما يفتح
+        // 4. تحديد الموقع الحالي أول ما يفتح
         function flyToMyLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(position) {
                     map.flyTo([position.coords.latitude, position.coords.longitude], 16);
+                    map.once('moveend', () => { isMapMoving = false; });
                 }, function(error) { console.log('Location permission denied'); }, { enableHighAccuracy: true });
             }
         }
+        isMapMoving = true;
         flyToMyLocation();
 
-        // 7. تأكيد الانطلاق
+        // 5. تأكيد الانطلاق
         function confirmPickup() {
             const center = map.getCenter();
             pickupPoint = [center.lat, center.lng];
@@ -244,7 +246,7 @@
             map.fire('moveend'); 
         }
 
-        // 8. تأكيد الوصول وحساب السعر
+        // 6. تأكيد الوصول
         async function confirmDropoff() {
             const center = map.getCenter();
             dropoffPoint = [center.lat, center.lng];
@@ -257,12 +259,11 @@
             await drawRoute();
         }
 
-        // 9. رسم المسار (مع خطة بديلة لو السيرفر وقع)
+        // 7. رسم المسار (مع الخطة البديلة)
         async function drawRoute() {
             if (!pickupPoint || !dropoffPoint) return;
             if (routeLine) { map.removeLayer(routeLine); }
 
-            // طلب المسار من السيرفر
             const url = `https://router.project-osrm.org/route/v1/driving/${pickupPoint[1]},${pickupPoint[0]};${dropoffPoint[1]},${dropoffPoint[0]}?overview=full&geometries=geojson`;
 
             try {
@@ -278,36 +279,25 @@
                     throw new Error("لا يوجد مسار");
                 }
             } catch (error) {
-                // الخطة البديلة: خط مستقيم متقطع لو السيرفر مش راضي يستجيب
-                console.log("Routing failed, drawing straight line fallback.", error);
                 routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#1A237E', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map);
                 map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-                
-                // حساب المسافة بالخط المستقيم عشان السعر يظهر
                 const distanceInMeters = map.distance(pickupPoint, dropoffPoint);
                 currentDistance = (distanceInMeters / 1000).toFixed(2);
             }
 
-            // حساب السعر وعرضه
             currentPrice = Math.round(10 + (currentDistance * 5)); 
             document.getElementById('distance-text').innerText = currentDistance;
             document.getElementById('price-text').innerText = currentPrice;
         }
 
-        // 10. إرسال الطلب
+        // 8. إرسال الطلب
         document.getElementById('request-btn').addEventListener('click', async function() {
             this.innerText = 'جاري إرسال الطلب...';
             this.disabled = true;
 
             try {
                 const { data, error } = await supabaseClient.from('rides').insert([{ 
-                    distance: currentDistance, 
-                    price: currentPrice, 
-                    dest_lat: dropoffPoint[0], 
-                    dest_lng: dropoffPoint[1], 
-                    pickup_lat: pickupPoint[0], 
-                    pickup_lng: pickupPoint[1], 
-                    status: 'pending' 
+                    distance: currentDistance, price: currentPrice, dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], status: 'pending' 
                 }]).select();
 
                 if (error) throw error;
@@ -319,7 +309,7 @@
             } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب التوصيل الآن'; this.disabled = false; }
         });
 
-        // 11. متابعة حالة الطلب
+        // 9. متابعة الطلب
         supabaseClient.channel('rider-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
             if (currentRideId && payload.new.id === currentRideId) {
                 if (payload.new.status === 'accepted') {
@@ -336,7 +326,7 @@
             }
         }).subscribe();
 
-        // 12. كود التثبيت
+        // 10. التثبيت
         let deferredPrompt;
         const installBanner = document.getElementById('install-banner');
         window.addEventListener('beforeinstallprompt', (e) => {
