@@ -348,8 +348,15 @@
             let closestRide = null;
             let minDistance = Infinity;
 
+            const now = new Date(); // عشان نحسب عمر الطلب
+
             data.forEach(ride => {
                 if (ignoredRides.includes(ride.id)) return;
+                
+                // ** فلتر الطلبات القديمة (أكتر من 10 دقايق) **
+                const rideAgeMinutes = (now - new Date(ride.created_at)) / 60000;
+                if (rideAgeMinutes > 10) return; 
+
                 const dist = map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000;
                 if (dist < MAX_DISTANCE_KM && dist < minDistance) { minDistance = dist; closestRide = ride; }
             });
@@ -382,7 +389,6 @@
             if(driverMarker) bounds.extend(driverMarker.getLatLng());
             map.fitBounds(bounds, mapPadding);
 
-            // عرض الكارت فوراً بالمسافة المباشرة (عشان مفيش تعليق)
             let roadDist = minDistance.toFixed(1);
             let roadTime = Math.round((minDistance / 30) * 60) + 1; 
             
@@ -392,13 +398,12 @@
                 <p>مشوار الراكب: <b>${ride.distance} كم</b></p>
                 <p class="price">السعر: ${ride.price} جنيه</p>
                 <div class="action-buttons">
-                    <button class="btn-action btn-accept" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}')">قبول</button>
+                    <button class="btn-action btn-accept" id="accept-btn-${ride.id}" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}')">قبول</button>
                     <button class="btn-action btn-ignore" onclick="ignoreRide(${ride.id})">X</button>
                 </div>
             </div>`;
             playNewOrderAlert();
 
-            // محاولة جلب المسارات الحقيقية في الخلفية (لو فشلت مفيش مشكلة)
             try {
                 const urlDest = `https://router.project-osrm.org/route/v1/driving/${ride.pickup_lng},${ride.pickup_lat};${ride.dest_lng},${ride.dest_lat}?overview=full&geometries=geojson`;
                 const responseDest = await fetch(urlDest); const destData = await responseDest.json();
@@ -417,14 +422,13 @@
                     if (pendingRouteLine) map.removeLayer(pendingRouteLine);
                     pendingRouteLine = L.geoJSON(routeData.routes[0].geometry, { style: { color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10' } }).addTo(map);
                     
-                    // تحديث النص بالمسافة الحقيقية
                     container.innerHTML = `<div class="ride-card">
                         <h3>راكب يطلب توصيل</h3>
                         <p class="distance-to-rider">🚗 يبعد عنك: ${roadDist} كم (${roadTime} دقيقة)</p>
                         <p>مشوار الراكب: <b>${ride.distance} كم</b> (الخط البنفسجي)</p>
                         <p class="price">السعر: ${ride.price} جنيه</p>
                         <div class="action-buttons">
-                            <button class="btn-action btn-accept" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}')">قبول</button>
+                            <button class="btn-action btn-accept" id="accept-btn-${ride.id}" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng}, '${ride.rider_name}')">قبول</button>
                             <button class="btn-action btn-ignore" onclick="ignoreRide(${ride.id})">X</button>
                         </div>
                     </div>`;
@@ -436,17 +440,41 @@
             ignoredRides.push(rideId); 
             showWaitingUI(); 
             setTimeout(fetchSingleRide, 1000); 
+
+            setTimeout(() => {
+                const index = ignoredRides.indexOf(rideId);
+                if (index > -1) {
+                    ignoredRides.splice(index, 1); 
+                    if (!currentPendingRideId && !currentActiveRideId) {
+                        fetchSingleRide();
+                    }
+                }
+            }, 30000); // 30 ثانية
         }
 
         async function acceptRide(rideId, pLat, pLng, dLat, dLng, rName) {
-            const { data: checkRide } = await supabaseClient.from('rides').select('status').eq('id', rideId).single();
-            if (checkRide && checkRide.status !== 'pending') {
-                alert('هذا الطلب لم يعد متاحاً.'); ignoreRide(rideId); return;
+            const btn = document.getElementById(`accept-btn-${rideId}`);
+            if(btn) { btn.innerText = 'جاري القبول...'; btn.disabled = true; }
+
+            const { data: updatedData, error } = await supabaseClient
+                .from('rides')
+                .update({ status: 'accepted', driver_name: user.name, driver_phone: user.phone })
+                .eq('id', rideId)
+                .eq('status', 'pending') 
+                .select();
+
+            if (error) {
+                alert('حدث خطأ في الاتصال.');
+                if(btn) { btn.innerText = 'قبول'; btn.disabled = false; }
+                return;
             }
 
-            const { error } = await supabaseClient.from('rides').update({ status: 'accepted', driver_name: user.name, driver_phone: user.phone }).eq('id', rideId);
-            if (error) { alert('حدث خطأ.'); return; }
-            
+            if (!updatedData || updatedData.length === 0) {
+                alert('عذراً، هذا الطلب تم قبوله من كابتن آخر للتو.');
+                ignoreRide(rideId); 
+                return;
+            }
+
             currentActiveRideId = rideId; currentRiderName = rName; isAlertPlaying = false; 
             currentPickupPoint = [pLat, pLng]; 
             currentDestPoint = [dLat, dLng]; 
@@ -495,7 +523,6 @@
                     document.getElementById('driver-to-rider-time').innerText = Math.round((route.duration / 60) * 2.5) + 1;
                 }
             } catch (e) {
-                // خطة بديلة لو السيرفر وقع
                 routeLine = L.polyline([startPoint, [pLat, pLng]], { color: '#28a745', weight: 6, opacity: 0.6, dashArray: '10, 10' }).addTo(map);
                 map.fitBounds(routeLine.getBounds(), mapPadding);
                 document.getElementById('driver-to-rider-distance').innerText = distDirect.toFixed(2);
@@ -560,7 +587,6 @@
             if (!enteredPin) { alert('برجاء إدخال الرقم السري.'); return; }
 
             if (enteredPin === currentRidePin) {
-                // الرقم صح!
                 closePinModal();
                 clearInterval(waitTimer); 
                 document.getElementById('wait-timer-ui').style.display = 'none';
@@ -639,20 +665,26 @@
         }
         setRating(5);
 
-        supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
+        supabaseClient.channel('driver-realtime').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
             
-            // لو الطلب اتلغى
+            // 1. لو في طلب أنا شايفه (معلق) وحد تاني قبله
+            if (payload.new && payload.new.status === 'accepted') {
+                if (currentPendingRideId === payload.new.id) {
+                    alert('عذراً، تم قبول هذا الطلب من كابتن آخر.');
+                    currentPendingRideId = null;
+                    showWaitingUI();
+                    fetchSingleRide();
+                }
+            }
+
+            // 2. لو الطلب اتلغى من الراكب
             if (payload.new && payload.new.status === 'cancelled') {
-                
-                // لو ده الطلب اللي الكابتن شايفه حالياً (معلق)
                 if (currentPendingRideId === payload.new.id) {
                     currentPendingRideId = null;
-                    showWaitingUI(); // قفل الشاشة ورجع للبحث
-                    fetchSingleRide(); // جيب طلب تاني
+                    showWaitingUI(); 
+                    fetchSingleRide(); 
                     return;
                 }
-
-                // لو ده الطلب النشط (الكابتن قبل وبيتحرك)
                 if (currentActiveRideId === payload.new.id) {
                     alert('عذراً، الراكب قام بإلغاء الرحلة.');
                     currentActiveRideId = null; clearInterval(liveLocationInterval); liveLocationInterval = null; clearInterval(waitTimer); waitTimer = null;
@@ -668,6 +700,7 @@
         }).subscribe();
         
         checkSubscription();
+        setInterval(fetchSingleRide, 10000);
     </script>
 </body>
 </html>
