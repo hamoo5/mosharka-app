@@ -33,10 +33,11 @@
         .address-text { font-size: 13px; color: #555; text-align: center; background: #f8f9fa; padding: 8px; border-radius: 8px; min-height: 35px; display: flex; align-items: center; justify-content: center;}
         .btn-action { background-color: #1A237E; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(26, 35, 126, 0.3); transition: 0.2s; }
         .btn-confirm-pickup { background-color: #28a745; } .btn-confirm-dropoff { background-color: #dc3545; }
-        #ride-info { display: none; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; text-align: center; }
-        #ride-info h3 { color: #28a745; font-size: 24px; margin: 5px 0; }
         
-        /* كارت الكابتن الجديد */
+        /* كارت السعر */
+        #ride-info { display: none; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; text-align: center; }
+        #ride-info h3 { color: #28a745; font-size: 26px; margin: 5px 0; }
+        
         #driver-details { display: none; background-color: #fff; padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2); }
         #driver-details h3 { color: #1A237E; margin-bottom: 5px; font-size: 18px;}
         .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; background: #ffebee; padding: 5px; border-radius: 5px;}
@@ -84,10 +85,12 @@
                 <div class="driver-distance-info" id="driver-eta-text">جاري تحديد موقع الكابتن...</div>
                 <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
             </div>
+            
+            <!-- شيلنا المسافة من هنا -->
             <div id="ride-info">
-                <p>المسافة: <span id="distance-text">...</span> كم</p>
                 <h3>السعر: <span id="price-text">...</span> جنيه</h3>
             </div>
+            
             <button id="request-btn" class="btn-action" style="background-color: #28a745;">اطلب التوصيل الآن</button>
         </div>
     </div>
@@ -226,7 +229,7 @@
                 currentDistance = (map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(2);
             }
             currentPrice = Math.round(10 + (currentDistance * 5)); 
-            document.getElementById('distance-text').innerText = currentDistance;
+            // شيلنا تحديث المسافة من هنا
             document.getElementById('price-text').innerText = currentPrice;
             document.getElementById('ride-info').style.display = 'block';
         }
@@ -249,13 +252,11 @@
                     document.getElementById('d-name').innerText = payload.new.driver_name;
                     document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
                     
-                    // لو الكابتن باعت مكانه أول مرة
                     if (payload.new.driver_lat && payload.new.driver_lng) {
                         updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng);
                     }
                 }
                 
-                // التتبع المباشر للمسافة والوقت
                 if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') {
                     updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng);
                 }
@@ -269,7 +270,6 @@
             }
         }).subscribe();
         
-        // دالة تحديث موقع الكابتن على خريطة الراكب
         function updateDriverLocation(dLat, dLng) {
             if (driverCarMarker) {
                 driverCarMarker.setLatLng([dLat, dLng]);
@@ -282,10 +282,8 @@
                 driverCarMarker = L.marker([dLat, dLng], {icon: carIcon}).addTo(map).bindPopup('الكابتن في الطريق');
             }
             
-            // حساب المسافة والوقت التقريبي بين الكابتن والراكب
             if (pickupPoint) {
                 const dist = map.distance([dLat, dLng], [pickupPoint[0], pickupPoint[1]]) / 1000;
-                // افتراض سرعة 30 كم/س لتقدير الوقت بالدقائق
                 const eta = Math.round((dist / 30) * 60);
                 document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${dist.toFixed(1)} كم (تقريباً ${eta} دقيقة)`;
             }
