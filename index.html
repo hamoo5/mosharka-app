@@ -35,8 +35,12 @@
         .btn-confirm-pickup { background-color: #28a745; } .btn-confirm-dropoff { background-color: #dc3545; }
         #ride-info { display: none; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; text-align: center; }
         #ride-info h3 { color: #28a745; font-size: 24px; margin: 5px 0; }
-        #driver-details { display: none; background-color: #e3f2fd; padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; }
-        .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 10px; }
+        
+        /* كارت الكابتن الجديد */
+        #driver-details { display: none; background-color: #fff; padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2); }
+        #driver-details h3 { color: #1A237E; margin-bottom: 5px; font-size: 18px;}
+        .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; background: #ffebee; padding: 5px; border-radius: 5px;}
+        .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -77,6 +81,7 @@
             <div id="driver-details">
                 <h3>الكابتن في الطريق إليك 🚗</h3>
                 <p>اسم الكابتن: <b id="d-name"></b></p>
+                <div class="driver-distance-info" id="driver-eta-text">جاري تحديد موقع الكابتن...</div>
                 <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
             </div>
             <div id="ride-info">
@@ -96,7 +101,7 @@
         var pickupPoint = null, dropoffPoint = null;
         var currentDistance = 0, currentPrice = 0, currentRideId = null;
         var currentStep = 'pickup'; 
-        var routeLine = null, driverCarMarker = null; // ماركر العربية
+        var routeLine = null, driverCarMarker = null; 
         var watchId = null, userMarker = null, lastPosition = null, isFollowingUser = true, moveEndTimeout;
 
         async function getAddress(lat, lng) {
@@ -236,33 +241,23 @@
             } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب التوصيل الآن'; this.disabled = false; }
         });
 
-        // التحديث السحري: استقبال مكان الكابتن لايف
         supabaseClient.channel('rider-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
             if (currentRideId && payload.new.id === currentRideId) {
-                // لو الكابتن قبل
                 if (payload.new.status === 'accepted') {
                     document.getElementById('request-btn').innerText = 'تم قبول الطلب'; document.getElementById('request-btn').style.backgroundColor = '#6c757d';
                     document.getElementById('driver-details').style.display = 'block';
                     document.getElementById('d-name').innerText = payload.new.driver_name;
                     document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
+                    
+                    // لو الكابتن باعت مكانه أول مرة
+                    if (payload.new.driver_lat && payload.new.driver_lng) {
+                        updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng);
+                    }
                 }
                 
-                // لو الكابتن باعت مكانه (التتبع اللايف)
-                if (payload.new.driver_lat && payload.new.driver_lng) {
-                    const dLat = payload.new.driver_lat;
-                    const dLng = payload.new.driver_lng;
-                    
-                    if (driverCarMarker) {
-                        driverCarMarker.setLatLng([dLat, dLng]); // حرك العربية
-                    } else {
-                        // ارسم العربية أول مرة
-                        const carIcon = L.divIcon({
-                            className: 'driver-car',
-                            html: `<svg width="35" height="35" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/></svg>`,
-                            iconSize: [35, 35], iconAnchor: [17, 17]
-                        });
-                        driverCarMarker = L.marker([dLat, dLng], {icon: carIcon}).addTo(map).bindPopup('الكابتن في الطريق');
-                    }
+                // التتبع المباشر للمسافة والوقت
+                if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') {
+                    updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng);
                 }
 
                 if (payload.new.status === 'completed') {
@@ -273,6 +268,28 @@
                 }
             }
         }).subscribe();
+        
+        // دالة تحديث موقع الكابتن على خريطة الراكب
+        function updateDriverLocation(dLat, dLng) {
+            if (driverCarMarker) {
+                driverCarMarker.setLatLng([dLat, dLng]);
+            } else {
+                const carIcon = L.divIcon({
+                    className: 'driver-car',
+                    html: `<svg width="35" height="35" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/></svg>`,
+                    iconSize: [35, 35], iconAnchor: [17, 17]
+                });
+                driverCarMarker = L.marker([dLat, dLng], {icon: carIcon}).addTo(map).bindPopup('الكابتن في الطريق');
+            }
+            
+            // حساب المسافة والوقت التقريبي بين الكابتن والراكب
+            if (pickupPoint) {
+                const dist = map.distance([dLat, dLng], [pickupPoint[0], pickupPoint[1]]) / 1000;
+                // افتراض سرعة 30 كم/س لتقدير الوقت بالدقائق
+                const eta = Math.round((dist / 30) * 60);
+                document.getElementById('driver-eta-text').innerText = `الكابتن على بعد ${dist.toFixed(1)} كم (تقريباً ${eta} دقيقة)`;
+            }
+        }
 
         let deferredPrompt;
         const installBanner = document.getElementById('install-banner');
