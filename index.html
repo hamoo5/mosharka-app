@@ -1,614 +1,733 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="h-full bg-gray-900">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>توصيل مشاركة - الراكب</title>
-    <link rel="manifest" href="manifest-rider.json">
-    <meta name="theme-color" content="#FFFFFF">
+    <title>توصيل مشاركة - واجهة الراكب</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#111827">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#fffbe6', 100: '#fff1b8', 400: '#fadb14', 500: '#e6a100', 600: '#d48800' },
+                        darkCard: '#1f2937',
+                        darkBg: '#111827'
+                    },
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        :root {
-            --bg-color: #F4F5F7;
-            --card-bg: #FFFFFF;
-            --primary: #000000; 
-            --text-main: #1A1A1A;
-            --text-sub: #7A7A7A;
-            --danger: #E53935;
-            --border-color: #E0E0E0;
-            --success: #28A745;
-            --blue-dot: #007AFF;
+        * { font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #map { width: 100%; height: 100vh; z-index: 1; }
+
+        /* Dark Mode Filter for Map */
+        .dark-map .leaflet-tile-pane {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
-        body { background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        /* Custom Pin */
+        .pin-bounce { animation: bouncePin 1.8s infinite ease-in-out; }
+        @keyframes bouncePin { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+        .shadow-up { box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4); }
+        .leaflet-control-attribution { display: none !important; }
+        .leaflet-container { background-color: #111827 !important; }
 
-        .top-nav { position: absolute; top: 0; left: 0; right: 0; z-index: 1000; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
-        .nav-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-main); text-decoration: none; pointer-events: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .nav-btn svg { width: 20px; height: 20px; fill: currentColor; }
-        
-        #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); transition: filter 0.5s ease; }
-
-        .sos-float { position: absolute; top: 70px; left: 20px; z-index: 1000; background: var(--card-bg); color: var(--danger); padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; border: 1px solid var(--danger); box-shadow: 0 2px 8px rgba(229, 57, 53, 0.2); cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .sos-float svg { width: 16px; height: 16px; fill: var(--danger); }
-
-        .center-pin { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -100%); z-index: 2000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -10px;}
-        .pin-icon { width: 50px; height: 50px; filter: drop-shadow(0 6px 8px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
-        .pin-shadow { width: 18px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; animation: shadow-scale 2s infinite; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        @keyframes shadow-scale { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(0.7); opacity: 0.2; } }
-
-        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 20px 20px 0 0; padding: 20px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); transition: 0.3s ease; max-height: 75vh; overflow-y: auto; color: var(--text-main); border-top: 1px solid var(--border-color); }
-        
-        .title { font-size: 20px; font-weight: 700; margin-bottom: 15px; text-align: center; }
-        
-        .input-group { display: flex; align-items: center; background: #F4F5F7; border: 1px solid transparent; border-radius: 12px; margin-bottom: 10px; padding-left: 5px; transition: 0.3s; }
-        .input-group:focus-within { border-color: var(--text-main); background: white; }
-        .input-group input { flex-grow: 1; background: transparent; border: none; padding: 15px; color: var(--text-main); font-size: 16px; outline: none; font-family: 'Cairo', sans-serif; font-weight: 600;}
-        
-        .search-btn { background: transparent; border: none; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .search-btn svg { width: 22px; height: 22px; fill: var(--text-main); }
-
-        .address-display { font-size: 13px; color: var(--text-sub); text-align: right; margin-bottom: 15px; padding-right: 15px; font-weight: 600;}
-
-        .btn-main { width: 100%; background: var(--primary); color: white; padding: 16px; border-radius: 12px; border: none; font-size: 18px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Cairo', sans-serif;}
-        .btn-main:active { transform: scale(0.98); opacity: 0.9; }
-        .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); margin-top: 10px; }
-        .btn-back { background: transparent; color: var(--text-sub); padding: 5px 0; border: none; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; margin-bottom: 10px; font-weight: 600;}
-
-        .add-stop-btn { background: transparent; color: var(--blue-dot); border: 1px dashed var(--blue-dot); width: 100%; padding: 10px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 5px; font-family: 'Cairo', sans-serif;}
-
-        .stop-input-box { display: none; background: #FFFBEA; padding: 10px; border-radius: 12px; border: 1px solid #FFC107; margin-bottom: 15px; }
-        .stop-input-box .input-group { background: white; margin-bottom: 5px; }
-        .remove-stop { background:none; border:none; color:var(--danger); font-size:12px; font-weight:bold; cursor:pointer;}
-
-        .vehicles-scroll { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 15px; scrollbar-width: none; }
-        .vehicles-scroll::-webkit-scrollbar { display: none; }
-        
-        .vehicle-card { flex: 0 0 110px; background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .vehicle-card.selected { border: 2px solid var(--text-main); background: #F4F5F7; }
-        .vehicle-img { width: 60px; height: 50px; margin: 0 auto 5px auto; display: flex; justify-content: center; align-items: center;}
-        .vehicle-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .vehicle-name { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
-        .vehicle-desc { font-size: 11px; color: var(--text-sub); font-weight: 600; margin-bottom: 5px;}
-        .vehicle-price { font-size: 15px; font-weight: 800; color: var(--text-main); }
-
-        .ticket-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 15px; }
-        .eta-badge { color: var(--success); font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 5px;}
-        .pin-badge { background: #F4F5F7; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 18px; letter-spacing: 2px; color: var(--text-main); border: 1px solid var(--border-color);}
-        
-        .driver-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-        .driver-avatar { width: 60px; height: 60px; border-radius: 50%; border: 1px solid var(--border-color); object-fit: cover; }
-        .driver-info h3 { font-size: 18px; font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 8px;}
-        .rating { color: var(--text-sub); font-size: 14px; font-weight: 600;}
-        .car-details { display: flex; gap: 10px; font-size: 14px; color: var(--text-sub); font-weight: 600;}
-        
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .action-btn { background: #F4F5F7; color: var(--text-main); padding: 14px; border-radius: 12px; border: 1px solid var(--border-color); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; transition: 0.2s;}
-        .action-btn.msg { background: var(--text-main); color: white; border-color: var(--text-main); } 
-        .action-btn svg { width: 18px; height: 18px; fill: currentColor; }
-        
-        .fare-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #F4F5F7; border-radius: 12px; margin-bottom: 15px; font-weight: 700; font-size: 16px; border: 1px solid var(--border-color);}
-        .fare-price { color: var(--text-main); font-size: 20px; font-weight: 800;}
-
-        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: flex-end; }
-        .modal-content { background: var(--card-bg); width: 100%; border-radius: 20px 20px 0 0; padding: 25px 20px; text-align: center; animation: slideUp 0.3s ease; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .sos-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px;}
-        .sos-btn { padding: 16px; border-radius: 12px; color: white; font-weight: 700; font-size: 16px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; cursor: pointer;}
-        .sos-btn.police { background: #1976D2; } .sos-btn.ambulance { background: #F44336; } .sos-btn.fire { background: #FF9800; }
+        .vehicle-card-selected {
+            border-color: #fadb14 !important;
+            background-color: rgba(250, 219, 20, 0.08) !important;
+        }
     </style>
 </head>
-<body>
+<body class="h-full overflow-hidden select-none bg-gray-900 text-gray-100">
 
-    <div id="sos-modal" class="modal">
-        <div class="modal-content">
-            <h2 style="color: var(--danger); margin-bottom: 10px; font-weight: 800;">🚨 طوارئ</h2>
-            <p style="color: var(--text-sub); margin-bottom: 20px; font-weight: 600;">هل أنت في خطر؟ اتصل بالجهات المختصة فوراً.</p>
-            <div class="sos-grid">
-                <button onclick="window.location.href='tel:122'" class="sos-btn police">🚓 الشرطة (122)</button>
-                <button onclick="window.location.href='tel:123'" class="sos-btn ambulance">🚑 الإسعاف (123)</button>
-                <button onclick="window.location.href='tel:180'" class="sos-btn fire">🚒 المطافئ (180)</button>
-                <button class="btn-main btn-outline" style="margin-top: 10px; color: var(--text-main);" onclick="closeSos()">إلغاء</button>
-            </div>
+    <!-- Top Navigation -->
+    <header class="fixed top-0 left-0 right-0 z-20 px-4 py-3 flex justify-between items-center pointer-events-none">
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <button onclick="openProfileModal()" class="w-10 h-10 rounded-full bg-gray-800/90 border border-gray-700 text-amber-400 flex items-center justify-center shadow-lg active:scale-95 transition-all">
+                <i class="fa-solid fa-user-gear"></i>
+            </button>
+            <button onclick="toggleThemeManual()" id="themeBtn" class="w-10 h-10 rounded-full bg-gray-800/90 border border-gray-700 text-amber-300 flex items-center justify-center shadow-lg active:scale-95 transition-all">
+                <i class="fa-solid fa-moon text-lg" id="themeIcon"></i>
+            </button>
         </div>
-    </div>
+    </header>
 
-    <div class="top-nav">
-        <a href="#" onclick="logout()" class="nav-btn">
-            <svg viewBox="0 0 24 24"><path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
-        </a>
-        <div class="nav-btn" onclick="openProfile()">
-            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-        </div>
-        <button id="toggleTheme" class="nav-btn" style="font-size: 18px; padding: 0; pointer-events: auto;">🌙</button>
-    </div>
+    <!-- SOS Button -->
+    <button onclick="openSosModal()" class="fixed top-16 right-4 z-20 bg-red-600/90 text-white px-3 py-2 rounded-full text-xs font-extrabold flex items-center gap-2 shadow-lg border border-red-400 border-opacity-40 active:scale-95 transition-all">
+        <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
+        <span>طوارئ SOS</span>
+    </button>
 
+    <!-- My Location Button -->
+    <button onclick="goToMyLocation()" id="myLocationBtn" class="fixed bottom-[35vh] left-4 z-20 w-12 h-12 bg-gray-800/90 border border-gray-700 rounded-full text-amber-400 shadow-xl flex items-center justify-center active:scale-95 transition-all hidden">
+        <i class="fa-solid fa-crosshairs text-xl"></i>
+    </button>
+
+    <!-- Map Container -->
     <div id="map"></div>
 
-    <div class="sos-float" onclick="document.getElementById('sos-modal').style.display='flex'">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> SOS
+    <!-- Center Pin -->
+    <div id="centerPin" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-full z-10 pointer-events-none flex flex-col items-center">
+        <div class="pin-bounce flex flex-col items-center">
+            <div id="pinLabel" class="bg-gray-900/90 text-amber-400 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-bold shadow-xl mb-1 whitespace-nowrap">
+                حرك الخريطة لتحديد الموقع
+            </div>
+            <i id="centerPinIcon" class="fa-solid fa-location-dot text-4xl text-amber-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"></i>
+        </div>
+        <div class="w-3 h-1 bg-black/50 rounded-full blur-[1px] -mt-1"></div>
     </div>
 
-    <div id="center-pin" class="center-pin">
-        <svg class="pin-icon" viewBox="0 0 24 24" fill="#1A1A1A" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/>
-        </svg>
-        <div class="pin-shadow"></div>
-    </div>
+    <!-- Bottom Sheet -->
+    <div id="bottomSheet" class="fixed bottom-0 left-0 right-0 z-30 bg-gray-900 border-t border-gray-800 rounded-t-3xl shadow-up transition-all duration-300 max-h-[85vh] flex flex-col">
+        <div class="w-full flex justify-center py-2.5"><div class="w-12 h-1.5 bg-gray-700 rounded-full"></div></div>
 
-    <div class="bottom-sheet">
-        
-        <div id="ui-pickup-dropoff">
-            <h2 class="title" id="instruction-title">أين أنت الآن؟</h2>
+        <div class="p-5 pt-1 overflow-y-auto no-scrollbar pb-24">
             
-            <div id="pickup-section">
-                <div class="input-group">
-                    <input type="text" id="search-pickup" placeholder="مكان الانطلاق..." onkeypress="handleSearch(event, 'pickup')">
-                    <button class="search-btn" onclick="handleSearch(null, 'pickup')">
-                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <!-- STEP 1: PICKUP -->
+            <div id="step-pickup" class="space-y-4">
+                <div class="text-center">
+                    <h2 class="text-lg font-black text-white flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-dot text-emerald-400 text-sm"></i> من أين تريد الانطلاق؟
+                    </h2>
+                </div>
+
+                <div class="relative">
+                    <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-emerald-400">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <input type="text" id="pickupInput" onkeypress="handleSearchKey(event, 'pickup')" placeholder="ابحث عن مكان الانطلاق..." 
+                           class="w-full pr-10 pl-16 py-3 bg-gray-800 border border-gray-700 rounded-xl text-sm font-semibold text-white placeholder-gray-400 focus:outline-none focus:border-amber-400 transition-colors">
+                    <button onclick="executeGeocodeSearch('pickup')" class="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+                        بحث
                     </button>
                 </div>
-                <div class="address-display" id="pickup-address">جاري تحديد الموقع...</div>
-                <button class="btn-main" onclick="confirmPickup()">تأكيد موقع الانطلاق</button>
+
+                <div class="bg-gray-800/60 border border-gray-800 rounded-xl p-3 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                        <i class="fa-solid fa-street-view"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <span class="text-[10px] text-gray-400 font-bold block">العنوان المحدد حالياً</span>
+                        <div id="pickupAddressText" class="text-xs font-bold text-gray-200 truncate">جاري جلب اسم الشارع...</div>
+                    </div>
+                </div>
+
+                <button onclick="confirmPickupLocation()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 rounded-xl shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2">
+                    <span>تأكيد موقع الانطلاق</span>
+                    <i class="fa-solid fa-arrow-left text-sm"></i>
+                </button>
             </div>
 
-            <div id="dropoff-section" style="display: none;">
-                <button class="btn-back" onclick="goBackToPickup()">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg> رجوع
-                </button>
-                <h2 class="title" style="margin-bottom: 10px;">إلى أين تريد الذهاب؟</h2>
-                <div class="input-group">
-                    <input type="text" id="search-dropoff" placeholder="اكتب وجهتك..." onkeypress="handleSearch(event, 'dropoff')">
-                    <button class="search-btn" onclick="handleSearch(null, 'dropoff')">
-                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <!-- STEP 2: DROPOFF -->
+            <div id="step-dropoff" class="hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <button onclick="backToStep('pickup')" class="text-gray-400 hover:text-white text-xs font-bold flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-800 transition-colors">
+                        <i class="fa-solid fa-arrow-right"></i> <span>رجوع</span>
                     </button>
                 </div>
-                <div class="address-display" id="dropoff-address">جاري تحديد الموقع...</div>
-                
-                <button id="add-stop-btn" class="add-stop-btn" onclick="showStopInput()">➕ إضافة نقطة توقف (اختياري)</button>
-                
-                <div id="stop-input-box" class="stop-input-box">
-                    <div class="input-group">
-                        <input type="text" id="search-stop" placeholder="اكتب اسم مكان التوقف..." onkeypress="handleSearch(event, 'stop')">
-                        <button class="search-btn" onclick="handleSearch(null, 'stop')">
-                            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+
+                <div class="bg-emerald-950/40 border border-emerald-800/40 p-2.5 rounded-xl flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2 truncate">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+                        <span class="text-gray-300 font-semibold truncate">من: <strong id="summaryPickupText" class="text-white">...</strong></span>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-rose-400">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                    <input type="text" id="dropoffInput" onkeypress="handleSearchKey(event, 'dropoff')" placeholder="اكتب وجهتك أو حددها من الخريطة..." 
+                           class="w-full pr-10 pl-16 py-3 bg-gray-800 border border-gray-700 rounded-xl text-sm font-semibold text-white placeholder-gray-400 focus:outline-none focus:border-amber-400 transition-colors">
+                    <button onclick="executeGeocodeSearch('dropoff')" class="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+                        بحث
+                    </button>
+                </div>
+
+                <div class="bg-gray-800/60 border border-gray-800 rounded-xl p-3 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                        <i class="fa-solid fa-map-pin"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <span class="text-[10px] text-gray-400 font-bold block">وجهة الوصول المحددة</span>
+                        <div id="dropoffAddressText" class="text-xs font-bold text-gray-200 truncate">حرك الخريطة أو ابحث...</div>
+                    </div>
+                </div>
+
+                <!-- Add Stop -->
+                <div id="addStopWrapper">
+                    <button onclick="showStopSection()" class="w-full bg-gray-800 hover:bg-gray-700 text-amber-400 border border-amber-500/30 border-dashed py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-plus-circle"></i> <span>إضافة نقطة توقف (اختياري)</span>
+                    </button>
+                </div>
+
+                <div id="stopBoxSection" class="hidden bg-amber-950/20 border border-amber-500/30 p-3 rounded-xl space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-amber-400 flex items-center gap-1"><i class="fa-solid fa-pause-circle"></i> نقطة توقف</span>
+                        <button onclick="removeStopSection()" class="text-rose-400 hover:text-rose-300 font-bold text-[11px] flex items-center gap-1"><i class="fa-solid fa-xmark"></i> إلغاء</button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="stopInput" onkeypress="handleSearchKey(event, 'stop')" placeholder="اكتب اسم المحطة..." 
+                               class="w-full pr-3 pl-16 py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-400">
+                        <button onclick="executeGeocodeSearch('stop')" class="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-700 text-white text-[10px] font-bold px-2 py-1.5 rounded">
+                            بحث
                         </button>
                     </div>
-                    <div class="address-display" id="stop-address" style="margin-bottom: 5px; color: #856404;">اكتب اسم المكان واضغط بحث</div>
-                    <button class="remove-stop" onclick="removeStopInput()">❌ إزالة نقطة التوقف</button>
+                    <div id="stopAddressText" class="text-[11px] font-medium text-amber-300/80 truncate">لم يتم اختيار محطة توقف بعد</div>
                 </div>
 
-                <button class="btn-main" style="margin-top: 10px;" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
+                <button onclick="confirmRouteAndProceed()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-extrabold py-3.5 rounded-xl shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2">
+                    <span>تأكيد مسار الرحلة</span>
+                    <i class="fa-solid fa-route text-sm"></i>
+                </button>
             </div>
-        </div>
 
-        <div id="ui-vehicle" style="display: none;">
-            <h2 class="title">اختر رحلتك</h2>
-            
-            <div class="vehicles-scroll">
-                <div class="vehicle-card" onclick="selectVehicle('moto', this)">
-                    <div class="vehicle-img"><img src="https://cdn-icons-png.flaticon.com/512/2830/2830284.png" alt="Moto"></div>
-                    <div class="vehicle-name">دراجة</div>
-                    <div class="vehicle-desc">فرد واحد - سريع</div>
-                    <div class="vehicle-price" id="price-moto">...</div>
-                </div>
-                
-                <div class="vehicle-card selected" onclick="selectVehicle('car', this)">
-                    <div class="vehicle-img"><img src="https://cdn-icons-png.flaticon.com/512/3097/3097144.png" alt="Car"></div>
-                    <div class="vehicle-name">ملاكي</div>
-                    <div class="vehicle-desc">4 أفراد - مكيف</div>
-                    <div class="vehicle-price" id="price-car">...</div>
-                </div>
-                
-                <div class="vehicle-card" onclick="selectVehicle('suv', this)">
-                    <div class="vehicle-img"><img src="https://cdn-icons-png.flaticon.com/512/3097/3097139.png" alt="SUV"></div>
-                    <div class="vehicle-name">عائلية</div>
-                    <div class="vehicle-desc">7 أفراد - واسعة</div>
-                    <div class="vehicle-price" id="price-suv">...</div>
-                </div>
-            </div>
-            
-            <button id="request-btn" class="btn-main">اطلب الآن</button>
-        </div>
-
-        <div id="ui-ride" style="display: none;">
-            <div id="driver-details">
-                <div class="ticket-header">
-                    <div class="eta-badge">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-                        وصول خلال <span id="eta-time">...</span> دقيقة
+            <!-- STEP 3: VEHICLE -->
+            <div id="step-vehicle" class="hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <button onclick="backToStep('dropoff')" class="text-gray-400 hover:text-white text-xs font-bold flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-800 transition-colors">
+                        <i class="fa-solid fa-arrow-right"></i> <span>تعديل المسار</span>
+                    </button>
+                    
+                    <div class="bg-gray-800 px-3 py-1 rounded-full text-xs font-bold text-amber-400 border border-gray-700 flex items-center gap-2">
+                        <span><i class="fa-solid fa-road text-gray-400"></i> <span id="routeDistanceText">0</span> كم</span>
+                        <span>•</span>
+                        <span><i class="fa-regular fa-clock text-gray-400"></i> <span id="routeDurationText">0</span> دقيقة</span>
                     </div>
-                    <div class="pin-badge">PIN: <span id="pin-code-display">----</span></div>
                 </div>
-                
-                <div class="driver-profile">
-                    <img src="https://www.w3schools.com/howto/img_avatar.png" alt="Driver" class="driver-avatar">
-                    <div class="driver-info">
-                        <h3><span id="d-name">جاري البحث...</span> <span class="rating">4.9 ★</span></h3>
-                        <div class="car-details">
-                            <span id="d-car-info">سيارة ملاكي - أبيض</span> • <span style="font-family: monospace; letter-spacing: 1px;" id="d-plate">أ ب ج 1 2 3 4</span>
+
+                <div class="text-center">
+                    <h2 class="text-base font-black text-white">اختر نوع المركبة</h2>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div onclick="selectVehicleType('car')" id="card-car" class="vehicle-card vehicle-card-selected border border-gray-700 bg-gray-800/80 p-3 rounded-2xl cursor-pointer text-center flex flex-col justify-between transition-all">
+                        <div class="text-amber-400 text-2xl mb-1"><i class="fa-solid fa-car-side"></i></div>
+                        <div><div class="text-xs font-black text-white">ملاكي</div><div class="text-[10px] text-gray-400 font-semibold mt-0.5">حتى 3 ركاب</div></div>
+                        <div class="mt-2 pt-2 border-t border-gray-700/60"><span class="text-sm font-black text-amber-400" id="price-car">0</span> <span class="text-[10px] font-bold text-gray-400">ج.م</span></div>
+                    </div>
+                    <div onclick="selectVehicleType('suzuki')" id="card-suzuki" class="vehicle-card border border-gray-700 bg-gray-800/80 p-3 rounded-2xl cursor-pointer text-center flex flex-col justify-between transition-all">
+                        <div class="text-amber-400 text-2xl mb-1"><i class="fa-solid fa-van-shuttle"></i></div>
+                        <div><div class="text-xs font-black text-white">سوزوكي</div><div class="text-[10px] text-gray-400 font-semibold mt-0.5">حتى 6 ركاب</div></div>
+                        <div class="mt-2 pt-2 border-t border-gray-700/60"><span class="text-sm font-black text-amber-400" id="price-suzuki">0</span> <span class="text-[10px] font-bold text-gray-400">ج.م</span></div>
+                    </div>
+                    <div onclick="selectVehicleType('microbus')" id="card-microbus" class="vehicle-card border border-gray-700 bg-gray-800/80 p-3 rounded-2xl cursor-pointer text-center flex flex-col justify-between transition-all">
+                        <div class="text-amber-400 text-2xl mb-1"><i class="fa-solid fa-bus"></i></div>
+                        <div><div class="text-xs font-black text-white">ميكروباص</div><div class="text-[10px] text-gray-400 font-semibold mt-0.5">حتى 13 راكب</div></div>
+                        <div class="mt-2 pt-2 border-t border-gray-700/60"><span class="text-sm font-black text-amber-400" id="price-microbus">0</span> <span class="text-[10px] font-bold text-gray-400">ج.م</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800/90 border border-gray-700 p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-white flex items-center gap-1.5"><i class="fa-solid fa-users text-amber-400"></i> عدد المقاعد:</div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-gray-900 border border-gray-700 px-3 py-1.5 rounded-lg">
+                        <button onclick="changePassengerCount(-1)" class="w-7 h-7 rounded-md bg-gray-800 text-amber-400 font-extrabold flex items-center justify-center active:scale-95 text-base">-</button>
+                        <span id="passengerCountDisplay" class="text-base font-black text-white w-4 text-center">1</span>
+                        <button onclick="changePassengerCount(1)" class="w-7 h-7 rounded-md bg-gray-800 text-amber-400 font-extrabold flex items-center justify-center active:scale-95 text-base">+</button>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-amber-500/10 via-gray-800 to-amber-500/10 border border-amber-500/30 p-3.5 rounded-xl flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-300">إجمالي التكلفة التقديرية</span>
+                    <div class="text-left"><span id="finalEstimatedPrice" class="text-2xl font-black text-amber-400">0</span> <span class="text-xs font-extrabold text-amber-300">جنيه</span></div>
+                </div>
+
+                <button onclick="requestRideNow()" id="submitRideBtn" class="w-full bg-amber-500 hover:bg-amber-400 text-gray-950 font-black py-4 rounded-xl shadow-xl active:scale-98 transition-all flex items-center justify-center gap-2 text-base">
+                    <i class="fa-solid fa-paper-plane"></i> <span>طلب الرحلة الآن</span>
+                </button>
+            </div>
+
+            <!-- STEP 4: RIDE TRACKING -->
+            <div id="step-ride" class="hidden space-y-4">
+                <div class="bg-gray-800 border border-gray-700 p-3.5 rounded-2xl flex items-center justify-between shadow-lg">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></div>
+                        <div>
+                            <span id="rideStatusBadge" class="text-xs font-extrabold text-amber-400 block">جاري البحث عن كابتن...</span>
+                            <span class="text-[10px] text-gray-400" id="etaSubText">وصول الكابتن: خلال <strong id="etaMinutesText" class="text-white">--</strong> دقيقة</span>
                         </div>
                     </div>
+                    <div class="bg-gray-900 border border-amber-500/40 px-3 py-1.5 rounded-xl text-center">
+                        <span class="text-[9px] text-gray-400 font-bold block">PIN</span>
+                        <span id="pinCodeDisplay" class="text-base font-black tracking-widest text-amber-400 font-mono">----</span>
+                    </div>
                 </div>
 
-                <div class="fare-row">
-                    <div style="color: var(--text-sub);">المبلغ التقديري</div>
-                    <div class="fare-price"><span id="ride-price-text">0</span> ج.م</div>
-                    <div style="font-size: 13px; color: var(--text-sub);">(كاش)</div>
+                <div class="bg-gray-800/80 border border-gray-700 p-3.5 rounded-2xl space-y-3">
+                    <div class="flex items-center gap-3">
+                        <img id="driverAvatar" src="https://placehold.co/100x100/374151/fadb14?text=كابتن" class="w-14 h-14 rounded-full border-2 border-amber-400 object-cover shadow-md">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between">
+                                <h3 id="driverNameText" class="text-sm font-extrabold text-white truncate">في انتظار القبول...</h3>
+                            </div>
+                            <p id="driverCarInfo" class="text-xs text-gray-300 font-semibold mt-0.5 truncate">بيانات السيارة ستظهر فور القبول</p>
+                            <div class="mt-1 inline-block bg-gray-900 border border-gray-700 text-amber-400 text-xs font-mono font-bold px-2 py-0.5 rounded-md" id="driverPlateText">أ ب ج • 1 2 3</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-gray-700">
+                        <a id="driverCallBtn" href="#" class="bg-gray-700 text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-phone text-emerald-400"></i> اتصال</a>
+                        <a id="driverWhatsappBtn" href="#" target="_blank" class="bg-emerald-600/90 text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"><i class="fa-brands fa-whatsapp text-lg"></i> واتساب</a>
+                    </div>
                 </div>
 
-                <div class="action-grid">
-                    <a href="#" id="d-call" class="action-btn">
-                        <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.03 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg> اتصال
-                    </a>
-                    <a href="#" id="d-msg" class="action-btn msg" target="_blank">
-                        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/></svg> رسالة
-                    </a>
+                <div class="bg-gray-800/60 border border-gray-700/60 p-3 rounded-xl flex justify-between items-center text-xs">
+                    <div class="text-gray-300 font-semibold">التكلفة النهائية (<span id="ridePassengerCountText">1</span> مقاعد)</div>
+                    <div class="text-base font-black text-amber-400"><span id="activeRidePriceText">0</span> ج.م</div>
                 </div>
 
-                <button id="cancel-btn" class="btn-main" style="background: white; color: var(--danger); border: 1px solid var(--border-color);" onclick="cancelRide()">إلغاء الرحلة</button>
+                <!-- Simulation Controls -->
+                <div id="demoSimulationControls" class="bg-amber-950/30 border border-amber-500/40 p-2.5 rounded-xl space-y-1.5">
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button onclick="simulateDriverAcceptance()" class="bg-emerald-700 text-white text-[10px] font-bold py-1.5 rounded-lg">1. قبول الكابتن</button>
+                        <button onclick="simulateDriverArrived()" class="bg-sky-700 text-white text-[10px] font-bold py-1.5 rounded-lg">2. وصول الكابتن</button>
+                        <button onclick="simulateRideCompletion()" class="bg-purple-700 text-white text-[10px] font-bold py-1.5 rounded-lg">3. إنهاء الرحلة</button>
+                    </div>
+                </div>
+
+                <button onclick="confirmCancelRide()" id="cancelRideBtn" class="w-full bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800/50 font-bold py-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-xmark"></i> <span>إلغاء الرحلة</span>
+                </button>
             </div>
-        </div>
 
+        </div>
     </div>
 
-    <div id="profile-modal" class="modal"><div class="modal-content" style="text-align: right;"><h2 class="title" style="text-align: center;">حسابي</h2><p style="margin-bottom: 10px; font-size: 16px; font-weight: 600;">الاسم: <b id="p-name" style="color: var(--text-main);"></b></p><p style="margin-bottom: 20px; font-size: 16px; font-weight: 600;">الموبايل: <b id="p-phone" style="color: var(--text-main);"></b></p><h3 style="margin-bottom: 10px; font-weight: 700;">سجل الرحلات</h3><div id="history-list" style="max-height: 200px; overflow-y: auto; color: var(--text-sub); font-weight: 600;"></div><button class="btn-main" style="margin-top: 20px;" onclick="closeProfile()">إغلاق</button></div></div>
-    <div id="rating-modal" class="modal"><div class="modal-content"><h2 class="title">قيّم الكابتن</h2><p style="color: var(--text-sub); margin-bottom: 15px; font-weight: 600;">كيف كانت رحلتك مع <b id="rate-driver-name" style="color: var(--text-main);"></b>؟</p><div class="stars" id="star-container" style="font-size: 40px; color: #E0E0E0; cursor: pointer; margin: 15px 0; display: flex; justify-content: center; gap: 10px;"><span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span></div><button class="btn-main" onclick="submitRating()">إرسال التقييم</button></div></div>
+    <!-- Modals (SOS, Profile, Rating) -->
+    <div id="sosModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-end justify-center sm:items-center p-4">
+        <div class="bg-gray-900 border border-red-500/40 rounded-3xl p-6 w-full max-w-md space-y-4 text-center">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 text-red-500 flex items-center justify-center text-3xl mx-auto animate-pulse"><i class="fa-solid fa-shield-halved"></i></div>
+            <h3 class="text-xl font-black text-red-400">🚨 طوارئ</h3>
+            <div class="space-y-2 pt-2">
+                <a href="tel:122" class="w-full bg-blue-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-3"><i class="fa-solid fa-building-shield"></i> شرطة النجدة (122)</a>
+                <a href="tel:123" class="w-full bg-red-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-3"><i class="fa-solid fa-truck-medical"></i> الإسعاف (123)</a>
+                <a href="tel:180" class="w-full bg-amber-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-3"><i class="fa-solid fa-fire-extinguisher"></i> المطافئ (180)</a>
+            </div>
+            <button onclick="closeSosModal()" class="w-full bg-gray-800 text-gray-300 font-bold py-3 rounded-xl text-xs">إغلاق</button>
+        </div>
+    </div>
 
+    <div id="profileModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-end justify-center sm:items-center p-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 w-full max-w-md space-y-4">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fa-solid fa-id-card text-amber-400"></i> حسابي</h3>
+                <button onclick="closeProfileModal()" class="text-gray-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="bg-gray-800 p-3.5 rounded-2xl flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-user"></i></div>
+                <div>
+                    <div id="riderProfileName" class="text-sm font-extrabold text-white">راكب مشاركة</div>
+                    <div id="riderProfilePhone" class="text-xs text-gray-400 dir-ltr font-mono">+20 100 000 0000</div>
+                </div>
+            </div>
+            <button onclick="logoutRider()" class="w-full bg-red-900/40 text-red-400 font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</button>
+        </div>
+    </div>
+
+    <div id="ratingModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-gray-900 border border-amber-500/40 rounded-3xl p-6 w-full max-w-sm space-y-4 text-center">
+            <h3 class="text-lg font-black text-white">وصلت بسلامة! 🎉</h3>
+            <p class="text-xs text-gray-300">كيف كانت تجربتك مع الكابتن <strong id="ratingDriverName" class="text-amber-400">...</strong>؟</p>
+            <div id="starRatingContainer" class="flex justify-center gap-2 text-3xl text-gray-600 py-2 cursor-pointer">
+                <i class="fa-solid fa-star hover:text-amber-400" onclick="setRatingValue(1)"></i>
+                <i class="fa-solid fa-star hover:text-amber-400" onclick="setRatingValue(2)"></i>
+                <i class="fa-solid fa-star hover:text-amber-400" onclick="setRatingValue(3)"></i>
+                <i class="fa-solid fa-star hover:text-amber-400" onclick="setRatingValue(4)"></i>
+                <i class="fa-solid fa-star hover:text-amber-400" onclick="setRatingValue(5)"></i>
+            </div>
+            <button onclick="submitDriverRating()" class="w-full bg-amber-500 text-gray-950 font-black py-3.5 rounded-xl text-sm">إرسال التقييم</button>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none space-y-2 w-11/12 max-w-xs"></div>
+
+    <!-- JAVASCRIPT -->
     <script>
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user || user.role !== 'rider') { window.location.href = 'login.html'; }
-        
-        function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
-        function closeSos() { document.getElementById('sos-modal').style.display = 'none'; }
-        
-        const greenIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #28A745; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-        const redIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #E53935; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-        const yellowIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #FFC107; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
-
-        // === 1. إعداد الخريطة الأساسية ===
-        var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15);
-
-        // === 2. دالة بتحدد إحنا نهار ولا ليل ===
-        function isDayTime() {
-            const hour = new Date().getHours();
-            return hour >= 6 && hour < 18; // من 6 الصبح لـ 6 المغرب = نهار
-        }
-
-        // === 3. رابط الخريطة (OpenStreetMap) ===
-        const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-        // === 4. إنشاء طبقة الخريطة ===
-        let currentTileLayer = L.tileLayer(tileUrl, {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        // === 5. دالة تطبيق فلتر الوضع الليلي ===
-        let manualMode = null; // null = تلقائي، 'day' = نهاري، 'night' = ليلي
-
-        function applyTheme(isDay) {
-            const mapPane = document.querySelector('.leaflet-tile-pane');
-            if (mapPane) {
-                if (isDay) {
-                    mapPane.style.filter = 'none';
-                } else {
-                    // الفلتر ده بيحول الخريطة لشكل ليلي داكن
-                    mapPane.style.filter = 'brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7)';
-                }
-            }
-        }
-
-        // === 6. تطبيق الثيم أول ما الصفحة تفتح ===
-        applyTheme(isDayTime());
-
-        // === 7. فحص كل 5 دقايق لو الوقت اتغير ===
-        setInterval(() => {
-            if (manualMode === null) {
-                applyTheme(isDayTime());
-            }
-        }, 5 * 60 * 1000);
-
-        // === 8. زرار التبديل اليدوي ===
-        document.getElementById('toggleTheme').addEventListener('click', () => {
-            if (manualMode === null) manualMode = 'night';
-            else if (manualMode === 'night') manualMode = 'day';
-            else manualMode = null;
-
-            const btn = document.getElementById('toggleTheme');
-            btn.textContent = manualMode === 'night' ? '☀️' : (manualMode === 'day' ? '🔄' : '🌙');
-
-            if (manualMode === 'night') applyTheme(false);
-            else if (manualMode === 'day') applyTheme(true);
-            else applyTheme(isDayTime());
-        });
-
-        var pickupPoint = null, dropoffPoint = null, stopPoint = null;
-        var currentDistance = 0, currentTime = 0, currentPrice = 0, currentRideId = null;
-        var currentStep = 'pickup'; 
-        var selectedVehicleType = 'car'; 
-        var routeLine = null, driverCarMarker = null, startMarker = null, destMarker = null, stopMarker = null; 
-        var watchId = null, userMarker = null, lastPosition = null, isFollowingUser = true, moveEndTimeout;
-        var isRiderCancelling = false; 
-
-        async function getAddress(lat, lng) {
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=ar`);
-                const data = await response.json();
-                if(data.error) return "موقع محدد";
-                const road = data.address.road || data.address.pedestrian || data.address.footway || "";
-                const suburb = data.address.suburb || data.address.neighbourhood || "";
-                const city = data.address.city || data.address.town || data.address.village || "";
-                let fullAddress = ""; if (road) fullAddress += road; if (suburb && suburb !== road) fullAddress += (fullAddress ? '، ' : '') + suburb; if (city && city !== suburb && city !== road) fullAddress += (fullAddress ? '، ' : '') + city;
-                return fullAddress || "موقع محدد";
-            } catch (e) { return "موقع محدد"; }
-        }
-
-        map.on('moveend', function() {
-            clearTimeout(moveEndTimeout);
-            moveEndTimeout = setTimeout(async () => {
-                if (currentStep === 'ride' || currentStep === 'vehicle') return; 
-                const center = map.getCenter(); 
-                
-                if (currentStep === 'pickup') {
-                    document.getElementById('pickup-address').innerText = "جاري تحديد الشارع...";
-                    const address = await getAddress(center.lat, center.lng); 
-                    document.getElementById('pickup-address').innerText = address;
-                    if (document.activeElement !== document.getElementById('search-pickup')) { document.getElementById('search-pickup').value = address; }
-                } else if (currentStep === 'dropoff') {
-                    document.getElementById('dropoff-address').innerText = "جاري تحديد الشارع...";
-                    const address = await getAddress(center.lat, center.lng); 
-                    document.getElementById('dropoff-address').innerText = address;
-                    if (document.activeElement !== document.getElementById('search-dropoff')) { document.getElementById('search-dropoff').value = address; }
-                }
-            }, 600);
-        });
-        map.on('dragstart', function() { isFollowingUser = false; });
-
-        async function handleSearch(event, type) {
-            if (event && event.key !== 'Enter') return;
-            const inputId = type === 'pickup' ? 'search-pickup' : type === 'dropoff' ? 'search-dropoff' : 'search-stop'; 
-            const inputElement = document.getElementById(inputId); const query = inputElement.value;
-            if(!query || query.trim() === '') { alert('برجاء كتابة اسم المكان أولاً'); return; }
-            isFollowingUser = false; 
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=eg&accept-language=ar`);
-                const data = await response.json();
-                if (data && data.length > 0) { 
-                    const lat = parseFloat(data[0].lat); const lon = parseFloat(data[0].lon);
-                    map.flyTo([lat, lon], 16); 
-                    
-                    if (type === 'stop') {
-                        stopPoint = [lat, lon];
-                        if (stopMarker) map.removeLayer(stopMarker);
-                        stopMarker = L.marker(stopPoint, {icon: yellowIcon}).addTo(map);
-                        document.getElementById('stop-address').innerText = query;
-                        document.getElementById('stop-address').style.color = "#28A745";
-                    }
-                } else { alert('لم يتم العثور على المكان، جرب تكتب اسم تاني.'); } 
-            } catch (e) { alert('حدث خطأ في البحث، تأكد من الإنترنت.'); } 
-        }
-
-        function showStopInput() {
-            document.getElementById('add-stop-btn').style.display = 'none';
-            document.getElementById('stop-input-box').style.display = 'block';
-        }
-
-        function removeStopInput() {
-            document.getElementById('add-stop-btn').style.display = 'block';
-            document.getElementById('stop-input-box').style.display = 'none';
-            stopPoint = null;
-            if (stopMarker) { map.removeLayer(stopMarker); stopMarker = null; }
-            document.getElementById('search-stop').value = "";
-            document.getElementById('stop-address').innerText = "اكتب اسم المكان واضغط بحث";
-            document.getElementById('stop-address').style.color = "#856404";
-        }
-
-        function startTracking() {
-            if (navigator.geolocation) {
-                watchId = navigator.geolocation.watchPosition(function(position) {
-                    const lat = position.coords.latitude, lng = position.coords.longitude; 
-                    if (userMarker) { userMarker.setLatLng([lat, lng]); } 
-                    else { userMarker = L.circleMarker([lat, lng], { radius: 8, fillColor: "#007AFF", color: "#FFFFFF", weight: 3, opacity: 1, fillOpacity: 1 }).addTo(map); }
-                    if (isFollowingUser) { map.panTo([lat, lng], {animate: true, duration: 1}); } 
-                    lastPosition = { lat: lat, lng: lng };
-                }, function(error) {}, { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
-            }
-        }
-        startTracking();
-
-        function confirmPickup() {
-            const center = map.getCenter(); pickupPoint = [center.lat, center.lng];
-            if (startMarker) map.removeLayer(startMarker);
-            startMarker = L.marker(pickupPoint, {icon: greenIcon}).addTo(map);
-
-            document.getElementById('pickup-section').style.display = 'none'; 
-            document.getElementById('dropoff-section').style.display = 'block';
-            document.getElementById('instruction-title').innerText = "إلى أين تريد الذهاب؟";
-            document.querySelector('.pin-icon path').setAttribute('fill', '#E53935');
-            map.panBy([0, -100]); 
-            currentStep = 'dropoff'; map.fire('moveend'); 
-        }
-
-        function goBackToPickup() {
-            currentStep = 'pickup';
-            dropoffPoint = null;
-            if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
-            if (stopMarker) { map.removeLayer(stopMarker); stopMarker = null; stopPoint = null; }
-            document.getElementById('stop-input-box').style.display = 'none';
-            document.getElementById('add-stop-btn').style.display = 'block';
-            document.getElementById('dropoff-section').style.display = 'none';
-            document.getElementById('pickup-section').style.display = 'block';
-            document.getElementById('instruction-title').innerText = "أين أنت الآن؟";
-            document.querySelector('.pin-icon path').setAttribute('fill', '#1A1A1A');
-            map.fire('moveend');
-        }
-
-        async function confirmDropoff() {
-            const center = map.getCenter(); dropoffPoint = [center.lat, center.lng];
-            currentStep = 'vehicle'; 
-            
-            if (destMarker) map.removeLayer(destMarker);
-            destMarker = L.marker(dropoffPoint, {icon: redIcon}).addTo(map);
-
-            document.getElementById('ui-pickup-dropoff').style.display = 'none';
-            document.getElementById('ui-vehicle').style.display = 'block';
-            document.getElementById('center-pin').style.display = 'none'; 
-            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-            
-            await drawRoute();
-        }
-
-        async function drawRoute() {
-            if (!pickupPoint || !dropoffPoint) return; if (routeLine) { map.removeLayer(routeLine); }
-            
-            let coords = `${pickupPoint[1]},${pickupPoint[0]}`;
-            if (stopPoint) coords += `;${stopPoint[1]},${stopPoint[0]}`;
-            coords += `;${dropoffPoint[1]},${dropoffPoint[0]}`;
-
-            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
-            try {
-                const response = await fetch(url); const data = await response.json();
-                if (data.code === 'Ok' && data.routes.length > 0) { 
-                    const route = data.routes[0]; 
-                    routeLine = L.geoJSON(route.geometry, { style: { color: '#007AFF', weight: 6, opacity: 0.8 } }).addTo(map); 
-                    currentDistance = parseFloat((route.distance / 1000).toFixed(2)); 
-                    currentTime = Math.round((route.duration / 60) * 2.5) + 1; 
-                } else { throw new Error(); }
-            } catch (error) { 
-                routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#007AFF', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map); 
-                currentDistance = parseFloat((map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(2)); 
-                currentTime = Math.round((currentDistance / 30) * 60) + 1;
-            }
-            
-            map.fitBounds(routeLine.getBounds(), { paddingTopLeft: [50, 50], paddingBottomRight: [50, 350] });
-            
-            const basePrice = 10 + (currentDistance * 5);
-            const motoPrice = Math.round(basePrice * 0.7);
-            const carPrice = Math.round(basePrice);
-            const suvPrice = Math.round(basePrice * 1.4);
-
-            document.getElementById('price-moto').innerText = motoPrice + " ج.م";
-            document.getElementById('price-car').innerText = carPrice + " ج.م";
-            document.getElementById('price-suv').innerText = suvPrice + " ج.م";
-            
-            currentPrice = carPrice; 
-        }
-
-        function selectVehicle(type, element) {
-            document.querySelectorAll('.vehicle-card').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
-            selectedVehicleType = type;
-            const priceText = element.querySelector('.vehicle-price').innerText;
-            currentPrice = parseInt(priceText);
-        }
-
-        document.getElementById('request-btn').addEventListener('click', async function() {
-            this.innerText = 'جاري الإرسال...'; this.disabled = true;
-            const generatedPin = Math.floor(1000 + Math.random() * 9000).toString();
-
-            try {
-                const { data, error } = await supabaseClient.from('rides').insert([{ 
-                    distance: currentDistance, price: currentPrice, 
-                    dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], 
-                    pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], 
-                    stop_lat: stopPoint ? stopPoint[0] : null, 
-                    stop_lng: stopPoint ? stopPoint[1] : null, 
-                    status: 'pending', rider_name: user.name, rider_phone: user.phone, pin_code: generatedPin 
-                }]).select();
-                if (error) throw error; 
-                currentRideId = data[0].id; 
-                
-                document.getElementById('ui-vehicle').style.display = 'none';
-                document.getElementById('ui-ride').style.display = 'block';
-                
-                document.getElementById('driver-details').style.display = 'block';
-                document.getElementById('d-name').innerText = "جاري البحث عن كابتن...";
-                document.getElementById('eta-time').innerText = "...";
-                document.getElementById('pin-code-display').innerText = generatedPin;
-                document.getElementById('ride-price-text').innerText = currentPrice;
-                document.getElementById('cancel-btn').style.display = 'block';
-                
-            } catch (error) { alert('حدث خطأ: ' + error.message); this.innerText = 'اطلب الآن'; this.disabled = false; }
-        });
-
-        async function cancelRide() {
-            if (!currentRideId) return;
-            if (!confirm('هل أنت متأكد من إلغاء الطلب؟')) return;
-            document.getElementById('cancel-btn').innerText = 'جاري الإلغاء...';
-            document.getElementById('cancel-btn').disabled = true;
-            isRiderCancelling = true; 
-            const { error } = await supabaseClient.from('rides').update({ status: 'cancelled' }).eq('id', currentRideId);
-            if (!error) { location.reload(); }
-        }
-
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
-        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        let supabaseClient = null;
+        try { if (typeof supabase !== 'undefined') supabaseClient = supabase.createClient(supabaseUrl, supabaseKey); } catch(e) {}
 
-        supabaseClient.channel('rider-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
-            if (currentRideId && payload.new.id === currentRideId) {
-                if (payload.new.status === 'accepted') {
-                    document.getElementById('d-name').innerText = payload.new.driver_name;
-                    let vehicleName = "سيارة ملاكي";
-                    if(selectedVehicleType === 'moto') vehicleName = "دراجة نارية";
-                    if(selectedVehicleType === 'suv') vehicleName = "سيارة عائلية";
-                    document.getElementById('d-car-info').innerText = `${vehicleName} - أبيض`;
-                    document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
-                    document.getElementById('d-msg').href = 'https://wa.me/2' + payload.new.driver_phone + '?text=أنا عند المنتظر.';
-                }
-                if (payload.new.driver_arrived_at) { document.getElementById('eta-time').innerText = "0"; }
-                if (payload.new.driver_lat && payload.new.driver_lng && payload.new.status === 'accepted') { updateDriverLocation(payload.new.driver_lat, payload.new.driver_lng); }
-                if (payload.new.status === 'completed') {
-                    document.getElementById('ui-ride').style.display = 'none';
-                    document.getElementById('rating-modal').style.display = 'flex';
-                    document.getElementById('rate-driver-name').innerText = payload.new.driver_name;
-                    if(driverCarMarker) { map.removeLayer(driverCarMarker); driverCarMarker = null; }
-                }
-                if (payload.new.status === 'cancelled') { 
-                    if (!isRiderCancelling) { alert('تم إلغاء الرحلة من قبل الكابتن.'); location.reload(); }
-                }
-            }
-        }).subscribe();
+        let currentUser = JSON.parse(localStorage.getItem('mosharka_user')) || { name: 'راكب تجريبي', phone: '01012345678', role: 'rider' };
+        localStorage.setItem('mosharka_user', JSON.stringify(currentUser));
+
+        let isDemoMode = true, mapMode = 'night', currentStep = 'pickup';
+        let pickupCoords = null, dropoffCoords = null, stopCoords = null;
+        let pickupAddress = "جاري التحديد...", dropoffAddress = "", stopAddress = "";
+        let routeDistanceKm = 0, routeDurationMin = 0, selectedVehicleType = 'car', passengerCount = 1, finalFareEgp = 0;
+        let currentRideId = null, currentPinCode = "1234", activeDriverData = null;
         
-        async function updateDriverLocation(dLat, dLng) {
-            if (driverCarMarker) { driverCarMarker.setLatLng([dLat, dLng]); } 
-            else {
-                const carIcon = L.divIcon({ className: 'driver-car', html: `<div style="background: #1A1A1A; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><svg viewBox="0 0 24 24" fill="white" width="16" height="16"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
-                driverCarMarker = L.marker([dLat, dLng], {icon: carIcon}).addTo(map);
-            }
-            if (pickupPoint) {
-                const url = `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${pickupPoint[1]},${pickupPoint[0]}?overview=false`;
-                try {
-                    const response = await fetch(url); const data = await response.json();
-                    if (data.code === 'Ok' && data.routes.length > 0) { 
-                        const roadTime = Math.round((data.routes[0].duration / 60) * 2.5) + 1; 
-                        document.getElementById('eta-time').innerText = roadTime;
+        let map = null, currentTileLayer = null, userLocationMarker = null, pickupMarker = null, dropoffMarker = null, stopMarker = null, driverMarker = null, routePolyline = null, mapMoveTimeout = null;
+
+        const VEHICLE_MATRIX = {
+            car: { name: "ملاكي", maxSeats: 3, baseFare: 12, kmRate: 6.5 },
+            suzuki: { name: "سوزوكي", maxSeats: 6, baseFare: 16, kmRate: 8.5 },
+            microbus: { name: "ميكروباص", maxSeats: 13, baseFare: 8, kmRate: 3.5 }
+        };
+
+        const icons = {
+            pickup: L.divIcon({ className: 'custom-pin', html: `<div class="w-6 h-6 bg-emerald-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs"><i class="fa-solid fa-circle-dot"></i></div>`, iconSize: [24, 24], iconAnchor: [12, 12] }),
+            dropoff: L.divIcon({ className: 'custom-pin', html: `<div class="w-6 h-6 bg-rose-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs"><i class="fa-solid fa-flag-checkered"></i></div>`, iconSize: [24, 24], iconAnchor: [12, 12] }),
+            stop: L.divIcon({ className: 'custom-pin', html: `<div class="w-6 h-6 bg-amber-400 rounded-full border-2 border-gray-900 shadow-lg flex items-center justify-center text-gray-900 text-xs font-bold"><i class="fa-solid fa-pause"></i></div>`, iconSize: [24, 24], iconAnchor: [12, 12] }),
+            driver: L.divIcon({ className: 'driver-marker-pulse', html: `<div class="w-9 h-9 bg-gray-900 border-2 border-amber-400 rounded-full flex items-center justify-center text-amber-400 shadow-2xl text-base"><i class="fa-solid fa-car-side"></i></div>`, iconSize: [36, 36], iconAnchor: [18, 18] })
+        };
+
+        window.onload = function() {
+            initMap();
+            updateRiderUIProfile();
+        };
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false, fadeAnimation: true }).setView([30.0444, 31.2357], 15);
+            setMapStyle(mapMode);
+
+            // Update address on drag
+            map.on('moveend', function() {
+                if (currentStep === 'ride' || currentStep === 'vehicle') return;
+                
+                clearTimeout(mapMoveTimeout);
+                mapMoveTimeout = setTimeout(async () => {
+                    const center = map.getCenter();
+                    const addr = await fetchAddressFromCoords(center.lat, center.lng);
+                    
+                    if (currentStep === 'pickup') {
+                        pickupCoords = [center.lat, center.lng];
+                        pickupAddress = addr;
+                        document.getElementById('pickupAddressText').innerText = addr;
+                        document.getElementById('pickupInput').value = addr;
+                    } else if (currentStep === 'dropoff') {
+                        dropoffCoords = [center.lat, center.lng];
+                        dropoffAddress = addr;
+                        document.getElementById('dropoffAddressText').innerText = addr;
+                        document.getElementById('dropoffInput').value = addr;
                     }
-                } catch (e) {}
+                }, 500);
+            });
+
+            // Get User Location on start
+            goToMyLocation();
+        }
+
+        function setMapStyle(mode) {
+            if (currentTileLayer) map.removeLayer(currentTileLayer);
+            currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+            
+            const mapElement = document.getElementById('map');
+            if (mode === 'night') mapElement.classList.add('dark-map');
+            else mapElement.classList.remove('dark-map');
+            
+            // Keep markers on top
+            if(pickupMarker) pickupMarker.addTo(map);
+            if(dropoffMarker) dropoffMarker.addTo(map);
+            if(routePolyline) routePolyline.addTo(map);
+            if(driverMarker) driverMarker.addTo(map);
+        }
+
+        function toggleThemeManual() {
+            mapMode = mapMode === 'night' ? 'day' : 'night';
+            setMapStyle(mapMode);
+            document.getElementById('themeIcon').className = mapMode === 'night' ? 'fa-solid fa-moon text-lg' : 'fa-solid fa-sun text-lg text-amber-400';
+            showToast(`الوضع ${mapMode === 'night' ? 'الليلي' : 'النهاري'}`);
+        }
+
+        function goToMyLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        pickupCoords = [lat, lng];
+                        map.setView([lat, lng], 16);
+
+                        if (userLocationMarker) map.removeLayer(userLocationMarker);
+                        userLocationMarker = L.circleMarker([lat, lng], { radius: 8, fillColor: '#3b82f6', color: '#ffffff', weight: 3, fillOpacity: 1 }).addTo(map);
+                        
+                        // Update the text immediately
+                        map.fire('moveend');
+                    },
+                    (err) => showToast("تعذر جلب موقعك، تأكد من تشغيل الـ GPS")
+                );
             }
         }
 
-        async function openProfile() {
-            document.getElementById('profile-modal').style.display = 'flex'; document.getElementById('p-name').innerText = user.name; document.getElementById('p-phone').innerText = user.phone;
-            const listContainer = document.getElementById('history-list'); listContainer.innerHTML = 'جاري التحميل...';
-            const { data, error } = await supabaseClient.from('rides').select('*').eq('rider_phone', user.phone).eq('status', 'completed').order('created_at', { ascending: false });
-            if (error || !data || data.length === 0) { listContainer.innerHTML = 'لا يوجد رحلات سابقة.'; return; }
-            listContainer.innerHTML = '';
-            data.forEach(ride => { listContainer.innerHTML += `<div style="border-bottom: 1px solid #eee; padding: 10px 0;">رحلة بـ ${ride.price} ج.م</div>`; });
+        async function fetchAddressFromCoords(lat, lng) {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=ar`);
+                const data = await res.json();
+                if (!data || !data.address) return "موقع محدد على الخريطة";
+                const road = data.address.road || data.address.suburb || "";
+                const city = data.address.city || data.address.town || data.address.state || "";
+                return (road ? road + "، " : "") + city || "موقع محدد";
+            } catch(e) { return "موقع محدد على الخريطة"; }
         }
-        function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
 
-        let selectedRating = 5;
-        function setRating(rating) { selectedRating = rating; const stars = document.querySelectorAll('#star-container span'); stars.forEach((star, index) => { if (index < rating) star.style.color = '#FFC107'; else star.style.color = '#E0E0E0'; }); }
-        async function submitRating() { if (!currentRideId) return; const { error } = await supabaseClient.from('rides').update({ rating_by_rider: selectedRating }).eq('id', currentRideId); if (!error) { alert('شكراً لتقييمك!'); document.getElementById('rating-modal').style.display = 'none'; currentRideId = null; setTimeout(() => location.reload(), 1000); } }
-        setRating(5);
+        function handleSearchKey(e, type) {
+            if (e.key === 'Enter') executeGeocodeSearch(type);
+        }
+
+        async function executeGeocodeSearch(type) {
+            const inputId = type === 'pickup' ? 'pickupInput' : (type === 'dropoff' ? 'dropoffInput' : 'stopInput');
+            const query = document.getElementById(inputId).value.trim();
+            if (!query) { showToast("اكتب اسم مكان للبحث"); return; }
+
+            try {
+                showToast("جاري البحث...");
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=eg&accept-language=ar`);
+                const data = await res.json();
+
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    
+                    if (type === 'stop') {
+                        stopCoords = [lat, lon];
+                        stopAddress = data[0].display_name.split(',')[0];
+                        document.getElementById('stopAddressText').innerText = stopAddress;
+                        if (stopMarker) map.removeLayer(stopMarker);
+                        stopMarker = L.marker(stopCoords, { icon: icons.stop }).addTo(map);
+                        map.flyTo([lat, lon], 16);
+                    } else {
+                        // Move map, the 'moveend' event will update the coords and text automatically
+                        map.flyTo([lat, lon], 17);
+                    }
+                } else {
+                    showToast("لم نجد المكان، جرب اسم تاني");
+                }
+            } catch(e) { showToast("خطأ في الاتصال"); }
+        }
+
+        function backToStep(stepTarget) {
+            currentStep = stepTarget;
+            ['pickup', 'dropoff', 'vehicle', 'ride'].forEach(s => document.getElementById(`step-${s}`).classList.add('hidden'));
+            document.getElementById(`step-${stepTarget}`).classList.remove('hidden');
+
+            if (stepTarget === 'pickup' || stepTarget === 'dropoff') {
+                document.getElementById('centerPin').classList.remove('hidden');
+                document.getElementById('myLocationBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('centerPin').classList.add('hidden');
+                document.getElementById('myLocationBtn').classList.add('hidden');
+            }
+        }
+
+        function confirmPickupLocation() {
+            if (!pickupCoords) { showToast("حدد الموقع أولاً"); return; }
+            if (pickupMarker) map.removeLayer(pickupMarker);
+            pickupMarker = L.marker(pickupCoords, { icon: icons.pickup }).addTo(map);
+
+            document.getElementById('summaryPickupText').innerText = pickupAddress;
+            backToStep('dropoff');
+            map.panBy([0, -80]);
+        }
+
+        function showStopSection() {
+            document.getElementById('addStopWrapper').classList.add('hidden');
+            document.getElementById('stopBoxSection').classList.remove('hidden');
+        }
+
+        function removeStopSection() {
+            document.getElementById('addStopWrapper').classList.remove('hidden');
+            document.getElementById('stopBoxSection').classList.add('hidden');
+            stopCoords = null; stopAddress = "";
+            if (stopMarker) { map.removeLayer(stopMarker); stopMarker = null; }
+        }
+
+        async function confirmRouteAndProceed() {
+            if (!dropoffCoords) { showToast("حدد الوجهة أولاً"); return; }
+            if (dropoffMarker) map.removeLayer(dropoffMarker);
+            dropoffMarker = L.marker(dropoffCoords, { icon: icons.dropoff }).addTo(map);
+
+            showToast("جاري رسم المسار...");
+            await calculateAndDrawOSRMRoute();
+            backToStep('vehicle');
+        }
+
+        async function calculateAndDrawOSRMRoute() {
+            if (!pickupCoords || !dropoffCoords) return;
+            if (routePolyline) map.removeLayer(routePolyline);
+
+            let waypoints = `${pickupCoords[1]},${pickupCoords[0]}`;
+            if (stopCoords) waypoints += `;${stopCoords[1]},${stopCoords[0]}`;
+            waypoints += `;${dropoffCoords[1]},${dropoffCoords[0]}`;
+
+            const url = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.code === 'Ok' && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    routePolyline = L.geoJSON(route.geometry, { style: { color: '#fadb14', weight: 5, opacity: 0.9 } }).addTo(map);
+                    routeDistanceKm = parseFloat((route.distance / 1000).toFixed(1));
+                    routeDurationMin = Math.ceil(route.duration / 60);
+                    map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+                } else { throw new Error(); }
+            } catch(e) {
+                routePolyline = L.polyline([pickupCoords, dropoffCoords], { color: '#fadb14', weight: 4, dashArray: '8, 8' }).addTo(map);
+                routeDistanceKm = parseFloat((map.distance(pickupCoords, dropoffCoords) / 1000).toFixed(1));
+                routeDurationMin = Math.ceil((routeDistanceKm / 35) * 60);
+            }
+
+            document.getElementById('routeDistanceText').innerText = routeDistanceKm;
+            document.getElementById('routeDurationText').innerText = routeDurationMin;
+            updateVehicleFareMatrix();
+        }
+
+        function selectVehicleType(type) {
+            selectedVehicleType = type;
+            document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('vehicle-card-selected'));
+            document.getElementById(`card-${type}`).classList.add('vehicle-card-selected');
+            const maxCap = VEHICLE_MATRIX[type].maxSeats;
+            if (passengerCount > maxCap) { passengerCount = maxCap; document.getElementById('passengerCountDisplay').innerText = passengerCount; }
+            recalculateFare();
+        }
+
+        function changePassengerCount(delta) {
+            const maxCap = VEHICLE_MATRIX[selectedVehicleType].maxSeats;
+            let newCount = passengerCount + delta;
+            if (newCount >= 1 && newCount <= maxCap) {
+                passengerCount = newCount;
+                document.getElementById('passengerCountDisplay').innerText = passengerCount;
+                recalculateFare();
+            } else { showToast(`الحد الأقصى ${maxCap} ركاب`); }
+        }
+
+        function updateVehicleFareMatrix() {
+            for (let key in VEHICLE_MATRIX) {
+                const config = VEHICLE_MATRIX[key];
+                let price = Math.round(config.baseFare + (routeDistanceKm * config.kmRate));
+                if (key === 'microbus') price = Math.max(10, Math.round(price / 4));
+                document.getElementById(`price-${key}`).innerText = price;
+            }
+            recalculateFare();
+        }
+
+        function recalculateFare() {
+            const config = VEHICLE_MATRIX[selectedVehicleType];
+            let basePrice = config.baseFare + (routeDistanceKm * config.kmRate);
+            if (selectedVehicleType === 'microbus') finalFareEgp = Math.max(10, Math.round(basePrice / 4)) * passengerCount;
+            else finalFareEgp = Math.round(basePrice);
+            document.getElementById('finalEstimatedPrice').innerText = finalFareEgp;
+        }
+
+        async function requestRideNow() {
+            const btn = document.getElementById('submitRideBtn');
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>جاري الإرسال...</span>`;
+            btn.disabled = true;
+
+            currentPinCode = Math.floor(1000 + Math.random() * 9000).toString();
+            currentRideId = 'ride_demo_' + Date.now(); // Demo ID
+
+            document.getElementById('pinCodeDisplay').innerText = currentPinCode;
+            document.getElementById('activeRidePriceText').innerText = finalFareEgp;
+            document.getElementById('ridePassengerCountText').innerText = passengerCount;
+            document.getElementById('etaMinutesText').innerText = routeDurationMin;
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>طلب الرحلة الآن</span>`;
+                backToStep('ride');
+                showToast("تم إرسال الطلب! جاري البحث عن كابتن");
+            }, 1000);
+        }
+
+        function simulateDriverAcceptance() {
+            activeDriverData = {
+                name: "كابتن محمود", phone: "01019876543",
+                vehicle: selectedVehicleType === 'car' ? "سيراتو - أسود" : (selectedVehicleType === 'suzuki' ? "سوزوكي فان - رمادي" : "تويوتا ميكروباص - أبيض"),
+                plate: "س ك ة • 7 8 9"
+            };
+            document.getElementById('driverNameText').innerText = activeDriverData.name;
+            document.getElementById('driverCarInfo').innerText = activeDriverData.vehicle;
+            document.getElementById('driverPlateText').innerText = activeDriverData.plate;
+            document.getElementById('driverCallBtn').href = `tel:${activeDriverData.phone}`;
+            document.getElementById('driverWhatsappBtn').href = `https://wa.me/2${activeDriverData.phone}`;
+            
+            document.getElementById('rideStatusBadge').innerText = "تم قبول الرحلة! الكابتن في الطريق";
+            
+            const driverLat = pickupCoords[0] + 0.003, driverLng = pickupCoords[1] + 0.003;
+            if (driverMarker) map.removeLayer(driverMarker);
+            driverMarker = L.marker([driverLat, driverLng], { icon: icons.driver }).addTo(map);
+            map.flyTo([driverLat, driverLng], 16);
+            showToast("قبل الكابتن طلبك 🎉");
+        }
+
+        function simulateDriverArrived() {
+            if (!driverMarker) simulateDriverAcceptance();
+            driverMarker.setLatLng(pickupCoords);
+            document.getElementById('rideStatusBadge').innerText = "وصل الكابتن لموقعك 🚖";
+            document.getElementById('etaMinutesText').innerText = "0";
+            showToast("الكابتن في انتظارك");
+        }
+
+        function simulateRideCompletion() {
+            document.getElementById('ratingModal').classList.remove('hidden');
+            document.getElementById('ratingModal').classList.add('flex');
+        }
+
+        function confirmCancelRide() {
+            if (confirm("إلغاء الرحلة؟")) {
+                showToast("تم إلغاء الرحلة");
+                if (driverMarker) map.removeLayer(driverMarker);
+                if (routePolyline) map.removeLayer(routePolyline);
+                if (dropoffMarker) map.removeLayer(dropoffMarker);
+                if (stopMarker) map.removeLayer(stopMarker);
+                backToStep('pickup');
+            }
+        }
+
+        // Modals
+        function openSosModal() { document.getElementById('sosModal').classList.remove('hidden'); document.getElementById('sosModal').classList.add('flex'); }
+        function closeSosModal() { document.getElementById('sosModal').classList.add('hidden'); document.getElementById('sosModal').classList.remove('flex'); }
+        function openProfileModal() { document.getElementById('profileModal').classList.remove('hidden'); document.getElementById('profileModal').classList.add('flex'); }
+        function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); document.getElementById('profileModal').classList.remove('flex'); }
+        function updateRiderUIProfile() {
+            document.getElementById('riderProfileName').innerText = currentUser.name;
+            document.getElementById('riderProfilePhone').innerText = currentUser.phone;
+        }
+        function logoutRider() { localStorage.removeItem('mosharka_user'); setTimeout(() => location.reload(), 500); }
+
+        let selectedStarRating = 5;
+        function setRatingValue(val) {
+            selectedStarRating = val;
+            document.querySelectorAll('#starRatingContainer i').forEach((star, idx) => {
+                star.className = idx < val ? 'fa-solid fa-star text-amber-400' : 'fa-solid fa-star text-gray-600';
+            });
+        }
+        function submitDriverRating() {
+            showToast(`تم إرسال تقييمك (${selectedStarRating} نجوم)`);
+            document.getElementById('ratingModal').classList.add('hidden');
+            document.getElementById('ratingModal').classList.remove('flex');
+            backToStep('pickup');
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'bg-gray-800 border border-amber-400/40 text-amber-300 text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-center gap-2 animate-bounce';
+            toast.innerHTML = `<i class="fa-solid fa-bell"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
     </script>
 </body>
 </html>
