@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>تطبيق مشاركة - الكابتن</title>
+    <title>توصيل مشاركة - الكابتن</title>
     <link rel="manifest" href="manifest-driver.json">
     <meta name="theme-color" content="#1A237E">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -11,33 +11,76 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        
+        :root {
+            --bg-color: #f0f2f5;
+            --panel-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f8f9fa;
+            --border-color: #dddddd;
+            --header-bg: #1A237E;
+            --header-text: #ffffff;
+            --card-bg: #f8f9fa;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --border-color: #444444;
+            --header-bg: #0d133d;
+            --header-text: #ffffff;
+            --card-bg: #2d2d2d;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .header { background-color: #1A237E; color: white; padding: 12px; font-size: 18px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.5s; }
+        
+        .header { background-color: var(--header-bg); color: var(--header-text); padding: 12px; font-size: 18px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; transition: 0.5s; }
         .logout-btn { position: absolute; left: 15px; top: 15px; background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 5px; text-decoration: none; font-size: 12px; }
-        #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
-        .bottom-panel { background: white; border-radius: 20px 20px 0 0; padding: 10px 15px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; }
-        .instruction-text { font-size: 15px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 2px; }
-        .ride-card { background: #f8f9fa; padding: 10px; border-radius: 10px; border-right: 4px solid #FFC107; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .ride-card h3 { color: #1A237E; font-size: 15px; margin-bottom: 4px; }
-        .ride-card p { color: #555; font-size: 13px; margin-bottom: 3px; }
-        .ride-card .price { color: #28a745; font-weight: bold; font-size: 15px; }
-        .distance-to-rider { color: #007bff; font-weight: bold; background: #e3f2fd; padding: 4px; border-radius: 5px; display: inline-block; margin-bottom: 3px;}
+        
+        #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
+        
+        .bottom-panel { background: var(--panel-bg); border-radius: 20px 20px 0 0; padding: 10px 15px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; transition: 0.5s; color: var(--text-color); }
+        .instruction-text { font-size: 15px; font-weight: bold; color: var(--text-color); text-align: center; margin-bottom: 2px; }
+        
+        .ride-card { background: var(--card-bg); padding: 10px; border-radius: 10px; border-right: 4px solid #FFC107; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.5s; }
+        .ride-card h3 { color: var(--text-color); font-size: 15px; margin-bottom: 4px; }
+        .ride-card p { color: var(--text-color); font-size: 13px; margin-bottom: 3px; opacity: 0.8; }
+        .ride-card .price { color: #28a745; font-weight: bold; font-size: 15px; opacity: 1;}
+        .distance-to-rider { color: #007bff; font-weight: bold; background: rgba(0, 123, 255, 0.1); padding: 4px; border-radius: 5px; display: inline-block; margin-bottom: 3px;}
+        
         .btn-action { background-color: #28a745; color: white; padding: 10px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); transition: 0.2s; margin-top: 3px; }
         .btn-action:active { transform: scale(0.98); }
         .btn-finish { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
         .btn-subscribe { background-color: #ffc107; color: #333; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
-        #subscription-box { display: none; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 5px; border: 2px solid #dc3545; text-align: center;}
+        
+        #subscription-box { display: none; background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 5px; border: 2px solid #dc3545; text-align: center; transition: 0.5s;}
         #subscription-box h3 { color: #dc3545; margin-bottom: 5px; font-size: 15px;}
-        .map-links a { display: block; margin: 3px 0; background: #e3f2fd; padding: 5px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold; font-size: 12px;}
+        
+        .map-links a { display: block; margin: 3px 0; background: var(--input-bg); padding: 5px; border-radius: 5px; text-decoration: none; color: #2196f3; font-weight: bold; font-size: 12px; transition: 0.5s;}
     </style>
 </head>
 <body>
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'driver') { window.location.href = 'login.html'; }
+
+        // كود الوضع الليلي والنهاري
+        function applyTheme() {
+            const hour = new Date().getHours();
+            if (hour >= 18 || hour < 6) { // من 6 مساءً لـ 6 صباحاً
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        }
+        applyTheme();
+        setInterval(applyTheme, 60000);
     </script>
-    <div class="header">لوحة الكابتن <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
+    
+    <div class="header">توصيل مشاركة - كابتن <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
     <div id="map"></div>
     <div class="bottom-panel">
         <div id="subscription-box">
@@ -47,7 +90,7 @@
         </div>
         <div id="waiting-ui" style="display: none;">
             <div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div>
-            <p style="text-align:center; font-size:12px; color:#777;">(بنبحث في نطاق 5 كم حول موقعك)</p>
+            <p style="text-align:center; font-size:12px; opacity:0.7;">(بنبحث في نطاق 5 كم حول موقعك)</p>
         </div>
         <div id="requests-ui" style="display: none;">
             <div class="instruction-text">🔔 وصلك طلب جديد!</div>
@@ -57,8 +100,8 @@
             <div class="instruction-text" style="color: #28a745;">🚗 أنت في رحلة الآن</div>
             <div class="ride-card" style="border-right-color: #28a745;">
                 <h3>توجه إلى الراكب</h3>
-                <p>المسافة للراكب: <span id="driver-to-rider-distance">...</span> كم</p>
-                <p>الوقت المتوقع: <span id="driver-to-rider-time">...</span> دقيقة</p>
+                <p>المسافة للراكب: <span id="driver-to-rider-distance" style="color: #2196f3; font-weight: bold;">...</span> كم</p>
+                <p>الوقت المتوقع: <span id="driver-to-rider-time" style="color: #2196f3; font-weight: bold;">...</span> دقيقة</p>
                 <div class="map-links">
                     <a href="#" id="link-rider" target="_blank">📍 فتح مكان الراكب</a>
                     <a href="#" id="link-dest" target="_blank">🏁 فتح الوجهة</a>
@@ -76,7 +119,17 @@
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
 
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+        
+        // كود الخريطة الديناميكية (نهاري / ليلي)
+        function getMapUrl() {
+            const hour = new Date().getHours();
+            if (hour >= 18 || hour < 6) {
+                return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'; // خريطة ليلية
+            } else {
+                return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'; // خريطة نهارية شيك
+            }
+        }
+        L.tileLayer(getMapUrl(), { maxZoom: 19, attribution: '© OpenStreetMap © CARTO' }).addTo(map);
 
         var currentActiveRideId = null;
         var driverMarker = null;
@@ -188,7 +241,6 @@
                     document.getElementById('requests-ui').style.display = 'block';
                     container.innerHTML = `<p style="text-align:center;">جاري حساب المسافة الحقيقية للراكب...</p>`;
 
-                    // التعديل المهم: بنجيب المسار الحقيقي قبل القبول
                     const url = `https://router.project-osrm.org/route/v1/driving/${dPos.lng},${dPos.lat};${closestRide.pickup_lng},${closestRide.pickup_lat}?overview=full&geometries=geojson`;
                     
                     try {
@@ -219,7 +271,6 @@
                                 <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng})">قبول المشوار</button>
                             </div>`;
                     } catch(e) {
-                        // لو السيرفر وقع، نرجع للمسافة المباشرة
                         container.innerHTML = `
                             <div class="ride-card">
                                 <h3>راكب يطلب توصيل</h3>
