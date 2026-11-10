@@ -28,6 +28,17 @@
 
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
 
+        /* زرار موقعي الحالي العايم */
+        .fab-locate {
+            position: absolute; bottom: 250px; left: 15px; z-index: 1000;
+            background-color: white; color: #1A237E; border: 2px solid #1A237E;
+            width: 45px; height: 45px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer;
+            transition: 0.2s;
+        }
+        .fab-locate:active { background-color: #e3f2fd; transform: scale(0.9); }
+
         /* الدبوس الثابت */
         .center-pin {
             position: absolute; top: 50%; left: 50%;
@@ -43,7 +54,6 @@
         
         .pin-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -4px; }
 
-        /* اللوحة السفلية */
         .bottom-panel {
             background: white; border-radius: 20px 20px 0 0;
             padding: 20px; position: absolute; bottom: 0; left: 0; right: 0;
@@ -53,7 +63,6 @@
 
         .instruction-text { font-size: 16px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 5px; }
         
-        /* تنسيق خانة البحث والزرار الدائري */
         .search-box { position: relative; width: 100%; display: flex; align-items: center; margin-bottom: 5px; }
         .search-box input { width: 100%; padding: 12px 15px 12px 50px; border: 2px solid #ddd; border-radius: 12px; font-family: 'Cairo', sans-serif; font-size: 16px; outline: none; transition: 0.3s; background-color: #f8f9fa; }
         .search-box input:focus { border-color: #1A237E; background-color: #fff; }
@@ -75,7 +84,6 @@
         .btn-confirm-pickup { background-color: #28a745; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
         .btn-confirm-dropoff { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
 
-        /* كارت السعر */
         #ride-info { display: none; background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; text-align: center; }
         #ride-info h3 { color: #28a745; font-size: 24px; margin: 5px 0; }
         
@@ -98,6 +106,9 @@
     </div>
 
     <div id="map"></div>
+
+    <!-- زرار موقعي الحالي -->
+    <button class="fab-locate" onclick="flyToMyLocation()">🎯</button>
 
     <div id="center-pin" class="center-pin">
         <svg class="pin-svg green" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -139,7 +150,6 @@
                 <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
             </div>
             
-            <!-- كارت السعر (اللي كان مختفي) -->
             <div id="ride-info">
                 <p>المسافة: <span id="distance-text">...</span> كم</p>
                 <h3>السعر: <span id="price-text">...</span> جنيه</h3>
@@ -204,7 +214,6 @@
             
             if(!query || query.trim() === '') return;
 
-            // تغيير شكل الزرار
             const btnElement = inputElement.nextElementSibling;
             const originalText = btnElement.innerText;
             btnElement.innerText = '⏳';
@@ -221,6 +230,7 @@
                     
                     map.flyTo([lat, lon], 16);
                     
+                    // بنستنى الخريطة تخلص حركة عشان نشغل التحديث التلقائي تاني
                     map.once('moveend', () => { 
                         isSearching = false; 
                         btnElement.innerText = originalText;
@@ -237,14 +247,30 @@
             }
         }
 
+        // دالة تحديد الموقع الحالي
         function flyToMyLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(position) {
-                    map.flyTo([position.coords.latitude, position.coords.longitude], 16);
-                    map.once('moveend', () => { isSearching = false; });
-                }, function(error) { console.log('Location denied'); }, { enableHighAccuracy: true });
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    // لو إحنا واقفين في نفس المكان، بلاش نعمل طيران عشان moveend ميهنجش
+                    if (map.getCenter().lat.toFixed(4) === lat.toFixed(4) && map.getCenter().lng.toFixed(4) === lon.toFixed(4)) {
+                        map.fire('moveend'); // نجبره يحدث العنوان
+                    } else {
+                        isSearching = true; // بنقفل التحديث التلقائي لحد ما يوصل
+                        map.flyTo([lat, lon], 16);
+                        map.once('moveend', () => { isSearching = false; });
+                    }
+                }, function(error) { 
+                    alert('برجاء السماح بالوصول للموقع من إعدادات المتصفح.');
+                }, { enableHighAccuracy: true });
+            } else {
+                alert('متصفحك لا يدعم تحديد الموقع.');
             }
         }
+
+        // أول ما التطبيق يفتح
         isSearching = true;
         flyToMyLocation();
 
@@ -271,6 +297,7 @@
             document.getElementById('ui-dropoff').style.display = 'none';
             document.getElementById('ui-ride').style.display = 'block';
             document.getElementById('center-pin').style.display = 'none'; 
+            document.querySelector('.fab-locate').style.display = 'none'; // نخفي زرار الموقع بعد التأكيد
             
             await drawRoute();
         }
@@ -294,19 +321,15 @@
                     throw new Error("لا يوجد مسار");
                 }
             } catch (error) {
-                // لو السيرفر وقع، بنرسم خط متقطع
                 routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#1A237E', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map);
                 map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
                 const distanceInMeters = map.distance(pickupPoint, dropoffPoint);
                 currentDistance = (distanceInMeters / 1000).toFixed(2);
             }
 
-            // الحساب وإظهار السعر
             currentPrice = Math.round(10 + (currentDistance * 5)); 
             document.getElementById('distance-text').innerText = currentDistance;
             document.getElementById('price-text').innerText = currentPrice;
-            
-            // إظهار صندوق السعر بعد ما كان مخفي
             document.getElementById('ride-info').style.display = 'block';
         }
 
