@@ -55,13 +55,19 @@
         .input-group { display: flex; align-items: center; background: rgba(11, 15, 25, 0.8); border: 1px solid var(--card-border); border-radius: 14px; margin-bottom: 10px; padding: 3px 4px 3px 10px; transition: 0.3s; }
         .input-group:focus-within { border-color: var(--primary); box-shadow: 0 0 10px rgba(0,242,254,0.2); }
         
-        /* تظبيط خلفية الإدخال عشان المتصفح ميعملهاش أبيض */
-        .input-group input { flex-grow: 1; background: transparent !important; border: none; padding: 10px; color: var(--text-main) !important; font-size: 14px; outline: none; font-weight: 600; -webkit-text-fill-color: var(--text-main); }
-        .input-group input:-webkit-autofill,
-        .input-group input:-webkit-autofill:hover, 
-        .input-group input:-webkit-autofill:focus, 
-        .input-group input:-webkit-autofill:active{
-            -webkit-box-shadow: 0 0 0 30px rgba(11, 15, 25, 0.8) inset !important;
+        /* فيكس الخلفية البيضاء للمتصفح */
+        .input-group input { 
+            flex-grow: 1; 
+            background: transparent !important; 
+            border: none; 
+            padding: 10px; 
+            color: var(--text-main) !important; 
+            font-size: 14px; 
+            outline: none; 
+            font-weight: 600; 
+            -webkit-text-fill-color: var(--text-main);
+            -webkit-box-shadow: 0 0 0px 1000px rgba(11, 15, 25, 0.8) inset !important;
+            transition: background-color 5000s ease-in-out 0s;
         }
         
         .search-btn { background: var(--card-border); color: var(--text-main); border: none; padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; }
@@ -208,7 +214,6 @@
     </div>
 
     <script>
-        // === إعداد الخريطة ===
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         let tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'dark-tiles' }).addTo(map);
 
@@ -217,7 +222,6 @@
         var currentStep = 'pickup', selectedVehicleType = 'car'; 
         var routeLine = null, startMarker = null, destMarker = null, userMarker = null, moveEndTimeout;
 
-        // === تتبع موقع الراكب الحقيقي ===
         function goToMyLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
@@ -242,16 +246,13 @@
             } catch (e) { return "موقع محدد على الخريطة"; }
         }
 
-        // === التحديث الذكي بناءً على مكان الدبوس ===
         map.on('moveend', function() {
             clearTimeout(moveEndTimeout);
             moveEndTimeout = setTimeout(async () => {
                 if (currentStep === 'pickup' || currentStep === 'dropoff') {
-                    
                     const size = map.getSize();
                     const pinLocation = map.containerPointToLatLng([size.x / 2, size.y * 0.30]);
                     
-                    // نظهر رسالة التحميل الأول
                     if (currentStep === 'pickup') {
                         document.getElementById('pickup-address').innerText = "جاري تحديد الشارع...";
                         document.getElementById('pickup-address').style.color = "var(--text-sub)";
@@ -288,9 +289,6 @@
                 if (data && data.length > 0) {
                     const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
                     
-                    // === سر التعديل هنا ===
-                    // بنحسب المسافة بين نص الشاشة (50%) والدبوس (30%)
-                    // عشان الخريطة تتحرك بحيث الدبوس هو اللي يقع على المكان المبحوث عنه
                     const targetZoom = 16;
                     const targetPoint = map.project([lat, lon], targetZoom);
                     const offsetPixels = (0.5 - 0.30) * map.getSize().y; 
@@ -298,7 +296,7 @@
                     const newCenterLatLng = map.unproject(newCenterPoint, targetZoom);
                     
                     map.flyTo(newCenterLatLng, targetZoom, { animate: true, duration: 1.5 });
-                    document.activeElement.blur(); // نقفل الكيبورد
+                    document.activeElement.blur();
                 } else { alert('لم يتم العثور على المكان.'); }
             } catch (e) { alert('خطأ في الاتصال.'); }
         }
