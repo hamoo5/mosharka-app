@@ -33,17 +33,8 @@
         
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
         
-        /* زرار الطوارئ SOS */
-        .sos-btn {
-            position: absolute; bottom: 300px; right: 15px; z-index: 1000;
-            background-color: #dc3545; color: white; border: 3px solid white;
-            width: 50px; height: 50px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4); cursor: pointer;
-            animation: pulse-red 1.5s infinite;
-        }
+        .sos-btn { position: absolute; bottom: 300px; right: 15px; z-index: 1000; background-color: #dc3545; color: white; border: 3px solid white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.4); cursor: pointer; animation: pulse-red 1.5s infinite; }
         @keyframes pulse-red { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); } }
-
         .fab-locate { position: absolute; bottom: 380px; left: 15px; z-index: 1000; background-color: var(--panel-bg); color: var(--header-bg); border: 2px solid var(--header-bg); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
         
         .center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -15px; }
@@ -61,11 +52,9 @@
         .search-btn { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); background-color: var(--header-bg); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: 0.2s; }
         .address-text { font-size: 13px; color: var(--text-color); text-align: center; background: var(--input-bg); padding: 8px; border-radius: 8px; min-height: 35px; display: flex; align-items: center; justify-content: center; transition: 0.5s;}
         
-        /* أزرار الأماكن المحفوظة */
         .saved-places { display: flex; gap: 10px; justify-content: center; margin-top: 5px; }
         .saved-btn { background: var(--input-bg); border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 20px; font-size: 13px; cursor: pointer; color: var(--text-color); font-weight: bold; display: flex; align-items: center; gap: 5px;}
         
-        /* شاشة اختيار المركبة */
         .vehicle-option { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 2px solid var(--border-color); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; background: var(--input-bg); }
         .vehicle-option.selected { border-color: #28a745; background: rgba(40, 167, 69, 0.1); }
         .vehicle-info { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 15px; }
@@ -77,7 +66,6 @@
         .btn-cancel { background-color: #dc3545; margin-top: 10px; display: none; }
         .btn-back { background: none; border: none; color: #007bff; font-weight: bold; font-size: 14px; cursor: pointer; text-align: right; margin-bottom: 10px; font-family: 'Cairo', sans-serif; }
 
-        /* كارت الكابتن (التتبع) */
         #driver-details { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 15px; border: 1px solid var(--border-color); margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.5s; }
         .driver-header { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; }
         .avatar { width: 60px; height: 60px; background-color: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; border: 2px solid #1A237E; }
@@ -91,8 +79,6 @@
         .contact-buttons { display: flex; gap: 10px; margin-top: 10px; }
         .contact-buttons a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background-color: #2196f3; color: white; padding: 12px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 16px; transition: 0.2s;}
         .contact-buttons .msg-btn { background-color: #25D366; } 
-        
-        /* زر مشاركة الرحلة */
         .share-btn { background-color: #6c757d; color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; font-family: 'Cairo', sans-serif; margin-top: 10px; cursor: pointer; display: flex; justify-content: center; gap: 8px;}
 
         .pin-box { background-color: #fff3cd; border: 2px dashed #ffc107; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; position: relative; }
@@ -102,7 +88,6 @@
         body.dark-mode .pin-code-text { color: #fff; }
         body.dark-mode .pin-box h4 { color: #ffca28; }
         
-        /* المودالات */
         #profile-modal, #rating-modal, #sos-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 3000; justify-content: center; align-items: center; }
         .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; text-align: center;}
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
@@ -114,7 +99,6 @@
 </head>
 <body>
     
-    <!-- مودال الطوارئ -->
     <div id="sos-modal">
         <div class="modal-content">
             <div class="modal-header"><h3 style="color: #dc3545;">🚨 طوارئ</h3><button class="close-btn" onclick="closeSos()">X</button></div>
@@ -166,7 +150,6 @@
     
     <div class="bottom-panel">
         
-        <!-- 1. شاشة تحديد الانطلاق والوصول -->
         <div id="ui-pickup-dropoff">
             <div class="instruction-text" id="instruction-title">📍 حدد مكان الانطلاق</div>
             
@@ -190,7 +173,6 @@
             </div>
         </div>
 
-        <!-- 2. شاشة اختيار المركبة -->
         <div id="ui-vehicle" style="display: none;">
             <div class="instruction-text">🚗 اختر وسيلة النقل المناسبة</div>
             
@@ -216,7 +198,6 @@
             <button id="request-btn" class="btn-action" style="background-color: #28a745;">اطلب التوصيل الآن</button>
         </div>
         
-        <!-- 3. شاشة الرحلة والتتبع -->
         <div id="ui-ride" style="display: none;">
             <div id="driver-details">
                 <div class="driver-header">
@@ -256,14 +237,27 @@
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
         function closeSos() { document.getElementById('sos-modal').style.display = 'none'; }
         
+        // ** تعريف دبابيس مخصصة (أخضر للانطلاق، أحمر للوصول) **
+        const greenIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<svg width="35" height="35" viewBox="0 0 24 24" fill="#28a745" stroke="white" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`,
+            iconSize: [35, 35], iconAnchor: [17, 35]
+        });
+
+        const redIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<svg width="35" height="35" viewBox="0 0 24 24" fill="#dc3545" stroke="white" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`,
+            iconSize: [35, 35], iconAnchor: [17, 35]
+        });
+
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
         var pickupPoint = null, dropoffPoint = null;
         var currentDistance = 0, currentTime = 0, currentPrice = 0, currentRideId = null;
         var currentStep = 'pickup'; 
-        var selectedVehicleType = 'car'; // الافتراضي
-        var routeLine = null, driverCarMarker = null, startMarker = null; 
+        var selectedVehicleType = 'car'; 
+        var routeLine = null, driverCarMarker = null, startMarker = null, destMarker = null; 
         var watchId = null, userMarker = null, lastPosition = null, isFollowingUser = true, moveEndTimeout;
 
         async function getAddress(lat, lng) {
@@ -303,12 +297,10 @@
             } catch (e) { alert('حدث خطأ.'); } finally { setTimeout(() => { btnElement.innerText = originalText; }, 1000); }
         }
 
-        // الأماكن المحفوظة (تجريبية)
         function setSavedPlace(type) {
             const input = document.getElementById('search-dropoff');
             if(type === 'home') input.value = "المنزل (شارع عباس العقاد)";
             else input.value = "العمل (وسط البلد)";
-            // في الواقع بنستخدم الإحداثيات، هنا بنحاكي الحركة
             map.flyTo([30.0600, 31.3300], 15); 
         }
 
@@ -326,10 +318,12 @@
         function centerToMyLocation() { isFollowingUser = true; if (lastPosition) { map.flyTo([lastPosition.lat, lastPosition.lng], 16); } }
         startTracking();
 
+        // ** التعديل الأول: إضافة دبوس أخضر ثابت للانطلاق **
         function confirmPickup() {
             const center = map.getCenter(); pickupPoint = [center.lat, center.lng];
+            
             if (startMarker) map.removeLayer(startMarker);
-            startMarker = L.marker(pickupPoint, {icon: L.divIcon({html: '📍', className: 'custom-icon', iconSize: [30,30]})}).addTo(map);
+            startMarker = L.marker(pickupPoint, {icon: greenIcon}).addTo(map);
 
             document.getElementById('pickup-section').style.display = 'none'; 
             document.getElementById('dropoff-section').style.display = 'block';
@@ -349,11 +343,14 @@
             map.fire('moveend');
         }
 
-        // التعديل هنا: بعد تحديد الوصول، بنروح لشاشة اختيار المركبة
+        // ** التعديل الثاني: إضافة دبوس أحمر للوصول + زووم على المسار **
         async function confirmDropoff() {
             const center = map.getCenter(); dropoffPoint = [center.lat, center.lng];
             currentStep = 'vehicle'; 
             
+            if (destMarker) map.removeLayer(destMarker);
+            destMarker = L.marker(dropoffPoint, {icon: redIcon}).addTo(map);
+
             document.getElementById('ui-pickup-dropoff').style.display = 'none';
             document.getElementById('ui-vehicle').style.display = 'block';
             document.getElementById('center-pin').style.display = 'none'; 
@@ -371,18 +368,18 @@
                 if (data.code === 'Ok' && data.routes.length > 0) { 
                     const route = data.routes[0]; 
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#1A237E', weight: 6, opacity: 0.8 } }).addTo(map); 
-                    map.fitBounds(routeLine.getBounds(), { padding: [50, 50] }); 
                     currentDistance = parseFloat((route.distance / 1000).toFixed(2)); 
                     currentTime = Math.round((route.duration / 60) * 2.5) + 1; 
                 } else { throw new Error(); }
             } catch (error) { 
                 routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#1A237E', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map); 
-                map.fitBounds(routeLine.getBounds(), { padding: [50, 50] }); 
                 currentDistance = parseFloat((map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(2)); 
                 currentTime = Math.round((currentDistance / 30) * 60) + 1;
             }
             
-            // حساب الأسعار للمركبات المختلفة
+            // ** التعديل الثالث: زووم عشان يشوف النقطتين والمسار بوضوح فوق اللوحة **
+            map.fitBounds([pickupPoint, dropoffPoint], { paddingTopLeft: [50, 50], paddingBottomRight: [50, 350] });
+            
             const basePrice = 10 + (currentDistance * 5);
             const motoPrice = Math.round(basePrice * 0.7);
             const carPrice = Math.round(basePrice);
@@ -392,7 +389,7 @@
             document.getElementById('price-car').innerText = carPrice + " ج.م";
             document.getElementById('price-suv').innerText = suvPrice + " ج.م";
             
-            currentPrice = carPrice; // الافتراضي
+            currentPrice = carPrice; 
         }
 
         function selectVehicle(type, element) {
@@ -400,11 +397,9 @@
             element.classList.add('selected');
             selectedVehicleType = type;
             
-            // تحديث السعر الحالي
             const priceText = element.querySelector('.vehicle-price').innerText;
             currentPrice = parseInt(priceText);
             
-            // تحديث زرار الطلب
             document.getElementById('request-btn').innerText = `اطلب ${type === 'moto' ? 'دراجة' : type === 'suv' ? 'سيارة عائلية' : 'سيارة'} بـ ${currentPrice} جنيه`;
         }
 
@@ -423,7 +418,7 @@
                 document.getElementById('ui-ride').style.display = 'block';
                 document.getElementById('rider-pin-display').innerText = generatedPin;
                 document.getElementById('pin-box').style.display = 'block';
-                document.getElementById('driver-details').style.display = 'block'; // اظهار الكارت
+                document.getElementById('driver-details').style.display = 'block'; 
                 document.getElementById('d-name').innerText = "جاري البحث عن كابتن...";
                 document.getElementById('driver-eta-text').innerText = "في انتظار القبول";
                 document.getElementById('cancel-btn').style.display = 'block';
@@ -511,7 +506,6 @@
             }
         }
 
-        // البروفايل والتقييم
         async function openProfile() {
             document.getElementById('profile-modal').style.display = 'flex'; document.getElementById('p-name').innerText = user.name; document.getElementById('p-phone').innerText = user.phone;
             const listContainer = document.getElementById('history-list'); listContainer.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
