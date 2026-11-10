@@ -54,7 +54,6 @@
         .ride-card .price { color: #28a745; font-weight: bold; font-size: 15px; opacity: 1;}
         .distance-to-rider { color: #007bff; font-weight: bold; background: rgba(0, 123, 255, 0.1); padding: 4px; border-radius: 5px; display: inline-block; margin-bottom: 3px;}
         
-        /* أزرار القبول والتجاهل */
         .action-buttons { display: flex; gap: 10px; margin-top: 8px; }
         .btn-action { padding: 10px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; font-family: 'Cairo', sans-serif; transition: 0.2s; }
         .btn-accept { background-color: #28a745; color: white; flex: 1; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
@@ -70,10 +69,19 @@
         
         .map-links a { display: block; margin: 3px 0; background: var(--input-bg); padding: 5px; border-radius: 5px; text-decoration: none; color: #2196f3; font-weight: bold; font-size: 12px; transition: 0.5s;}
 
-        /* شكل علامة الراكب */
         .rider-pin-icon { background-color: #FFC107; border: 2px solid white; border-radius: 50%; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 16px; }
 
-        /* المودالات */
+        /* نافذة إدخال الـ PIN */
+        #pin-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 4000; justify-content: center; align-items: center; }
+        .pin-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
+        .pin-content h3 { margin-bottom: 10px; color: #2196f3;}
+        .pin-content input { width: 100%; text-align: center; font-size: 30px; padding: 10px; letter-spacing: 5px; border: 2px solid var(--border-color); border-radius: 10px; background: var(--input-bg); color: var(--text-color); margin-bottom: 15px; outline: none; }
+        .pin-content input:focus { border-color: #1A237E; }
+        .pin-btns { display: flex; gap: 10px; }
+        .pin-btns button { flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 16px;}
+        .pin-cancel { background: #dc3545; color: white; }
+        .pin-submit { background: #28a745; color: white; }
+
         #profile-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
@@ -110,6 +118,19 @@
         setInterval(applyTheme, 60000);
     </script>
     
+    <!-- المودالات -->
+    <div id="pin-modal">
+        <div class="pin-content">
+            <h3>بدء الرحلة</h3>
+            <p>برجاء إدخال الرقم السري الذي يظهر عند الراكب:</p>
+            <input type="number" id="pin-input" placeholder="****" maxlength="4">
+            <div class="pin-btns">
+                <button class="pin-cancel" onclick="closePinModal()">إلغاء</button>
+                <button class="pin-submit" onclick="verifyPin()">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
     <div id="profile-modal">
         <div class="modal-content">
             <div class="modal-header"><h3>حسابي (كابتن)</h3><button class="close-btn" onclick="closeProfile()">X</button></div>
@@ -146,7 +167,6 @@
             <div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div>
         </div>
 
-        <!-- كارت تفاصيل الرحلة -->
         <div id="selected-ride-ui" style="display: none;">
             <div class="instruction-text">🔔 تفاصيل الطلب</div>
             <div id="requests-container"></div>
@@ -169,7 +189,7 @@
             </div>
 
             <button id="arrived-btn" class="btn-action btn-accept" style="background-color: #007bff; width:100%;" onclick="arriveAtRider()">📍 وصلت للراكب</button>
-            <button id="finish-btn" class="btn-action btn-finish" style="display:none;" onclick="finishRide()">إنهاء الرحلة (وصلت للوجهة)</button>
+            <button id="finish-btn" class="btn-action btn-finish" style="display:none;" onclick="openPinModal()">بدء الرحلة (إدخال الرقم السري)</button>
         </div>
     </div>
 
@@ -199,7 +219,7 @@
         var driverMarker = null;
         var currentRiderMarker = null; 
         var routeLine = null;
-        var destRouteLine = null; // خط الوجهة
+        var destRouteLine = null; 
         var pendingRouteLine = null; 
         var isFollowingUser = true;
         var liveLocationInterval = null; 
@@ -209,8 +229,10 @@
         var waitSeconds = 0;
         
         var currentPickupPoint = null; 
+        var currentDestPoint = null; // عشان نستخدمها لو الـ PIN صح
         var currentRiderName = "";
-        var ignoredRides = []; // لحفظ الطلبات المرفوضة
+        var currentRidePin = ""; // لحفظ الـ PIN للتحقق
+        var ignoredRides = []; 
 
         const MAX_DISTANCE_KM = 15; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
@@ -287,7 +309,8 @@
                             fetchSingleRide(); 
                         }
                         
-                        if (currentActiveRideId && currentPickupPoint) {
+                        // لو لسه في مرحلة الذهاب للراكب (مش بدأنا الرحلة)
+                        if (currentActiveRideId && currentPickupPoint && !document.getElementById('finish-btn').innerText.includes('إنهاء')) {
                             const distToPickup = newPos.distanceTo(L.latLng(currentPickupPoint[0], currentPickupPoint[1]));
                             if (distToPickup <= 150 && document.getElementById('arrived-btn').style.display !== 'none') {
                                 document.getElementById('arrived-btn').innerText = "✅ أنت قريب، اضغط لتأكيد الوصول";
@@ -315,38 +338,26 @@
 
         map.on('dragstart', function() { isFollowingUser = false; });
 
-        // دالة جلب طلب واحد فقط وتجاهل الباقي
         async function fetchSingleRide() {
             if (currentActiveRideId || !driverMarker || currentPendingRideId) return; 
             
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending');
             if (error) return;
 
-            if (data.length === 0) {
-                showWaitingUI();
-                return;
-            }
+            if (data.length === 0) { showWaitingUI(); return; }
 
             const dPos = driverMarker.getLatLng();
             let closestRide = null;
             let minDistance = Infinity;
 
-            // بنلف على الطلبات ونختار الأقرب اللي إحنا مرفضناهوش
             data.forEach(ride => {
-                if (ignoredRides.includes(ride.id)) return; // لو مرفوض، طنشه
-
+                if (ignoredRides.includes(ride.id)) return;
                 const dist = map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000;
-                if (dist < MAX_DISTANCE_KM && dist < minDistance) { 
-                    minDistance = dist; 
-                    closestRide = ride; 
-                }
+                if (dist < MAX_DISTANCE_KM && dist < minDistance) { minDistance = dist; closestRide = ride; }
             });
 
-            if (closestRide) {
-                displayRide(closestRide, minDistance);
-            } else {
-                showWaitingUI();
-            }
+            if (closestRide) { displayRide(closestRide, minDistance); } 
+            else { showWaitingUI(); }
         }
 
         function showWaitingUI() {
@@ -358,26 +369,23 @@
             if (destRouteLine) { map.removeLayer(destRouteLine); destRouteLine = null; }
         }
 
-        // عرض تفاصيل الطلب
         async function displayRide(ride, minDistance) {
             currentPendingRideId = ride.id;
+            currentRidePin = ride.pin_code; // حفظ الـ PIN
             
             document.getElementById('waiting-ui').style.display = 'none';
             document.getElementById('selected-ride-ui').style.display = 'block';
             const container = document.getElementById('requests-container');
             
-            // عرض علامة الراكب
             if (currentRiderMarker) map.removeLayer(currentRiderMarker);
             currentRiderMarker = L.marker([ride.pickup_lat, ride.pickup_lng], {icon: riderIcon}).addTo(map);
             
-            // زووم على الراكب والوجهة مع بعض
             let bounds = L.latLngBounds([[ride.pickup_lat, ride.pickup_lng], [ride.dest_lat, ride.dest_lng]]);
             if(driverMarker) bounds.extend(driverMarker.getLatLng());
             map.fitBounds(bounds, mapPadding);
 
             container.innerHTML = `<p style="text-align:center;">جاري حساب المسار...</p>`;
 
-            // رسم مسار الراكب للوجهة (بنفسجي)
             const urlDest = `https://router.project-osrm.org/route/v1/driving/${ride.pickup_lng},${ride.pickup_lat};${ride.dest_lng},${ride.dest_lat}?overview=full&geometries=geojson`;
             try {
                 const responseDest = await fetch(urlDest); const destData = await responseDest.json();
@@ -387,7 +395,6 @@
                 }
             } catch(e) {}
 
-            // رسم مسار الكابتن للراكب (أزرق متقطع) وحساب التفاصيل
             if (minDistance < 0.1) {
                 container.innerHTML = `<div class="ride-card">
                     <h3>راكب يطلب توصيل</h3>
@@ -428,12 +435,9 @@
             }
         }
 
-        // دالة تجاهل الراكب
         function ignoreRide(rideId) {
-            ignoredRides.push(rideId); // ضيفه لقائمة المرفوضين
-            showWaitingUI(); // اخفي الشاشة
-            
-            // بعد ثانية، جيب الطلب اللي بعده
+            ignoredRides.push(rideId); 
+            showWaitingUI(); 
             setTimeout(fetchSingleRide, 1000); 
         }
 
@@ -448,6 +452,7 @@
             
             currentActiveRideId = rideId; currentRiderName = rName; isAlertPlaying = false; 
             currentPickupPoint = [pLat, pLng]; 
+            currentDestPoint = [dLat, dLng]; // حفظ الوجهة
             
             if (currentRiderMarker) { map.removeLayer(currentRiderMarker); currentRiderMarker = null; }
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
@@ -467,9 +472,7 @@
             document.getElementById('link-rider').href = `https://www.google.com/maps?q=${pLat},${pLng}`;
             document.getElementById('link-dest').href = `https://www.google.com/maps?q=${dLat},${dLng}`;
             
-            // مسح خط الوجهة القديم، لإننا هنمشي للراكب الأول
             if (destRouteLine) { map.removeLayer(destRouteLine); destRouteLine = null; }
-
             drawRouteToRider(pLat, pLng);
         }
 
@@ -521,7 +524,7 @@
                 startWaitTimer();
                 
                 document.getElementById('finish-btn').style.display = 'block';
-                document.getElementById('finish-btn').innerText = "بدء الرحلة (وصل الراكب)";
+                document.getElementById('finish-btn').innerText = "بدء الرحلة (إدخال الرقم السري)";
                 document.getElementById('finish-btn').style.backgroundColor = "#28a745"; 
             }
         }
@@ -535,6 +538,67 @@
                 const secs = String(waitSeconds % 60).padStart(2, '0');
                 document.getElementById('timer-text').innerText = `${mins}:${secs}`;
             }, 1000);
+        }
+
+        // دالة فتح شاشة الـ PIN
+        function openPinModal() {
+            document.getElementById('pin-input').value = "";
+            document.getElementById('pin-modal').style.display = 'flex';
+            document.getElementById('pin-input').focus();
+        }
+
+        function closePinModal() {
+            document.getElementById('pin-modal').style.display = 'none';
+        }
+
+        // دالة التحقق من الـ PIN
+        async function verifyPin() {
+            const enteredPin = document.getElementById('pin-input').value.trim();
+            
+            if (!enteredPin) { alert('برجاء إدخال الرقم السري.'); return; }
+
+            if (enteredPin === currentRidePin) {
+                // الرقم صح! نبدأ الرحلة
+                closePinModal();
+                clearInterval(waitTimer); // وقف العداد
+                document.getElementById('wait-timer-ui').style.display = 'none';
+
+                // تحديث الداتا بيز إن الرحلة بدأت
+                const { error } = await supabaseClient.from('rides').update({ ride_started_at: new Date().toISOString() }).eq('id', currentActiveRideId);
+                
+                if (!error) {
+                    // تغيير الواجهة للذهاب للوجهة
+                    document.getElementById('active-ride-header').innerText = "في الطريق إلى الوجهة 🏁";
+                    document.getElementById('active-ride-distance-text').style.display = 'block';
+                    document.getElementById('active-ride-time-text').style.display = 'block';
+                    document.getElementById('finish-btn').innerText = "إنهاء الرحلة (وصلت للوجهة)";
+                    
+                    // رسم المسار للوجهة (الخط البنفسجي يبقى هو الأساسي)
+                    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+                    if (currentDestPoint) {
+                        drawRouteToDestination(currentDestPoint[0], currentDestPoint[1]);
+                    }
+                }
+            } else {
+                alert('الرقم السري غير صحيح. برجاء التأكد من الراكب.');
+            }
+        }
+
+        async function drawRouteToDestination(dLat, dLng) {
+            if (!driverMarker) return;
+            const startPoint = driverMarker.getLatLng();
+            const url = `https://router.project-osrm.org/route/v1/driving/${startPoint.lng},${startPoint.lat};${dLng},${dLat}?overview=full&geometries=geojson`;
+            
+            try {
+                const response = await fetch(url); const data = await response.json();
+                if (data.code === 'Ok' && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    routeLine = L.geoJSON(route.geometry, { style: { color: '#9C27B0', weight: 6, opacity: 0.9 } }).addTo(map);
+                    map.fitBounds(routeLine.getBounds(), mapPadding);
+                    document.getElementById('driver-to-rider-distance').innerText = (route.distance / 1000).toFixed(2);
+                    document.getElementById('driver-to-rider-time').innerText = Math.round((route.duration / 60) * 2.5) + 1;
+                }
+            } catch (e) {}
         }
 
         async function finishRide() {
@@ -567,7 +631,7 @@
                 currentActiveRideId = null; 
                 isFollowingUser = true;
                 showWaitingUI();
-                fetchSingleRide(); // جيب طلب جديد
+                fetchSingleRide(); 
             } 
         }
         setRating(5);
