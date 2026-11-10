@@ -13,36 +13,25 @@
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         
         :root {
-            --bg-color: #f0f2f5;
-            --panel-bg: #ffffff;
-            --text-color: #333333;
-            --input-bg: #f8f9fa;
-            --border-color: #dddddd;
-            --header-bg: #1A237E;
-            --header-text: #ffffff;
-            --card-bg: #f8f9fa;
+            --bg-color: #f0f2f5; --panel-bg: #ffffff; --text-color: #333333;
+            --input-bg: #f8f9fa; --border-color: #dddddd; --header-bg: #1A237E;
+            --header-text: #ffffff; --card-bg: #f8f9fa;
         }
-
         body.dark-mode {
-            --bg-color: #121212;
-            --panel-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --input-bg: #2d2d2d;
-            --border-color: #444444;
-            --header-bg: #0d133d;
-            --header-text: #ffffff;
-            --card-bg: #2d2d2d;
+            --bg-color: #121212; --panel-bg: #1e1e1e; --text-color: #e0e0e0;
+            --input-bg: #2d2d2d; --border-color: #444444; --header-bg: #0d133d;
+            --header-text: #ffffff; --card-bg: #2d2d2d;
         }
-
-        body.dark-mode .leaflet-tile-pane {
-            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
-        }
+        body.dark-mode .leaflet-tile-pane { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.5s; }
         
         .header { background-color: var(--header-bg); color: var(--header-text); padding: 12px; font-size: 18px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; transition: 0.5s; }
-        .logout-btn { position: absolute; left: 15px; top: 15px; background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 5px; text-decoration: none; font-size: 12px; }
+        
+        .header-btn { position: absolute; top: 15px; color: white; padding: 4px 8px; border-radius: 5px; text-decoration: none; font-size: 13px; cursor: pointer; }
+        .logout-btn { left: 15px; background-color: #dc3545; }
+        .profile-btn { right: 15px; background-color: #2196f3; }
         
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
         
@@ -64,6 +53,21 @@
         #subscription-box h3 { color: #dc3545; margin-bottom: 5px; font-size: 15px;}
         
         .map-links a { display: block; margin: 3px 0; background: var(--input-bg); padding: 5px; border-radius: 5px; text-decoration: none; color: #2196f3; font-weight: bold; font-size: 12px; transition: 0.5s;}
+
+        /* نافذة الملف الشخصي */
+        #profile-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-header h3 { margin: 0; color: #2196f3; }
+        .close-btn { background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
+        .profile-info { background: var(--input-bg); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border-color); }
+        .profile-info p { margin-bottom: 5px; }
+        .earnings-box { background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 18px; border: 1px solid #c8e6c9;}
+        .history-list { overflow-y: auto; flex-grow: 1; }
+        .history-item { border-bottom: 1px solid var(--border-color); padding: 10px 0; }
+        .history-item:last-child { border-bottom: none; }
+        .history-item .price { color: #28a745; font-weight: bold; }
+        .history-item .date { font-size: 12px; color: #888; }
     </style>
 </head>
 <body>
@@ -80,7 +84,36 @@
         setInterval(applyTheme, 60000);
     </script>
     
-    <div class="header">توصيل مشاركة - كابتن <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
+    <!-- نافذة الملف الشخصي -->
+    <div id="profile-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>حسابي (كابتن)</h3>
+                <button class="close-btn" onclick="closeProfile()">X</button>
+            </div>
+            <div class="profile-info">
+                <p><b>الاسم:</b> <span id="p-name"></span></p>
+                <p><b>الموبايل:</b> <span id="p-phone"></span></p>
+                <p><b>حالة الاشتراك:</b> <span id="p-sub" style="font-weight:bold;"></span></p>
+            </div>
+            
+            <div class="earnings-box">
+                إجمالي الأرباح: <span id="p-earnings">0</span> جنيه
+            </div>
+
+            <h4>سجل المشاوير المكتملة:</h4>
+            <div class="history-list" id="history-list">
+                <p style="text-align:center;">جاري التحميل...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="header">
+        توصيل مشاركة - كابتن 
+        <a href="#" onclick="logout()" class="logout-btn header-btn">خروج</a>
+        <a onclick="openProfile()" class="profile-btn header-btn">👤 حسابي</a>
+    </div>
+    
     <div id="map"></div>
     <div class="bottom-panel">
         <div id="subscription-box">
@@ -341,6 +374,64 @@
                 fetchPendingRide();
             }
         }
+
+        // دوال الملف الشخصي للكابتن
+        async function openProfile() {
+            document.getElementById('profile-modal').style.display = 'flex';
+            document.getElementById('p-name').innerText = user.name;
+            document.getElementById('p-phone').innerText = user.phone;
+            
+            const now = new Date();
+            const subEnd = user.sub_end_date ? new Date(user.sub_end_date) : null;
+            const subElement = document.getElementById('p-sub');
+            
+            if (subEnd && subEnd > now) {
+                const daysLeft = Math.ceil((subEnd - now) / (1000 * 60 * 60 * 24));
+                subElement.innerText = `نشط (متبقي ${daysLeft} يوم)`;
+                subElement.style.color = '#28a745';
+            } else {
+                subElement.innerText = 'غير نشط أو منتهي';
+                subElement.style.color = '#dc3545';
+            }
+            
+            const listContainer = document.getElementById('history-list');
+            listContainer.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
+
+            // جلب الرحلات المكتملة للكابتن
+            const { data, error } = await supabaseClient
+                .from('rides')
+                .select('*')
+                .eq('driver_phone', user.phone)
+                .eq('status', 'completed')
+                .order('created_at', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+                listContainer.innerHTML = '<p style="text-align:center; color:#888;">لا يوجد مشاوير مكتملة.</p>';
+                document.getElementById('p-earnings').innerText = '0';
+                return;
+            }
+
+            // حساب إجمالي الأرباح
+            let totalEarnings = 0;
+            listContainer.innerHTML = '';
+            
+            data.forEach(ride => {
+                totalEarnings += Number(ride.price);
+                const date = new Date(ride.created_at).toLocaleDateString('ar-EG');
+                
+                listContainer.innerHTML += `
+                    <div class="history-item">
+                        <p>راكب: ${ride.rider_name || 'غير معروف'} | مسافة: ${ride.distance} كم</p>
+                        <p class="price">+ ${ride.price} جنيه</p>
+                        <p class="date">${date}</p>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('p-earnings').innerText = totalEarnings;
+        }
+
+        function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
 
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
             if (!currentActiveRideId) { fetchPendingRide(); }
