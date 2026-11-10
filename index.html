@@ -28,7 +28,6 @@
 
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
 
-        /* زرار موقعي الحالي العايم */
         .fab-locate {
             position: absolute; bottom: 260px; left: 15px; z-index: 1000;
             background-color: white; color: #1A237E; border: 2px solid #1A237E;
@@ -39,7 +38,6 @@
         }
         .fab-locate:active { background-color: #e3f2fd; transform: scale(0.9); }
 
-        /* الدبوس الثابت */
         .center-pin {
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -100%);
@@ -183,53 +181,67 @@
         var watchId = null;
         var userMarker = null;
         var lastPosition = null;
-        
-        // متغيرات التحكم في الحالة
-        var isFollowingUser = true; // هل التطبيق بيتابع حركة المستخدم؟
-        var isSearching = false;    // هل في عملية بحث شغالة دلوقتي؟
+        var isFollowingUser = true; 
+        var moveEndTimeout; // متغير عشان نمنع تكرار الطلبات للسيرفر
 
         async function getAddress(lat, lng) {
             try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`);
+                // ضفنا zoom=18 عشان يجيب اسم الشارع بالظبط
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=ar`);
                 const data = await response.json();
+                
                 if(data.error) return "موقع محدد على الخريطة";
-                return data.display_name ? data.display_name.split(',')[0] + '، ' + (data.address.suburb || data.address.city || '') : "موقع محدد على الخريطة";
+                
+                // ترتيب الأولويات: اسم الشارع، ثم الحي، ثم المدينة
+                const road = data.address.road || data.address.pedestrian || data.address.footway || data.address.suburb || "";
+                const city = data.address.city || data.address.town || data.address.village || "";
+                
+                if (road) {
+                    return road + (city ? '، ' + city : '');
+                }
+                
+                return data.display_name ? data.display_name.split(',')[0] : "موقع محدد على الخريطة";
             } catch (e) {
                 return "موقع محدد على الخريطة";
             }
         }
 
-        // 1. تحديث اسم الشارع لما المستخدم يحرك الخريطة بإيده (بس لو مش بنبحث)
-        map.on('moveend', async function() {
-            if (currentStep === 'ride' || isSearching) return; 
-
-            const center = map.getCenter();
-            const addressTextId = currentStep === 'pickup' ? 'pickup-address' : 'dropoff-address';
-            const inputId = currentStep === 'pickup' ? 'search-pickup' : 'search-dropoff';
-            const inputElement = document.getElementById(inputId);
-
-            document.getElementById(addressTextId).innerText = "جاري تحديد اسم الشارع...";
+        // 1. التحديث التلقائي لما الخريطة توقف حركة
+        map.on('moveend', function() {
+            clearTimeout(moveEndTimeout);
             
-            const address = await getAddress(center.lat, center.lng);
-            document.getElementById(addressTextId).innerText = address;
+            moveEndTimeout = setTimeout(async () => {
+                if (currentStep === 'ride') return; 
 
-            if (document.activeElement !== inputElement) {
-                inputElement.value = address;
-            }
+                const center = map.getCenter();
+                const addressTextId = currentStep === 'pickup' ? 'pickup-address' : 'dropoff-address';
+                const inputId = currentStep === 'pickup' ? 'search-pickup' : 'search-dropoff';
+                const inputElement = document.getElementById(inputId);
+
+                document.getElementById(addressTextId).innerText = "جاري تحديد اسم الشارع...";
+                
+                // بنجيب الاسم الحقيقي من الخريطة
+                const address = await getAddress(center.lat, center.lng);
+                
+                // بنكتب الاسم الحقيقي في الخانة وفي النص
+                document.getElementById(addressTextId).innerText = address;
+                
+                // بنحدث الخانة بس لو المستخدم مش بيكتب فيها دلوقتي
+                if (document.activeElement !== inputElement) {
+                    inputElement.value = address;
+                }
+            }, 600); // استنى نص ثانية عشان الخريطة تستقر
         });
 
-        // أول ما المستخدم يلمس الخريطة بإيده، بنوقف متابعة الـ GPS
         map.on('dragstart', function() {
             isFollowingUser = false;
         });
 
-        // 2. البحث بالكتابة (محمي من الـ GPS)
+        // 2. البحث بالكتابة
         async function handleSearch(event, type) {
             if (event && event.key !== 'Enter') return;
 
-            isFollowingUser = false; // وقفنا الـ GPS عشان ميسحبش الخريطة تاني
-            isSearching = true;      // قفلنا التحديث التلقائي للعناوين
-
+            isFollowingUser = false; 
             const inputId = type === 'pickup' ? 'search-pickup' : 'search-dropoff';
             const inputElement = document.getElementById(inputId);
             const query = inputElement.value;
@@ -241,40 +253,33 @@
             btnElement.innerText = '⏳';
 
             try {
+                // لو المستخدم كتب رقم صورة أو اسم مكان
                 const encodedQuery = encodeURIComponent(query);
                 const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=eg&accept-language=ar`);
                 const data = await response.json();
 
                 if (data && data.length > 0) {
-                    const place = data[0];
-                    const lat = parseFloat(place.lat);
-                    const lon = parseFloat(place.lon);
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
                     
                     // بنطير للمكان
                     map.flyTo([lat, lon], 16);
                     
-                    // بنثبت الاسم اللي إحنا بحثنا عنه في الخانة وفي النص
-                    const shortName = query; // بنستخدم الاسم اللي المستخدم كتبه
-                    inputElement.value = shortName;
-                    
-                    const addressTextId = type === 'pickup' ? 'pickup-address' : 'dropoff-address';
-                    document.getElementById(addressTextId).innerText = shortName;
-
+                    // لما الخريطة توصل هتوقف وهيتشغل event (moveend) اللي فوق
+                    // وهو اللي هيجيب اسم الشارع الحقيقي ويحدث الخانات
                 } else {
                     alert('لم يتم العثور على المكان. جرب اسم تاني أو حدد من الخريطة.');
                 }
             } catch (e) {
                 alert('حدث خطأ في البحث.');
             } finally {
-                // بنرجع الزرار لشكله الطبيعي بعد ثانية عشان نضمن إنه ميهنجش
                 setTimeout(() => {
                     btnElement.innerText = originalText;
-                    isSearching = false;
                 }, 1000);
             }
         }
 
-        // 3. التتبع المباشر وحركة السهم
+        // 3. التتبع المباشر
         function startTracking() {
             if (navigator.geolocation) {
                 if (watchId !== null) navigator.geolocation.clearWatch(watchId);
@@ -308,8 +313,7 @@
                         userMarker = L.marker([lat, lng], {icon: arrowIcon}).addTo(map);
                     }
 
-                    // بنحرك الخريطة بس لو إحنا في وضع "المتابعة" ومفيش بحث شغال
-                    if (isFollowingUser && !isSearching) {
+                    if (isFollowingUser) {
                         map.panTo([lat, lng], {animate: true, duration: 1});
                     }
 
@@ -320,7 +324,6 @@
             }
         }
 
-        // زرار "موقعي" (بيرجع يشغل المتابعة)
         function centerToMyLocation() {
             isFollowingUser = true;
             if (lastPosition) {
