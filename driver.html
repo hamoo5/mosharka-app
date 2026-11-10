@@ -15,35 +15,22 @@
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
         .header { background-color: #1A237E; color: white; padding: 12px; font-size: 18px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; }
         .logout-btn { position: absolute; left: 15px; top: 15px; background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 5px; text-decoration: none; font-size: 12px; }
-
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: #e5e3df; }
-
-        .bottom-panel {
-            background: white; border-radius: 20px 20px 0 0;
-            padding: 10px 15px; position: absolute; bottom: 0; left: 0; right: 0;
-            z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
-            display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto;
-        }
-
+        .bottom-panel { background: white; border-radius: 20px 20px 0 0; padding: 10px 15px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; }
         .instruction-text { font-size: 15px; font-weight: bold; color: #1A237E; text-align: center; margin-bottom: 2px; }
-        
         .ride-card { background: #f8f9fa; padding: 10px; border-radius: 10px; border-right: 4px solid #FFC107; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .ride-card h3 { color: #1A237E; font-size: 15px; margin-bottom: 4px; }
         .ride-card p { color: #555; font-size: 13px; margin-bottom: 3px; }
         .ride-card .price { color: #28a745; font-weight: bold; font-size: 15px; }
-        .distance-to-rider { color: #007bff; font-weight: bold; }
-        
+        .distance-to-rider { color: #007bff; font-weight: bold; background: #e3f2fd; padding: 4px; border-radius: 5px; display: inline-block; margin-bottom: 3px;}
         .btn-action { background-color: #28a745; color: white; padding: 10px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); transition: 0.2s; margin-top: 3px; }
         .btn-action:active { transform: scale(0.98); }
         .btn-finish { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
         .btn-subscribe { background-color: #ffc107; color: #333; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
-
         #subscription-box { display: none; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 5px; border: 2px solid #dc3545; text-align: center;}
         #subscription-box h3 { color: #dc3545; margin-bottom: 5px; font-size: 15px;}
-        
         .map-links a { display: block; margin: 3px 0; background: #e3f2fd; padding: 5px; border-radius: 5px; text-decoration: none; color: #1A237E; font-weight: bold; font-size: 12px;}
     </style>
 </head>
@@ -54,7 +41,6 @@
     </script>
     
     <div class="header">لوحة الكابتن <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
-    
     <div id="map"></div>
     
     <div class="bottom-panel">
@@ -65,8 +51,8 @@
         </div>
 
         <div id="waiting-ui" style="display: none;">
-            <div class="instruction-text">⏳ جاري البحث عن طلبات...</div>
-            <p style="text-align:center; font-size:12px; color:#777;">أول ما راكب يطلب، هيظهرلك هنا فوراً.</p>
+            <div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div>
+            <p style="text-align:center; font-size:12px; color:#777;">(بنبحث في نطاق 5 كم حول موقعك)</p>
         </div>
 
         <div id="requests-ui" style="display: none;">
@@ -79,6 +65,7 @@
             <div class="ride-card" style="border-right-color: #28a745;">
                 <h3>توجه إلى الراكب</h3>
                 <p>المسافة للراكب: <span id="driver-to-rider-distance">...</span> كم</p>
+                <p>الوقت المتوقع: <span id="driver-to-rider-time">...</span> دقيقة</p>
                 <div class="map-links">
                     <a href="#" id="link-rider" target="_blank">📍 فتح مكان الراكب</a>
                     <a href="#" id="link-dest" target="_blank">🏁 فتح الوجهة</a>
@@ -102,9 +89,11 @@
         var driverMarker = null;
         var riderMarker = null;
         var routeLine = null;
-        var pendingRouteLine = null; // الخط المبدئي قبل القبول
+        var pendingRouteLine = null; 
         var isFollowingUser = true;
         var liveLocationInterval = null; 
+
+        const MAX_DISTANCE_KM = 5; // أقصى مسافة للطلب (5 كم)
 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
         
@@ -187,60 +176,81 @@
         map.on('dragstart', function() { isFollowingUser = false; });
 
         async function fetchPendingRide() {
-            const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending').order('created_at', { ascending: false }).limit(1);
+            const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending').order('created_at', { ascending: false });
             if (error) return;
+            
             const container = document.getElementById('requests-container');
             
             if (data && data.length > 0) {
-                const ride = data[0];
-                document.getElementById('waiting-ui').style.display = 'none';
-                document.getElementById('requests-ui').style.display = 'block';
+                let closestRide = null;
+                let minDistance = Infinity;
 
-                // حساب المسافة المبدئية بين الكابتن والراكب (هوائية)
-                let distToRider = 0;
                 if (driverMarker) {
                     const dPos = driverMarker.getLatLng();
-                    distToRider = (map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000).toFixed(1);
                     
-                    // رسم خط متقطع بين الكابتن والراكب
-                    if (pendingRouteLine) map.removeLayer(pendingRouteLine);
-                    pendingRouteLine = L.polyline([dPos, [ride.pickup_lat, ride.pickup_lng]], {
-                        color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10'
-                    }).addTo(map);
+                    data.forEach(ride => {
+                        const dist = map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000;
+                        if (dist < MAX_DISTANCE_KM && dist < minDistance) {
+                            minDistance = dist;
+                            closestRide = { ...ride, distToRider: dist.toFixed(1) };
+                        }
+                    });
                 }
 
-                container.innerHTML = `
-                    <div class="ride-card">
-                        <h3>راكب يطلب توصيل</h3>
-                        <p class="distance-to-rider">🚗 المسافة للوصول للراكب: ${distToRider} كم</p>
-                        <p>مشوار الراكب: <b>${ride.distance} كم</b></p>
-                        <p class="price">السعر: ${ride.price} جنيه</p>
-                        <div class="map-links">
-                            <a href="https://www.google.com/maps?q=${ride.pickup_lat},${ride.pickup_lng}" target="_blank">📍 مكان الراكب</a>
-                            <a href="https://www.google.com/maps?q=${ride.dest_lat},${ride.dest_lng}" target="_blank">🏁 الوجهة</a>
-                        </div>
-                        <button class="btn-action" onclick="acceptRide(${ride.id}, ${ride.pickup_lat}, ${ride.pickup_lng}, ${ride.dest_lat}, ${ride.dest_lng})">قبول المشوار</button>
-                    </div>`;
-                
-                if (!riderMarker) {
-                    riderMarker = L.marker([ride.pickup_lat, ride.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
+                if (closestRide) {
+                    document.getElementById('waiting-ui').style.display = 'none';
+                    document.getElementById('requests-ui').style.display = 'block';
+
+                    if (driverMarker) {
+                        if (pendingRouteLine) map.removeLayer(pendingRouteLine);
+                        pendingRouteLine = L.polyline([driverMarker.getLatLng(), [closestRide.pickup_lat, closestRide.pickup_lng]], {
+                            color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10'
+                        }).addTo(map);
+                    }
+
+                    // حساب الوقت التقريبي (بافتراض السرعة 30 كم/س في الزحمة)
+                    let estTimeMins = Math.round((closestRide.distToRider / 30) * 60);
+
+                    container.innerHTML = `
+                        <div class="ride-card">
+                            <h3>راكب يطلب توصيل</h3>
+                            <p class="distance-to-rider">🚗 يبعد عنك: ${closestRide.distToRider} كم (تقريباً ${estTimeMins} دقيقة)</p>
+                            <p>مشوار الراكب: <b>${closestRide.distance} كم</b></p>
+                            <p class="price">السعر: ${closestRide.price} جنيه</p>
+                            <div class="map-links">
+                                <a href="https://www.google.com/maps?q=${closestRide.pickup_lat},${closestRide.pickup_lng}" target="_blank">📍 مكان الراكب</a>
+                                <a href="https://www.google.com/maps?q=${closestRide.dest_lat},${closestRide.dest_lng}" target="_blank">🏁 الوجهة</a>
+                            </div>
+                            <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng})">قبول المشوار</button>
+                        </div>`;
                     
-                    let bounds = L.latLngBounds([]);
-                    if(driverMarker) bounds.extend(driverMarker.getLatLng());
-                    bounds.extend([ride.pickup_lat, ride.pickup_lng]);
-                    
-                    map.flyToBounds(bounds, { 
-                        paddingTopLeft: [40, 50], 
-                        paddingBottomRight: [40, 300],
-                        maxZoom: 16 
-                    });
+                    if (!riderMarker) {
+                        riderMarker = L.marker([closestRide.pickup_lat, closestRide.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
+                        
+                        let bounds = L.latLngBounds([]);
+                        if(driverMarker) bounds.extend(driverMarker.getLatLng());
+                        bounds.extend([closestRide.pickup_lat, closestRide.pickup_lng]);
+                        
+                        map.flyToBounds(bounds, { 
+                            paddingTopLeft: [40, 50], 
+                            paddingBottomRight: [40, 300],
+                            maxZoom: 16 
+                        });
+                    }
+                } else {
+                    if (!currentActiveRideId) {
+                        document.getElementById('waiting-ui').style.display = 'block';
+                        document.getElementById('requests-ui').style.display = 'none';
+                        if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
+                        if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
+                    }
                 }
             } else {
                 if (!currentActiveRideId) {
                     document.getElementById('waiting-ui').style.display = 'block';
                     document.getElementById('requests-ui').style.display = 'none';
                     if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
-                    if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; } // مسح الخط المبدئي
+                    if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
                 }
             }
         }
@@ -250,7 +260,6 @@
             if (error) { alert('حدث خطأ.'); return; }
             currentActiveRideId = rideId;
             
-            // مسح الخط المبدئي
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
             
             document.getElementById('requests-ui').style.display = 'none';
@@ -273,12 +282,12 @@
                 const data = await response.json();
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const route = data.routes[0];
-                    // رسم المسار الحقيقي (أخضر متصل)
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#28a745', weight: 6, opacity: 0.8 } }).addTo(map);
                     
                     map.fitBounds(routeLine.getBounds(), mapPadding);
                     
                     document.getElementById('driver-to-rider-distance').innerText = (route.distance / 1000).toFixed(2);
+                    document.getElementById('driver-to-rider-time').innerText = Math.round(route.duration / 60);
                 }
             } catch (e) {}
         }
