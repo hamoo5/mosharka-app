@@ -77,20 +77,20 @@
     </button>
 
     <!-- My Location Button -->
-    <button onclick="goToMyLocation()" id="myLocationBtn" class="fixed bottom-[35vh] left-4 z-20 w-12 h-12 bg-gray-800/90 border border-gray-700 rounded-full text-amber-400 shadow-xl flex items-center justify-center active:scale-95 transition-all hidden">
+    <button onclick="goToMyLocation()" id="myLocationBtn" class="fixed bottom-[45vh] left-4 z-20 w-12 h-12 bg-gray-800/90 border border-gray-700 rounded-full text-amber-400 shadow-xl flex items-center justify-center active:scale-95 transition-all hidden">
         <i class="fa-solid fa-crosshairs text-xl"></i>
     </button>
 
     <!-- Map Container -->
     <div id="map"></div>
 
-    <!-- Center Pin -->
-    <div id="centerPin" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-full z-10 pointer-events-none flex flex-col items-center">
+    <!-- Center Pin (NOW AT 35% FROM TOP) -->
+    <div id="centerPin" class="fixed top-[35%] left-1/2 -translate-x-1/2 -translate-y-full z-10 pointer-events-none flex flex-col items-center">
         <div class="pin-bounce flex flex-col items-center">
             <div id="pinLabel" class="bg-gray-900/90 text-amber-400 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-bold shadow-xl mb-1 whitespace-nowrap">
                 حرك الخريطة لتحديد الموقع
             </div>
-            <i id="centerPinIcon" class="fa-solid fa-location-dot text-4xl text-amber-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"></i>
+            <i id="centerPinIcon" class="fa-solid fa-location-dot text-4xl text-rose-500 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"></i>
         </div>
         <div class="w-3 h-1 bg-black/50 rounded-full blur-[1px] -mt-1"></div>
     </div>
@@ -400,22 +400,27 @@
             map = L.map('map', { zoomControl: false, fadeAnimation: true }).setView([30.0444, 31.2357], 15);
             setMapStyle(mapMode);
 
-            // Update address on drag
+            // Update address on drag - fetching from the PIN POSITION (35% from top)
             map.on('moveend', function() {
                 if (currentStep === 'ride' || currentStep === 'vehicle') return;
                 
                 clearTimeout(mapMoveTimeout);
                 mapMoveTimeout = setTimeout(async () => {
-                    const center = map.getCenter();
-                    const addr = await fetchAddressFromCoords(center.lat, center.lng);
+                    // Get the exact point under the visual pin (35% down the screen)
+                    const size = map.getSize();
+                    const pinPoint = map.containerPointToLatLng([size.x / 2, size.y * 0.35]);
+                    const lat = pinPoint.lat;
+                    const lng = pinPoint.lng;
+                    
+                    const addr = await fetchAddressFromCoords(lat, lng);
                     
                     if (currentStep === 'pickup') {
-                        pickupCoords = [center.lat, center.lng];
+                        pickupCoords = [lat, lng];
                         pickupAddress = addr;
                         document.getElementById('pickupAddressText').innerText = addr;
                         document.getElementById('pickupInput').value = addr;
                     } else if (currentStep === 'dropoff') {
-                        dropoffCoords = [center.lat, center.lng];
+                        dropoffCoords = [lat, lng];
                         dropoffAddress = addr;
                         document.getElementById('dropoffAddressText').innerText = addr;
                         document.getElementById('dropoffInput').value = addr;
@@ -461,8 +466,8 @@
                         if (userLocationMarker) map.removeLayer(userLocationMarker);
                         userLocationMarker = L.circleMarker([lat, lng], { radius: 8, fillColor: '#3b82f6', color: '#ffffff', weight: 3, fillOpacity: 1 }).addTo(map);
                         
-                        // Update the text immediately
-                        map.fire('moveend');
+                        // Trigger moveend to get the address of the new center
+                        setTimeout(() => { map.fire('moveend'); }, 300);
                     },
                     (err) => showToast("تعذر جلب موقعك، تأكد من تشغيل الـ GPS")
                 );
@@ -523,6 +528,14 @@
             if (stepTarget === 'pickup' || stepTarget === 'dropoff') {
                 document.getElementById('centerPin').classList.remove('hidden');
                 document.getElementById('myLocationBtn').classList.remove('hidden');
+                
+                // Change pin color based on step
+                const pinIcon = document.getElementById('centerPinIcon');
+                if (stepTarget === 'pickup') {
+                    pinIcon.className = 'fa-solid fa-location-dot text-4xl text-emerald-500 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]';
+                } else {
+                    pinIcon.className = 'fa-solid fa-location-dot text-4xl text-rose-500 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]';
+                }
             } else {
                 document.getElementById('centerPin').classList.add('hidden');
                 document.getElementById('myLocationBtn').classList.add('hidden');
