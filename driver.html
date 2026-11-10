@@ -49,6 +49,10 @@
         .btn-finish { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
         .btn-subscribe { background-color: #ffc107; color: #333; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
         
+        /* زرار تفعيل التنبيهات */
+        #enable-alerts-btn { background-color: #e91e63; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(233, 30, 99, 0.3); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+
         #subscription-box { display: none; background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 5px; border: 2px solid #dc3545; text-align: center; transition: 0.5s;}
         #subscription-box h3 { color: #dc3545; margin-bottom: 5px; font-size: 15px;}
         
@@ -89,13 +93,6 @@
         }
         applyTheme();
         setInterval(applyTheme, 60000);
-
-        // طلب إذن الإشعارات
-        if ("Notification" in window) {
-            if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-                Notification.requestPermission();
-            }
-        }
     </script>
     
     <!-- نافذة الملف الشخصي -->
@@ -146,6 +143,10 @@
     
     <div id="map"></div>
     <div class="bottom-panel">
+        
+        <!-- زرار تفعيل التنبيهات -->
+        <button id="enable-alerts-btn" onclick="enableAlerts()">🔔 اضغط هنا لتفعيل صوت التنبيهات</button>
+
         <div id="subscription-box">
             <h3>عذراً، اشتراكك غير نشط!</h3>
             <p style="font-size:12px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري.</p>
@@ -153,7 +154,7 @@
         </div>
         <div id="waiting-ui" style="display: none;">
             <div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div>
-            <p style="text-align:center; font-size:12px; opacity:0.7;">(بنبحث في نطاق 5 كم حول موقعك)</p>
+            <p style="text-align:center; font-size:12px; opacity:0.7;">(بنبحث في نطاق 15 كم حول موقعك)</p>
         </div>
         <div id="requests-ui" style="display: none;">
             <div class="instruction-text">🔔 وصلك طلب جديد!</div>
@@ -181,6 +182,34 @@
 
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
 
+        // دالة تفعيل التنبيهات
+        function enableAlerts() {
+            // 1. فتح قفل الصوت
+            const audio = document.getElementById('notifSound');
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+            }).catch(e => console.log("Audio unlock failed", e));
+
+            // 2. طلب إذن الإشعارات
+            if ("Notification" in window) {
+                Notification.requestPermission();
+            }
+
+            // 3. اهتزاز تجريبي
+            if (navigator.vibrate) { navigator.vibrate(200); }
+
+            // 4. إخفاء الزرار وحفظ الحالة
+            document.getElementById('enable-alerts-btn').style.display = 'none';
+            localStorage.setItem('alertsEnabled', 'true');
+            alert('تم تفعيل التنبيهات بنجاح! أول ما طلب جديد ينزل هتسمع صوت وهتحس باهتزاز.');
+        }
+
+        // لو متفعل من قبل، نخفي الزرار
+        if (localStorage.getItem('alertsEnabled') === 'true') {
+            document.getElementById('enable-alerts-btn').style.display = 'none';
+        }
+
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
@@ -191,9 +220,10 @@
         var pendingRouteLine = null; 
         var isFollowingUser = true;
         var liveLocationInterval = null; 
-        var isAlertPlaying = false; // عشان نمنع تكرار الصوت
+        var isAlertPlaying = false;
 
-        const MAX_DISTANCE_KM = 5; 
+        // وسعنا النطاق لـ 15 كم عشان مشاكل الـ GPS
+        const MAX_DISTANCE_KM = 15; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
         
         function panToDriverWithOffset(lat, lng) {
@@ -202,21 +232,18 @@
             map.panTo(targetLatLng, {animate: true, duration: 1});
         }
 
-        // دالة تشغيل صوت التنبيه والاهتزاز
         function playNewOrderAlert() {
             if (isAlertPlaying) return;
             isAlertPlaying = true;
 
-            // 1. تشغيل الصوت
+            // تشغيل الصوت
             const audio = document.getElementById('notifSound');
             audio.play().catch(e => console.log("الصوت محتاج تفاعل من المستخدم", e));
 
-            // 2. اهتزاز الموبايل
-            if (navigator.vibrate) {
-                navigator.vibrate([500, 200, 500, 200, 500]);
-            }
+            // اهتزاز
+            if (navigator.vibrate) { navigator.vibrate([500, 200, 500, 200, 500]); }
 
-            // 3. إظهار إشعار في النظام
+            // إشعار
             if ("Notification" in window && Notification.permission === "granted") {
                 new Notification("🚗 طلب توصيل جديد!", {
                     body: "وصلك طلب جديد على تطبيق مشاركة، افتح التطبيق للتفاصيل.",
@@ -253,12 +280,17 @@
             }
         }
 
+        // شكل العربية الجديد (3D)
         function startTrackingAndListening() {
             if (navigator.geolocation) {
                 const carIcon = L.divIcon({
                     className: 'driver-car',
-                    html: `<svg width="35" height="35" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/></svg>`,
-                    iconSize: [35, 35], iconAnchor: [17, 17]
+                    html: `<svg width="45" height="45" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;">
+                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4h14v4z" fill="#1A237E" stroke="white" stroke-width="1"/>
+                            <circle cx="7.5" cy="14.5" r="1.5" fill="#333"/>
+                            <circle cx="16.5" cy="14.5" r="1.5" fill="#333"/>
+                           </svg>`,
+                    iconSize: [45, 45], iconAnchor: [22, 22]
                 });
 
                 navigator.geolocation.watchPosition(function(position) {
@@ -312,7 +344,6 @@
                 });
 
                 if (closestRide) {
-                    // لو دي أول مرة يلاقي فيها الطلب، يشغل الصوت
                     if (document.getElementById('requests-ui').style.display === 'none') {
                         playNewOrderAlert();
                     }
@@ -371,7 +402,7 @@
                         document.getElementById('requests-ui').style.display = 'none';
                         if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
                         if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
-                        isAlertPlaying = false; // وقفنا الصوت
+                        isAlertPlaying = false;
                     }
                 }
             } else {
@@ -380,7 +411,7 @@
                     document.getElementById('requests-ui').style.display = 'none';
                     if (riderMarker) { map.removeLayer(riderMarker); riderMarker = null; }
                     if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
-                    isAlertPlaying = false; // وقفنا الصوت
+                    isAlertPlaying = false;
                 }
             }
         }
