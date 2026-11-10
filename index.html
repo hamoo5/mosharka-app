@@ -17,11 +17,12 @@
         
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.5s; }
-        #install-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background-color: #28a745; color: white; padding: 12px; text-align: center; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; font-weight: bold; font-size: 16px; }
+        
         .header { background-color: var(--header-bg); color: var(--header-text); padding: 15px; font-size: 20px; font-weight: bold; text-align: center; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; transition: 0.5s; }
         .header-btn { position: absolute; top: 15px; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 14px; cursor: pointer; }
         .logout-btn { left: 15px; background-color: #dc3545; }
         .profile-btn { right: 15px; background-color: #2196f3; }
+        
         #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
         
         .fab-locate { position: absolute; bottom: 260px; left: 15px; z-index: 1000; background-color: var(--panel-bg); color: var(--header-bg); border: 2px solid var(--header-bg); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
@@ -42,7 +43,7 @@
         
         .btn-action { background-color: #1A237E; color: white; padding: 15px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(26, 35, 126, 0.3); transition: 0.2s; }
         .btn-confirm-pickup { background-color: #28a745; } 
-        .btn-confirm-dropoff { background-color: #007bff; } /* تم تغيير اللون للأزرق */
+        .btn-confirm-dropoff { background-color: #007bff; } 
         .btn-cancel { background-color: #dc3545; margin-top: 10px; display: none; }
         .btn-back { background: none; border: none; color: #007bff; font-weight: bold; font-size: 14px; cursor: pointer; text-align: right; margin-bottom: 10px; font-family: 'Cairo', sans-serif; }
 
@@ -50,18 +51,30 @@
         #ride-info h3 { color: #28a745; font-size: 26px; margin: 5px 0; }
         #ride-info p { color: var(--text-color); font-size: 14px; margin-bottom: 5px;}
         
-        #driver-details { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 10px; border: 2px solid #2196f3; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2); transition: 0.5s; }
-        #driver-details h3 { color: #2196f3; margin-bottom: 5px; font-size: 18px;}
-        .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; background: rgba(211, 47, 47, 0.1); padding: 5px; border-radius: 5px;}
+        /* --- تصميم كارت الكابتن الجديد (شاشة التتبع) --- */
+        #driver-details { display: none; background-color: var(--card-bg); padding: 15px; border-radius: 15px; border: 1px solid var(--border-color); margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.5s; }
         
-        .pin-box { background-color: #fff3cd; border: 2px dashed #ffc107; padding: 10px; border-radius: 10px; margin: 10px 0; }
-        .pin-box h4 { color: #856404; margin-bottom: 5px; font-size: 14px; }
-        .pin-code-text { font-size: 32px; font-weight: bold; color: #333; letter-spacing: 5px; }
+        .driver-header { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; }
+        .avatar { width: 60px; height: 60px; background-color: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; border: 2px solid #1A237E; }
+        body.dark-mode .avatar { background-color: #444; border-color: #fff; }
+        .driver-info-text h3 { color: var(--text-color); font-size: 18px; margin-bottom: 2px; }
+        .driver-info-text p { color: #888; font-size: 13px; margin-bottom: 2px; display: flex; align-items: center; gap: 5px; }
+        .rating-star { color: #ffc107; font-weight: bold; }
+        
+        .car-info { background-color: var(--input-bg); padding: 8px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 14px; color: var(--text-color); margin-bottom: 15px; border: 1px solid var(--border-color);}
+
+        .driver-distance-info { font-size: 16px; color: #d32f2f; font-weight: bold; margin-bottom: 15px; background: rgba(211, 47, 47, 0.1); padding: 8px; border-radius: 8px; text-align: center;}
+        
+        .contact-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .contact-buttons a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background-color: #2196f3; color: white; padding: 12px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 16px; transition: 0.2s;}
+        .contact-buttons .msg-btn { background-color: #25D366; } /* لون واتساب */
+        
+        .pin-box { background-color: #fff3cd; border: 2px dashed #ffc107; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; position: relative; }
+        .pin-box h4 { color: #856404; margin-bottom: 10px; font-size: 15px; }
+        .pin-code-text { font-size: 40px; font-weight: bold; color: #333; letter-spacing: 10px; padding-right: 10px; }
         body.dark-mode .pin-box { background-color: #3e2723; border-color: #ffb300; }
         body.dark-mode .pin-code-text { color: #fff; }
         body.dark-mode .pin-box h4 { color: #ffca28; }
-
-        .call-btn { display: inline-block; background-color: #2196f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 5px; }
         
         #profile-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: var(--panel-bg); color: var(--text-color); width: 90%; max-width: 400px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
@@ -83,7 +96,6 @@
     </style>
 </head>
 <body>
-    <div id="install-banner">📥 اضغط هنا لتثبيت التطبيق على هاتفك</div>
     
     <div id="profile-modal">
         <div class="modal-content">
@@ -117,7 +129,6 @@
     <div id="map"></div>
     <button class="fab-locate" onclick="centerToMyLocation()">🎯</button>
     
-    <!-- الدبوس الثابت -->
     <div id="center-pin" class="center-pin">
         <svg class="pin-svg green" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/></svg>
         <div class="pin-shadow"></div>
@@ -141,22 +152,36 @@
             <button class="btn-action btn-confirm-dropoff" onclick="confirmDropoff()">تأكيد موقع الوصول</button>
         </div>
         
-        <!-- شاشة الرحلة -->
+        <!-- شاشة الرحلة والتتبع -->
         <div id="ui-ride" style="display: none;">
+            
+            <!-- كارت الكابتن الجديد -->
             <div id="driver-details">
-                <h3>الكابتن في الطريق إليك 🚗</h3>
-                <p>اسم الكابتن: <b id="d-name"></b></p>
+                <div class="driver-header">
+                    <div class="avatar">👨‍✈️</div>
+                    <div class="driver-info-text">
+                        <h3 id="d-name">اسم الكابتن</h3>
+                        <p><span class="rating-star">★ 4.9</span> • كابتن متميز</p>
+                    </div>
+                </div>
+                
+                <div class="car-info" id="d-car-info">🚗 تويوتا كورولا - أبيض</div>
+                
                 <div class="driver-distance-info" id="driver-eta-text">جاري تحديد موقع الكابتن...</div>
                 
+                <!-- الرقم السري -->
                 <div class="pin-box" id="pin-box" style="display:none;">
                     <h4>الرقم السري للرحلة (اعطه للكابتن):</h4>
                     <div class="pin-code-text" id="rider-pin-display">----</div>
                 </div>
 
-                <a href="#" id="d-call" class="call-btn">📞 اتصل بالكابتن</a>
+                <div class="contact-buttons">
+                    <a href="#" id="d-call" class="call-btn">📞 اتصال</a>
+                    <a href="#" id="d-msg" class="msg-btn" target="_blank">💬 رسالة</a>
+                </div>
             </div>
             
-            <!-- كارت السعر والمسافة -->
+            <!-- كارت السعر (يختفي بعد القبول) -->
             <div id="ride-info">
                 <p>المسافة: <span id="ride-distance-text">...</span> كم (تقريباً <span id="ride-time-text">...</span> دقيقة)</p>
                 <h3>السعر: <span id="price-text">...</span> جنيه</h3>
@@ -232,11 +257,8 @@
         function centerToMyLocation() { isFollowingUser = true; if (lastPosition) { map.flyTo([lastPosition.lat, lastPosition.lng], 16); } }
         startTracking();
 
-        // --- التعديل الأول: إضافة دبوس أخضر لمكان الانطلاق ---
         function confirmPickup() {
             const center = map.getCenter(); pickupPoint = [center.lat, center.lng];
-            
-            // إضافة دبوس أخضر ثابت
             if (startMarker) map.removeLayer(startMarker);
             startMarker = L.marker(pickupPoint, {icon: L.divIcon({html: '📍', className: 'custom-icon', iconSize: [30,30]})}).addTo(map);
 
@@ -246,7 +268,6 @@
             currentStep = 'dropoff'; map.fire('moveend'); 
         }
 
-        // --- التعديل الثاني: زرار الرجوع ---
         function goBackToPickup() {
             currentStep = 'pickup';
             dropoffPoint = null;
@@ -265,7 +286,6 @@
             await drawRoute();
         }
 
-        // --- التعديل الثالث: إضافة حساب الوقت ---
         async function drawRoute() {
             if (!pickupPoint || !dropoffPoint) return; if (routeLine) { map.removeLayer(routeLine); }
             const url = `https://router.project-osrm.org/route/v1/driving/${pickupPoint[1]},${pickupPoint[0]};${dropoffPoint[1]},${dropoffPoint[0]}?overview=full&geometries=geojson`;
@@ -276,7 +296,7 @@
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#1A237E', weight: 6, opacity: 0.8 } }).addTo(map); 
                     map.fitBounds(routeLine.getBounds(), { padding: [50, 50] }); 
                     currentDistance = (route.distance / 1000).toFixed(2); 
-                    currentTime = Math.round((route.duration / 60) * 2.5) + 1; // معامل التصحيح
+                    currentTime = Math.round((route.duration / 60) * 2.5) + 1; 
                 } else { throw new Error(); }
             } catch (error) { 
                 routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#1A237E', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map); 
@@ -287,7 +307,6 @@
             
             currentPrice = Math.round(10 + (currentDistance * 5)); 
             
-            // عرض المسافة والوقت في الكارت
             document.getElementById('ride-distance-text').innerText = currentDistance;
             document.getElementById('ride-time-text').innerText = currentTime;
             document.getElementById('price-text').innerText = currentPrice;
@@ -325,12 +344,20 @@
         supabaseClient.channel('rider-channel').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
             if (currentRideId && payload.new.id === currentRideId) {
                 
+                // ** التعديل الجديد: تحويل الشاشة لشكل كارت الكابتن **
                 if (payload.new.status === 'accepted') {
-                    document.getElementById('request-btn').innerText = 'تم قبول الطلب'; document.getElementById('request-btn').style.backgroundColor = '#6c757d';
-                    document.getElementById('cancel-btn').style.display = 'none'; 
-                    document.getElementById('driver-details').style.display = 'block';
+                    document.getElementById('request-btn').style.display = 'none'; // اخفاء زرار الطلب
+                    document.getElementById('cancel-btn').style.display = 'none'; // اخفاء زرار الإلغاء
+                    document.getElementById('ride-info').style.display = 'none'; // اخفاء كارت السعر
+                    
+                    document.getElementById('driver-details').style.display = 'block'; // اظهار كارت الكابتن
+                    
                     document.getElementById('d-name').innerText = payload.new.driver_name;
+                    document.getElementById('d-car-info').innerText = "🚗 عربية ملاكي - أبيض"; // بيانات وهمية للعربية
+                    
+                    // روابط الاتصال والرسالة
                     document.getElementById('d-call').href = 'tel:' + payload.new.driver_phone;
+                    document.getElementById('d-msg').href = 'https://wa.me/2' + payload.new.driver_phone + '?text=مرحباً، أنا الراكب الخاص بك.';
                 }
 
                 if (payload.new.driver_arrived_at) {
@@ -350,8 +377,6 @@
 
                 if (payload.new.status === 'completed') {
                     document.getElementById('driver-details').style.display = 'none';
-                    document.getElementById('request-btn').innerText = 'وصلت بالسلامة!'; document.getElementById('request-btn').style.backgroundColor = '#1A237E'; document.getElementById('request-btn').disabled = true;
-                    document.getElementById('cancel-btn').style.display = 'none';
                     document.getElementById('rating-modal').style.display = 'flex';
                     document.getElementById('rate-driver-name').innerText = payload.new.driver_name;
                     if(driverCarMarker) { map.removeLayer(driverCarMarker); driverCarMarker = null; }
