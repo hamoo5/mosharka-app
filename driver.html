@@ -56,6 +56,7 @@
         
         .btn-action { background-color: #28a745; color: white; padding: 10px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); transition: 0.2s; margin-top: 3px; }
         .btn-action:active { transform: scale(0.98); }
+        .btn-disabled { background-color: #6c757d !important; cursor: not-allowed; box-shadow: none; }
         .btn-finish { background-color: #dc3545; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
         .btn-subscribe { background-color: #ffc107; color: #333; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3); }
         
@@ -103,7 +104,6 @@
         setInterval(applyTheme, 60000);
     </script>
     
-    <!-- المودالات هنا (نفس الكود السابق) -->
     <div id="profile-modal">
         <div class="modal-content">
             <div class="modal-header"><h3>حسابي (كابتن)</h3><button class="close-btn" onclick="closeProfile()">X</button></div>
@@ -143,7 +143,6 @@
             <div class="instruction-text">🔔 وصلك طلب جديد!</div><div id="requests-container"></div>
         </div>
         
-        <!-- شاشة الرحلة النشطة -->
         <div id="active-ride-ui" style="display: none;">
             <div class="instruction-text" style="color: #28a745;" id="active-ride-title">🚗 أنت في رحلة الآن</div>
             <div class="ride-card" style="border-right-color: #28a745;" id="active-ride-card">
@@ -156,12 +155,10 @@
                 </div>
             </div>
             
-            <!-- عداد الانتظار (مخفي في البداية) -->
             <div id="wait-timer-ui" style="display:none; text-align:center; font-weight:bold; color:#dc3545; font-size:20px; margin: 10px 0; background: #ffebee; padding: 10px; border-radius: 8px;">
                 ⏱️ في انتظار الراكب: <span id="timer-text">00:00</span>
             </div>
 
-            <!-- أزرار التحكم -->
             <button id="arrived-btn" class="btn-action" style="background-color: #007bff;" onclick="arriveAtRider()">📍 وصلت للراكب</button>
             <button id="finish-btn" class="btn-action btn-finish" style="display:none;" onclick="finishRide()">إنهاء الرحلة (وصلت للوجهة)</button>
         </div>
@@ -198,8 +195,12 @@
         var liveLocationInterval = null; 
         var isAlertPlaying = false;
         var lastDriverPos = null;
-        var waitTimer = null; // متغير عداد الانتظار
+        var waitTimer = null; 
         var waitSeconds = 0;
+        
+        // متغيرات مهمة لتحديد موقع الانطلاق
+        var currentPickupPoint = null; 
+        var currentRiderName = "";
 
         const MAX_DISTANCE_KM = 15; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
@@ -271,6 +272,18 @@
                             }
                         } else { driverMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map); }
                         
+                        // تحديث المسافة ديناميكياً لو كان في رحلة نشطة
+                        if (currentActiveRideId && currentPickupPoint) {
+                            const distToPickup = newPos.distanceTo(L.latLng(currentPickupPoint[0], currentPickupPoint[1]));
+                            if (distToPickup <= 150 && document.getElementById('arrived-btn').style.display !== 'none') {
+                                document.getElementById('arrived-btn').innerText = "✅ أنت قريب، اضغط لتأكيد الوصول";
+                                document.getElementById('arrived-btn').style.backgroundColor = "#28a745"; // لون أخضر
+                            } else if (distToPickup > 150 && document.getElementById('arrived-btn').style.display !== 'none') {
+                                document.getElementById('arrived-btn').innerText = "📍 وصلت للراكب (اقترب أولاً)";
+                                document.getElementById('arrived-btn').style.backgroundColor = "#6c757d"; // لون رمادي
+                            }
+                        }
+
                         if (isFollowingUser && !currentActiveRideId) { panToDriverWithOffset(lat, lng); }
                     }
                     
@@ -290,7 +303,7 @@
         map.on('dragstart', function() { isFollowingUser = false; });
 
         async function fetchPendingRide() {
-            if (currentActiveRideId) return; // لو في رحلة شغالة، بلاش نجيب طلبات
+            if (currentActiveRideId) return;
             
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending').order('created_at', { ascending: false });
             if (error) return;
@@ -365,9 +378,12 @@
             if (error) { alert('حدث خطأ.'); return; }
             
             currentActiveRideId = rideId; currentRiderName = rName; isAlertPlaying = false; currentPendingRideId = null; 
+            
+            // حفظ مكان الانطلاق عشان نستخدمه في الحماية
+            currentPickupPoint = [pLat, pLng]; 
+            
             if (pendingRouteLine) { map.removeLayer(pendingRouteLine); pendingRouteLine = null; }
             
-            // تجهيز الواجهة
             document.getElementById('requests-ui').style.display = 'none';
             document.getElementById('active-ride-ui').style.display = 'block';
             document.getElementById('active-ride-title').innerText = "🚗 أنت في رحلة الآن";
@@ -375,6 +391,8 @@
             document.getElementById('active-ride-distance-text').style.display = 'block';
             document.getElementById('active-ride-time-text').style.display = 'block';
             document.getElementById('arrived-btn').style.display = 'block';
+            document.getElementById('arrived-btn').innerText = "📍 وصلت للراكب (اقترب أولاً)";
+            document.getElementById('arrived-btn').style.backgroundColor = "#6c757d";
             document.getElementById('finish-btn').style.display = 'none';
             document.getElementById('wait-timer-ui').style.display = 'none';
 
@@ -409,28 +427,35 @@
             } catch (e) {}
         }
 
-        // دالة زرار "وصلت للراكب"
+        // ** دالة "وصلت للراكب" مع الحماية الجغرافية **
         async function arriveAtRider() {
-            if (!currentActiveRideId) return;
+            if (!currentActiveRideId || !currentPickupPoint || !driverMarker) return;
             
-            // تحديث الداتابيز إن الكابتن وصل
+            const currentPos = driverMarker.getLatLng();
+            const pickupLatLng = L.latLng(currentPickupPoint[0], currentPickupPoint[1]);
+            const distanceInMeters = currentPos.distanceTo(pickupLatLng);
+
+            // شرط الحماية: المسافة لازم تكون أقل من 150 متر
+            if (distanceInMeters > 150) {
+                alert(`أنت بعيد عن نقطة الانطلاق بحوالي ${Math.round(distanceInMeters)} متر. برجاء الاقتراب من الراكب أولاً.`);
+                return;
+            }
+            
+            // لو قريب، نكمل عادي
             const { error } = await supabaseClient.from('rides').update({ driver_arrived_at: new Date().toISOString() }).eq('id', currentActiveRideId);
             
             if (!error) {
-                // إخفاء زرار "وصلت" وإظهار العداد
                 document.getElementById('arrived-btn').style.display = 'none';
                 document.getElementById('wait-timer-ui').style.display = 'block';
                 document.getElementById('active-ride-header').innerText = "في انتظار الراكب...";
                 document.getElementById('active-ride-distance-text').style.display = 'none';
                 document.getElementById('active-ride-time-text').style.display = 'none';
                 
-                // بدء العداد
                 startWaitTimer();
                 
-                // إظهار زرار إنهاء الرحلة (عشان يبدأ المشوار)
                 document.getElementById('finish-btn').style.display = 'block';
                 document.getElementById('finish-btn').innerText = "بدء الرحلة (وصل الراكب)";
-                document.getElementById('finish-btn').style.backgroundColor = "#28a745"; // لون أخضر للبدء
+                document.getElementById('finish-btn').style.backgroundColor = "#28a745"; 
             }
         }
 
@@ -447,13 +472,12 @@
 
         async function finishRide() {
             if (!currentActiveRideId) return;
-            
             if (!confirm('هل وصلت بالراكب للوجهة؟')) return;
             
             const { error } = await supabaseClient.from('rides').update({ status: 'completed' }).eq('id', currentActiveRideId);
             if (!error) {
                 clearInterval(liveLocationInterval); liveLocationInterval = null;
-                clearInterval(waitTimer); waitTimer = null; // وقف عداد الانتظار
+                clearInterval(waitTimer); waitTimer = null; 
                 
                 document.getElementById('active-ride-ui').style.display = 'none';
                 document.getElementById('waiting-ui').style.display = 'block';
@@ -467,7 +491,7 @@
             }
         }
 
-        // دوال الملف الشخصي والتقييم (نفس الكود السابق)
+        // دوال الملف الشخصي والتقييم
         async function openProfile() {
             document.getElementById('profile-modal').style.display = 'flex';
             document.getElementById('p-name').innerText = user.name; document.getElementById('p-phone').innerText = user.phone;
@@ -483,12 +507,11 @@
             document.getElementById('p-earnings').innerText = totalEarnings;
         }
         function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
-        let selectedRating = 5; let currentRiderName = "";
+        let selectedRating = 5; 
         function setRating(rating) { selectedRating = rating; const stars = document.querySelectorAll('#star-container span'); stars.forEach((star, index) => { if (index < rating) star.classList.add('active'); else star.classList.remove('active'); }); }
         async function submitRating() { if (!currentActiveRideId) return; const { error } = await supabaseClient.from('rides').update({ rating_by_driver: selectedRating }).eq('id', currentActiveRideId); if (!error) { alert('شكراً لتقييمك!'); document.getElementById('rating-modal').style.display = 'none'; currentActiveRideId = null; } }
         setRating(5);
 
-        // الـ Realtime listener للكابتن
         supabaseClient.channel('driver-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload) => {
             if (payload.new && payload.new.status === 'cancelled') {
                 if (currentActiveRideId && payload.new.id === currentActiveRideId) {
