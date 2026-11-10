@@ -6,11 +6,9 @@
     <title>تطبيق مشاركة - الكابتن</title>
     <link rel="manifest" href="manifest-driver.json">
     <meta name="theme-color" content="#1A237E">
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,27 +37,22 @@
         const user = JSON.parse(localStorage.getItem('user'));
         if (!user || user.role !== 'driver') { window.location.href = 'login.html'; }
     </script>
-    
     <div class="header">لوحة الكابتن <a href="#" onclick="logout()" class="logout-btn">خروج</a></div>
     <div id="map"></div>
-    
     <div class="bottom-panel">
         <div id="subscription-box">
             <h3>عذراً، اشتراكك غير نشط!</h3>
             <p style="font-size:12px; margin-bottom: 10px;">عشان تقدر تستقبل طلبات وتشتغل، لازم تفعل اشتراكك الشهري.</p>
             <button class="btn-action btn-subscribe" onclick="activateMockSubscription()">تفعيل الاشتراك (تجريبي)</button>
         </div>
-
         <div id="waiting-ui" style="display: none;">
             <div class="instruction-text">⏳ جاري البحث عن طلبات قريبة منك...</div>
             <p style="text-align:center; font-size:12px; color:#777;">(بنبحث في نطاق 5 كم حول موقعك)</p>
         </div>
-
         <div id="requests-ui" style="display: none;">
             <div class="instruction-text">🔔 وصلك طلب جديد!</div>
             <div id="requests-container"></div>
         </div>
-
         <div id="active-ride-ui" style="display: none;">
             <div class="instruction-text" style="color: #28a745;">🚗 أنت في رحلة الآن</div>
             <div class="ride-card" style="border-right-color: #28a745;">
@@ -93,8 +86,7 @@
         var isFollowingUser = true;
         var liveLocationInterval = null; 
 
-        const MAX_DISTANCE_KM = 5; // أقصى مسافة للطلب (5 كم)
-
+        const MAX_DISTANCE_KM = 5; 
         const mapPadding = { paddingTopLeft: [30, 50], paddingBottomRight: [30, 300] };
         
         function panToDriverWithOffset(lat, lng) {
@@ -135,9 +127,7 @@
             if (navigator.geolocation) {
                 const carIcon = L.divIcon({
                     className: 'driver-car',
-                    html: `<svg width="35" height="35" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;">
-                            <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/>
-                           </svg>`,
+                    html: `<svg width="35" height="35" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.3s ease;"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#1A237E" stroke="white" stroke-width="0.5"/></svg>`,
                     iconSize: [35, 35], iconAnchor: [17, 17]
                 });
 
@@ -178,51 +168,66 @@
         async function fetchPendingRide() {
             const { data, error } = await supabaseClient.from('rides').select('*').eq('status', 'pending').order('created_at', { ascending: false });
             if (error) return;
-            
             const container = document.getElementById('requests-container');
             
-            if (data && data.length > 0) {
+            if (data && data.length > 0 && driverMarker) {
                 let closestRide = null;
                 let minDistance = Infinity;
+                const dPos = driverMarker.getLatLng();
 
-                if (driverMarker) {
-                    const dPos = driverMarker.getLatLng();
-                    
-                    data.forEach(ride => {
-                        const dist = map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000;
-                        if (dist < MAX_DISTANCE_KM && dist < minDistance) {
-                            minDistance = dist;
-                            closestRide = { ...ride, distToRider: dist.toFixed(1) };
-                        }
-                    });
-                }
+                data.forEach(ride => {
+                    const dist = map.distance(dPos, [ride.pickup_lat, ride.pickup_lng]) / 1000;
+                    if (dist < MAX_DISTANCE_KM && dist < minDistance) {
+                        minDistance = dist;
+                        closestRide = ride;
+                    }
+                });
 
                 if (closestRide) {
                     document.getElementById('waiting-ui').style.display = 'none';
                     document.getElementById('requests-ui').style.display = 'block';
+                    container.innerHTML = `<p style="text-align:center;">جاري حساب المسافة الحقيقية للراكب...</p>`;
 
-                    if (driverMarker) {
-                        if (pendingRouteLine) map.removeLayer(pendingRouteLine);
-                        pendingRouteLine = L.polyline([driverMarker.getLatLng(), [closestRide.pickup_lat, closestRide.pickup_lng]], {
-                            color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10'
-                        }).addTo(map);
+                    // التعديل المهم: بنجيب المسار الحقيقي قبل القبول
+                    const url = `https://router.project-osrm.org/route/v1/driving/${dPos.lng},${dPos.lat};${closestRide.pickup_lng},${closestRide.pickup_lat}?overview=full&geometries=geojson`;
+                    
+                    try {
+                        const response = await fetch(url);
+                        const routeData = await response.json();
+                        let roadDist, roadTime;
+
+                        if (routeData.code === 'Ok' && routeData.routes.length > 0) {
+                            roadDist = (routeData.routes[0].distance / 1000).toFixed(1);
+                            roadTime = Math.round(routeData.routes[0].duration / 60);
+
+                            if (pendingRouteLine) map.removeLayer(pendingRouteLine);
+                            pendingRouteLine = L.geoJSON(routeData.routes[0].geometry, { style: { color: '#007bff', weight: 4, opacity: 0.7, dashArray: '10, 10' } }).addTo(map);
+                        } else {
+                            throw new Error("No route");
+                        }
+
+                        container.innerHTML = `
+                            <div class="ride-card">
+                                <h3>راكب يطلب توصيل</h3>
+                                <p class="distance-to-rider">🚗 يبعد عنك: ${roadDist} كم (تقريباً ${roadTime} دقيقة)</p>
+                                <p>مشوار الراكب: <b>${closestRide.distance} كم</b></p>
+                                <p class="price">السعر: ${closestRide.price} جنيه</p>
+                                <div class="map-links">
+                                    <a href="https://www.google.com/maps?q=${closestRide.pickup_lat},${closestRide.pickup_lng}" target="_blank">📍 مكان الراكب</a>
+                                    <a href="https://www.google.com/maps?q=${closestRide.dest_lat},${closestRide.dest_lng}" target="_blank">🏁 الوجهة</a>
+                                </div>
+                                <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng})">قبول المشوار</button>
+                            </div>`;
+                    } catch(e) {
+                        // لو السيرفر وقع، نرجع للمسافة المباشرة
+                        container.innerHTML = `
+                            <div class="ride-card">
+                                <h3>راكب يطلب توصيل</h3>
+                                <p class="distance-to-rider">🚗 يبعد عنك: ${minDistance.toFixed(1)} كم</p>
+                                <p class="price">السعر: ${closestRide.price} جنيه</p>
+                                <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng})">قبول المشوار</button>
+                            </div>`;
                     }
-
-                    // حساب الوقت التقريبي (بافتراض السرعة 30 كم/س في الزحمة)
-                    let estTimeMins = Math.round((closestRide.distToRider / 30) * 60);
-
-                    container.innerHTML = `
-                        <div class="ride-card">
-                            <h3>راكب يطلب توصيل</h3>
-                            <p class="distance-to-rider">🚗 يبعد عنك: ${closestRide.distToRider} كم (تقريباً ${estTimeMins} دقيقة)</p>
-                            <p>مشوار الراكب: <b>${closestRide.distance} كم</b></p>
-                            <p class="price">السعر: ${closestRide.price} جنيه</p>
-                            <div class="map-links">
-                                <a href="https://www.google.com/maps?q=${closestRide.pickup_lat},${closestRide.pickup_lng}" target="_blank">📍 مكان الراكب</a>
-                                <a href="https://www.google.com/maps?q=${closestRide.dest_lat},${closestRide.dest_lng}" target="_blank">🏁 الوجهة</a>
-                            </div>
-                            <button class="btn-action" onclick="acceptRide(${closestRide.id}, ${closestRide.pickup_lat}, ${closestRide.pickup_lng}, ${closestRide.dest_lat}, ${closestRide.dest_lng})">قبول المشوار</button>
-                        </div>`;
                     
                     if (!riderMarker) {
                         riderMarker = L.marker([closestRide.pickup_lat, closestRide.pickup_lng]).addTo(map).bindPopup("راكب يطلب مشوار").openPopup();
@@ -231,11 +236,7 @@
                         if(driverMarker) bounds.extend(driverMarker.getLatLng());
                         bounds.extend([closestRide.pickup_lat, closestRide.pickup_lng]);
                         
-                        map.flyToBounds(bounds, { 
-                            paddingTopLeft: [40, 50], 
-                            paddingBottomRight: [40, 300],
-                            maxZoom: 16 
-                        });
+                        map.flyToBounds(bounds, { paddingTopLeft: [40, 50], paddingBottomRight: [40, 300], maxZoom: 16 });
                     }
                 } else {
                     if (!currentActiveRideId) {
