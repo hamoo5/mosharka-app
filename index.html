@@ -75,6 +75,12 @@
         .history-item:last-child { border-bottom: none; }
         .history-item .price { color: #28a745; font-weight: bold; }
         .history-item .date { font-size: 12px; color: #888; }
+
+        /* نافذة التقييم */
+        #rating-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 3000; justify-content: center; align-items: center; }
+        .rating-content { background: var(--panel-bg); color: var(--text-color); padding: 20px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px; }
+        .stars { font-size: 40px; color: #ddd; cursor: pointer; margin: 15px 0; }
+        .stars .active { color: #ffc107; }
     </style>
 </head>
 <body>
@@ -95,6 +101,22 @@
             <div class="history-list" id="history-list">
                 <p style="text-align:center;">جاري التحميل...</p>
             </div>
+        </div>
+    </div>
+
+    <!-- نافذة التقييم -->
+    <div id="rating-modal">
+        <div class="rating-content">
+            <h3>قيّم الكابتن</h3>
+            <p>كيف كانت رحلتك مع <b id="rate-driver-name"></b>؟</p>
+            <div class="stars" id="star-container">
+                <span onclick="setRating(1)">★</span>
+                <span onclick="setRating(2)">★</span>
+                <span onclick="setRating(3)">★</span>
+                <span onclick="setRating(4)">★</span>
+                <span onclick="setRating(5)">★</span>
+            </div>
+            <button class="btn-action" style="background-color:#2196f3;" onclick="submitRating()">إرسال التقييم</button>
         </div>
     </div>
 
@@ -302,11 +324,7 @@
         document.getElementById('request-btn').addEventListener('click', async function() {
             this.innerText = 'جاري إرسال الطلب...'; this.disabled = true;
             try {
-                // ضفنا اسم ورقم الراكب هنا
-                const { data, error } = await supabaseClient.from('rides').insert([{ 
-                    distance: currentDistance, price: currentPrice, dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], status: 'pending',
-                    rider_name: user.name, rider_phone: user.phone 
-                }]).select();
+                const { data, error } = await supabaseClient.from('rides').insert([{ distance: currentDistance, price: currentPrice, dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1], pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], status: 'pending', rider_name: user.name, rider_phone: user.phone }]).select();
                 if (error) throw error;
                 currentRideId = data[0].id; 
                 this.innerText = 'في انتظار قبول الكابتن...'; this.style.backgroundColor = '#ffc107'; this.style.color = '#333';
@@ -326,7 +344,9 @@
                 if (payload.new.status === 'completed') {
                     document.getElementById('driver-details').style.display = 'none';
                     document.getElementById('request-btn').innerText = 'وصلت بالسلامة!'; document.getElementById('request-btn').style.backgroundColor = '#1A237E'; document.getElementById('request-btn').disabled = true;
-                    alert('تم إنهاء الرحلة.');
+                    // إظهار نافذة التقييم
+                    document.getElementById('rating-modal').style.display = 'flex';
+                    document.getElementById('rate-driver-name').innerText = payload.new.driver_name;
                     if(driverCarMarker) { map.removeLayer(driverCarMarker); driverCarMarker = null; }
                 }
             }
@@ -357,7 +377,7 @@
             }
         }
 
-        // دوال الملف الشخصي
+        // دوال الملف الشخصي والتقييم
         async function openProfile() {
             document.getElementById('profile-modal').style.display = 'flex';
             document.getElementById('p-name').innerText = user.name;
@@ -366,13 +386,7 @@
             const listContainer = document.getElementById('history-list');
             listContainer.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
 
-            // جلب الرحلات اللي خلصت لهذا الراكب
-            const { data, error } = await supabaseClient
-                .from('rides')
-                .select('*')
-                .eq('rider_phone', user.phone)
-                .eq('status', 'completed')
-                .order('created_at', { ascending: false });
+            const { data, error } = await supabaseClient.from('rides').select('*').eq('rider_phone', user.phone).eq('status', 'completed').order('created_at', { ascending: false });
 
             if (error || !data || data.length === 0) {
                 listContainer.innerHTML = '<p style="text-align:center; color:#888;">لا يوجد رحلات سابقة.</p>';
@@ -382,17 +396,44 @@
             listContainer.innerHTML = '';
             data.forEach(ride => {
                 const date = new Date(ride.created_at).toLocaleDateString('ar-EG');
+                let ratingText = ride.rating_by_rider ? `تقييمك: ${'★'.repeat(ride.rating_by_rider)}` : 'لم يتم التقييم';
                 listContainer.innerHTML += `
                     <div class="history-item">
                         <p>رحلة إلى وجهة تبعد ${ride.distance} كم</p>
                         <p class="price">${ride.price} جنيه</p>
-                        <p class="date">${date}</p>
+                        <p class="date">${date} | ${ratingText}</p>
                     </div>
                 `;
             });
         }
 
         function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
+
+        // كود التقييم
+        let selectedRating = 5;
+        function setRating(rating) {
+            selectedRating = rating;
+            const stars = document.querySelectorAll('#star-container span');
+            stars.forEach((star, index) => {
+                if (index < rating) star.classList.add('active');
+                else star.classList.remove('active');
+            });
+        }
+
+        async function submitRating() {
+            if (!currentRideId) return;
+            const { error } = await supabaseClient.from('rides').update({ rating_by_rider: selectedRating }).eq('id', currentRideId);
+            if (!error) {
+                alert('شكراً لتقييمك!');
+                document.getElementById('rating-modal').style.display = 'none';
+                currentRideId = null;
+                // إعادة تحميل الصفحة عشان يقدر يطلب تاني
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+
+        // تشغيل التقييم الافتراضي (5 نجوم)
+        setRating(5);
 
         let deferredPrompt;
         const installBanner = document.getElementById('install-banner');
