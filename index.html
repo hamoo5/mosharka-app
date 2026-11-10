@@ -22,6 +22,7 @@
             --danger: #E53935;
             --border-color: #E0E0E0;
             --success: #28A745;
+            --blue-dot: #007AFF;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
@@ -39,10 +40,12 @@
         .sos-float { position: absolute; top: 70px; left: 20px; z-index: 1000; background: var(--card-bg); color: var(--danger); padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; border: 1px solid var(--danger); box-shadow: 0 2px 8px rgba(229, 57, 53, 0.2); cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .sos-float svg { width: 16px; height: 16px; fill: var(--danger); }
 
-        /* الدبوس الثابت */
-        .center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; }
-        .pin-pulse { width: 16px; height: 16px; background: var(--text-main); border-radius: 50%; box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.3); animation: pulse 1.5s infinite; border: 3px solid white; }
-        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.3); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(0, 0, 0, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); } }
+        /* الدبوس الثابت في النص (شكل حقيقي) */
+        .center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; align-items: center; margin-top: -10px;}
+        .pin-icon { width: 45px; height: 45px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); animation: bounce 2s infinite; }
+        .pin-shadow { width: 15px; height: 5px; background: rgba(0,0,0,0.3); border-radius: 50%; margin-top: -2px; animation: shadow-scale 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes shadow-scale { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(0.7); opacity: 0.2; } }
 
         /* الشريط السفلي (Bottom Sheet) */
         .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 20px 20px 0 0; padding: 20px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); transition: 0.3s ease; max-height: 80vh; overflow-y: auto; color: var(--text-main); border-top: 1px solid var(--border-color); }
@@ -72,14 +75,15 @@
         .vehicles-scroll { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 15px; scrollbar-width: none; }
         .vehicles-scroll::-webkit-scrollbar { display: none; }
         
-        .vehicle-card { flex: 0 0 100px; background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .vehicle-card { flex: 0 0 110px; background: white; border: 1px solid var(--border-color); border-radius: 15px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s; }
         .vehicle-card.selected { border: 2px solid var(--text-main); background: #F4F5F7; }
-        .vehicle-img { width: 50px; height: 50px; margin: 0 auto 10px auto; }
-        .vehicle-img img { width: 100%; height: 100%; object-fit: contain; }
-        .vehicle-name { font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 5px; }
+        .vehicle-img { width: 60px; height: 50px; margin: 0 auto 5px auto; display: flex; justify-content: center; align-items: center;}
+        .vehicle-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .vehicle-name { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
+        .vehicle-desc { font-size: 11px; color: var(--text-sub); font-weight: 600; margin-bottom: 5px;}
         .vehicle-price { font-size: 15px; font-weight: 800; color: var(--text-main); }
 
-        /* شاشة التتبع (Clean Ticket) */
+        /* شاشة التتبع */
         .ticket-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 15px; }
         .eta-badge { color: var(--success); font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 5px;}
         .pin-badge { background: #F4F5F7; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 18px; letter-spacing: 2px; color: var(--text-main); border: 1px solid var(--border-color);}
@@ -137,8 +141,12 @@
         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> SOS
     </div>
 
+    <!-- الدبوس الجديد -->
     <div id="center-pin" class="center-pin">
-        <div class="pin-pulse" id="main-pin"></div>
+        <svg class="pin-icon" viewBox="0 0 24 24" fill="#1A1A1A" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/>
+        </svg>
+        <div class="pin-shadow"></div>
     </div>
 
     <div class="bottom-sheet">
@@ -183,25 +191,29 @@
             </div>
         </div>
 
+        <!-- صور العربيات مع الوصف -->
         <div id="ui-vehicle" style="display: none;">
             <h2 class="title">اختر رحلتك</h2>
             
             <div class="vehicles-scroll">
                 <div class="vehicle-card" onclick="selectVehicle('moto', this)">
-                    <div class="vehicle-img"><img src="https://cdn-icons-png.flaticon.com/512/3097/3097180.png" alt="Moto"></div>
+                    <div class="vehicle-img"><img src="https://cdn-icons-png.flaticon.com/512/2830/2830284.png" alt="Moto"></div>
                     <div class="vehicle-name">دراجة</div>
+                    <div class="vehicle-desc">فرد واحد - سريع</div>
                     <div class="vehicle-price" id="price-moto">...</div>
                 </div>
                 
                 <div class="vehicle-card selected" onclick="selectVehicle('car', this)">
                     <div class="vehicle-img"><img src="https://cdn-icons-png.flaticon.com/512/3097/3097144.png" alt="Car"></div>
                     <div class="vehicle-name">ملاكي</div>
+                    <div class="vehicle-desc">4 أفراد - مكيف</div>
                     <div class="vehicle-price" id="price-car">...</div>
                 </div>
                 
                 <div class="vehicle-card" onclick="selectVehicle('suv', this)">
                     <div class="vehicle-img"><img src="https://cdn-icons-png.flaticon.com/512/3097/3097139.png" alt="SUV"></div>
                     <div class="vehicle-name">عائلية</div>
+                    <div class="vehicle-desc">7 أفراد - واسعة</div>
                     <div class="vehicle-price" id="price-suv">...</div>
                 </div>
             </div>
@@ -221,7 +233,6 @@
                 </div>
                 
                 <div class="driver-profile">
-                    <!-- صورة افتراضية نظيفة -->
                     <img src="https://www.w3schools.com/howto/img_avatar.png" alt="Driver" class="driver-avatar">
                     <div class="driver-info">
                         <h3><span id="d-name">جاري البحث...</span> <span class="rating">4.9 ★</span></h3>
@@ -252,27 +263,9 @@
 
     </div>
 
-    <div id="profile-modal" class="modal">
-        <div class="modal-content" style="text-align: right;">
-            <h2 class="title" style="text-align: center;">حسابي</h2>
-            <p style="margin-bottom: 10px; font-size: 16px; font-weight: 600;">الاسم: <b id="p-name" style="color: var(--text-main);"></b></p>
-            <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600;">الموبايل: <b id="p-phone" style="color: var(--text-main);"></b></p>
-            <h3 style="margin-bottom: 10px; font-weight: 700;">سجل الرحلات</h3>
-            <div id="history-list" style="max-height: 200px; overflow-y: auto; color: var(--text-sub); font-weight: 600;"></div>
-            <button class="btn-main" style="margin-top: 20px;" onclick="closeProfile()">إغلاق</button>
-        </div>
-    </div>
-
-    <div id="rating-modal" class="modal">
-        <div class="modal-content">
-            <h2 class="title">قيّم الكابتن</h2>
-            <p style="color: var(--text-sub); margin-bottom: 15px; font-weight: 600;">كيف كانت رحلتك مع <b id="rate-driver-name" style="color: var(--text-main);"></b>؟</p>
-            <div class="stars" id="star-container" style="font-size: 40px; color: #E0E0E0; cursor: pointer; margin: 15px 0; display: flex; justify-content: center; gap: 10px;">
-                <span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span>
-            </div>
-            <button class="btn-main" onclick="submitRating()">إرسال التقييم</button>
-        </div>
-    </div>
+    <!-- المودالات -->
+    <div id="profile-modal" class="modal"><div class="modal-content" style="text-align: right;"><h2 class="title" style="text-align: center;">حسابي</h2><p style="margin-bottom: 10px; font-size: 16px; font-weight: 600;">الاسم: <b id="p-name" style="color: var(--text-main);"></b></p><p style="margin-bottom: 20px; font-size: 16px; font-weight: 600;">الموبايل: <b id="p-phone" style="color: var(--text-main);"></b></p><h3 style="margin-bottom: 10px; font-weight: 700;">سجل الرحلات</h3><div id="history-list" style="max-height: 200px; overflow-y: auto; color: var(--text-sub); font-weight: 600;"></div><button class="btn-main" style="margin-top: 20px;" onclick="closeProfile()">إغلاق</button></div></div>
+    <div id="rating-modal" class="modal"><div class="modal-content"><h2 class="title">قيّم الكابتن</h2><p style="color: var(--text-sub); margin-bottom: 15px; font-weight: 600;">كيف كانت رحلتك مع <b id="rate-driver-name" style="color: var(--text-main);"></b>؟</p><div class="stars" id="star-container" style="font-size: 40px; color: #E0E0E0; cursor: pointer; margin: 15px 0; display: flex; justify-content: center; gap: 10px;"><span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span></div><button class="btn-main" onclick="submitRating()">إرسال التقييم</button></div></div>
 
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
@@ -281,7 +274,8 @@
         function logout() { localStorage.removeItem('user'); window.location.href = 'login.html'; }
         function closeSos() { document.getElementById('sos-modal').style.display = 'none'; }
         
-        const greenIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #1A1A1A; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+        // أيقونات مخصصة للخريطة
+        const greenIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #28A745; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
         const redIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #E53935; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
 
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
@@ -340,12 +334,28 @@
             map.flyTo([30.0600, 31.3300], 15); 
         }
 
+        // ** إضافة علامة الموقع الحقيقي (الدايرة الزرقاء) **
         function startTracking() {
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition(function(position) {
-                    const lat = position.coords.latitude, lng = position.coords.longitude; let heading = position.coords.heading;
-                    if ((!heading || isNaN(heading)) && lastPosition) { heading = Math.atan2(lat - lastPosition.lat, lng - lastPosition.lng) * 180 / Math.PI; heading = (heading + 360) % 360; }
-                    if (isFollowingUser) { map.panTo([lat, lng], {animate: true, duration: 1}); } lastPosition = { lat: lat, lng: lng };
+                    const lat = position.coords.latitude, lng = position.coords.longitude; 
+                    
+                    if (userMarker) {
+                        userMarker.setLatLng([lat, lng]);
+                    } else {
+                        // رسم دايرة زرقاء زي جوجل ماب
+                        userMarker = L.circleMarker([lat, lng], {
+                            radius: 8,
+                            fillColor: "#007AFF",
+                            color: "#FFFFFF",
+                            weight: 3,
+                            opacity: 1,
+                            fillOpacity: 1
+                        }).addTo(map);
+                    }
+                    
+                    if (isFollowingUser) { map.panTo([lat, lng], {animate: true, duration: 1}); } 
+                    lastPosition = { lat: lat, lng: lng };
                 }, function(error) {}, { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 });
             }
         }
@@ -359,7 +369,10 @@
             document.getElementById('pickup-section').style.display = 'none'; 
             document.getElementById('dropoff-section').style.display = 'block';
             document.getElementById('instruction-title').innerText = "إلى أين تريد الذهاب؟";
-            document.getElementById('main-pin').style.background = '#E53935';
+            
+            // تغيير لون الدبوس من أسود لأحمر
+            document.querySelector('.pin-icon path').setAttribute('fill', '#E53935');
+            
             currentStep = 'dropoff'; map.fire('moveend'); 
         }
 
@@ -370,7 +383,10 @@
             document.getElementById('dropoff-section').style.display = 'none';
             document.getElementById('pickup-section').style.display = 'block';
             document.getElementById('instruction-title').innerText = "أين أنت الآن؟";
-            document.getElementById('main-pin').style.background = '#1A1A1A';
+            
+            // رجوع لون الدبوس أسود
+            document.querySelector('.pin-icon path').setAttribute('fill', '#1A1A1A');
+            
             map.fire('moveend');
         }
 
