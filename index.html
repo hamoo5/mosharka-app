@@ -32,7 +32,7 @@
         .nav-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-main); text-decoration: none; pointer-events: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .nav-btn svg { width: 20px; height: 20px; fill: currentColor; }
         
-        #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); }
+        #map { flex-grow: 1; width: 100%; z-index: 1; background-color: var(--bg-color); transition: filter 0.5s ease; }
 
         .sos-float { position: absolute; top: 70px; left: 20px; z-index: 1000; background: var(--card-bg); color: var(--danger); padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; border: 1px solid var(--danger); box-shadow: 0 2px 8px rgba(229, 57, 53, 0.2); cursor: pointer; display: flex; align-items: center; gap: 5px; }
         .sos-float svg { width: 16px; height: 16px; fill: var(--danger); }
@@ -273,7 +273,7 @@
         const yellowIcon = L.divIcon({ className: 'custom-pin', html: `<div style="width: 16px; height: 16px; background: #FFC107; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
 
         // === 1. إعداد الخريطة الأساسية ===
-        var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
+        var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15);
 
         // === 2. دالة بتحدد إحنا نهار ولا ليل ===
         function isDayTime() {
@@ -281,38 +281,41 @@
             return hour >= 6 && hour < 18; // من 6 الصبح لـ 6 المغرب = نهار
         }
 
-        // === 3. روابط الخرائط من CARTO ===
-        const mapStyles = {
-            day: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-            night: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        };
+        // === 3. رابط الخريطة (OpenStreetMap) ===
+        const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-        // === 4. إنشاء طبقة الخريطة الحالية ===
-        let currentTileLayer = L.tileLayer(isDayTime() ? mapStyles.day : mapStyles.night, {
+        // === 4. إنشاء طبقة الخريطة ===
+        let currentTileLayer = L.tileLayer(tileUrl, {
             maxZoom: 19,
-            subdomains: 'abcd'
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // === 5. دالة بتغير الخريطة لو الوقت اتغير ===
-        function refreshMapStyle() {
-            if (manualMode !== null) return; // لو المستخدم اختار يدوي متلمسش
-            const shouldBeDay = isDayTime();
-            const currentUrl = currentTileLayer._url;
-            
-            if ((shouldBeDay && currentUrl.includes('dark')) || (!shouldBeDay && currentUrl.includes('voyager'))) {
-                map.removeLayer(currentTileLayer);
-                currentTileLayer = L.tileLayer(shouldBeDay ? mapStyles.day : mapStyles.night, {
-                    maxZoom: 19,
-                    subdomains: 'abcd'
-                }).addTo(map);
+        // === 5. دالة تطبيق فلتر الوضع الليلي ===
+        let manualMode = null; // null = تلقائي، 'day' = نهاري، 'night' = ليلي
+
+        function applyTheme(isDay) {
+            const mapPane = document.querySelector('.leaflet-tile-pane');
+            if (mapPane) {
+                if (isDay) {
+                    mapPane.style.filter = 'none';
+                } else {
+                    // الفلتر ده بيحول الخريطة لشكل ليلي داكن
+                    mapPane.style.filter = 'brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7)';
+                }
             }
         }
 
-        // === 6. فحص كل 5 دقايق ===
-        setInterval(refreshMapStyle, 5 * 60 * 1000);
+        // === 6. تطبيق الثيم أول ما الصفحة تفتح ===
+        applyTheme(isDayTime());
 
-        // === 7. زرار التبديل اليدوي ===
-        let manualMode = null;
+        // === 7. فحص كل 5 دقايق لو الوقت اتغير ===
+        setInterval(() => {
+            if (manualMode === null) {
+                applyTheme(isDayTime());
+            }
+        }, 5 * 60 * 1000);
+
+        // === 8. زرار التبديل اليدوي ===
         document.getElementById('toggleTheme').addEventListener('click', () => {
             if (manualMode === null) manualMode = 'night';
             else if (manualMode === 'night') manualMode = 'day';
@@ -321,13 +324,9 @@
             const btn = document.getElementById('toggleTheme');
             btn.textContent = manualMode === 'night' ? '☀️' : (manualMode === 'day' ? '🔄' : '🌙');
 
-            map.removeLayer(currentTileLayer);
-            let style;
-            if (manualMode === 'night') style = mapStyles.night;
-            else if (manualMode === 'day') style = mapStyles.day;
-            else style = isDayTime() ? mapStyles.day : mapStyles.night;
-
-            currentTileLayer = L.tileLayer(style, { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+            if (manualMode === 'night') applyTheme(false);
+            else if (manualMode === 'day') applyTheme(true);
+            else applyTheme(isDayTime());
         });
 
         var pickupPoint = null, dropoffPoint = null, stopPoint = null;
