@@ -39,7 +39,6 @@
 </head>
 <body>
 
-    <!-- الحماية: لو مفيش مستخدم مسجل، رجعه لصفحة تسجيل الدخول -->
     <script>
         const loggedUser = JSON.parse(localStorage.getItem('mosharka_user'));
         if (!loggedUser || loggedUser.role !== 'driver') { 
@@ -97,11 +96,11 @@
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // بناخد رقم الكابتن من اللي سجله في صفحة الدخول
         const driverPhone = loggedUser.phone; 
         const driverName = loggedUser.name || "كابتن"; 
         
         let isOnline = false; let map, driverMarker, routeLine, watchId, currentRequest;
+        let reqMarker1 = null, reqMarker2 = null, reqRoute = null; // عشان نرسم مسار الطلب
 
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -117,7 +116,6 @@
                     } else { driverMarker.setLatLng([lat, lng]); }
                     
                     if (isOnline) {
-                        // تحديث الموقع برقم الموبايل كمعرف
                         supabaseClient.from('users').update({ lat, lng, is_online: true }).eq('phone', driverPhone);
                     }
                 }, null, { enableHighAccuracy: true });
@@ -138,29 +136,79 @@
             }
         }
 
-        supabaseClient.channel('driver-rides-channel').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides' }, payload => {
-            if (payload.new.status === 'pending' && isOnline) {
-                currentRequest = payload.new;
-                document.getElementById('req-rider-name').innerText = currentRequest.rider_name;
-                document.getElementById('req-distance').innerText = `${currentRequest.distance} كم`;
-                document.getElementById('req-price').innerText = `${currentRequest.price} ج.م`;
-                document.getElementById('ride-request-modal').style.display = 'flex';
+        // الاستماع للطلبات الجديدة وإلغاء الطلبات
+        supabaseClient.channel('driver-rides-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, payload => {
+            if (payload.eventType === 'INSERT') {
+                if (payload.new.status === 'pending' && isOnline) {
+                    showRideRequest(payload.new);
+                }
+            } else if (payload.eventType === 'UPDATE') {
+                // لو الراكب لغى الطلب وهو لسه بيظهر عند الكابتن
+                if (currentRequest && payload.new.id === currentRequest.id && payload.new.status === 'cancelled') {
+                    closeRequestModal();
+                    alert("قام الراكب بإلغاء الطلب.");
+                }
             }
         }).subscribe();
+
+        function showRideRequest(ride) {
+            currentRequest = ride;
+            document.getElementById('req-rider-name').innerText = ride.rider_name;
+            document.getElementById('req-distance').innerText = `${ride.distance} كم`;
+            document.getElementById('req-price').innerText = `${ride.price} ج.م`;
+            document.getElementById('ride-request-modal').style.display = 'flex';
+            
+            // رسم مكان الراكب ومكان النزول على الخريطة
+            drawRequestOnMap(ride);
+        }
+
+        // دالة رسم المسار للطلب
+        async function drawRequestOnMap(ride) {
+            if (reqMarker1) map.removeLayer(reqMarker1);
+            if (reqMarker2) map.removeLayer(reqMarker2);
+            if (reqRoute) map.removeLayer(reqRoute);
+
+            const pickupIcon = L.divIcon({ html: `<div style="width: 20px; height: 20px; background: #22c55e; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px #22c55e;"></div>`, iconSize: [20,20], iconAnchor: [10,10] });
+            const dropoffIcon = L.divIcon({ html: `<div style="width: 20px; height: 20px; background: #ff4757; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px #ff4757;"></div>`, iconSize: [20,20], iconAnchor: [10,10] });
+
+            reqMarker1 = L.marker([ride.pickup_lat, ride.pickup_lng], {icon: pickupIcon}).addTo(map);
+            reqMarker2 = L.marker([ride.dest_lat, ride.dest_lng], {icon: dropoffIcon}).addTo(map);
+
+            const coords = `${ride.pickup_lng},${ride.pickup_lat};${ride.dest_lng},${ride.dest_lat}`;
+            try {
+                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+                const data = await res.json();
+                if (data.code === 'Ok' && data.routes.length > 0) {
+                    reqRoute = L.geoJSON(data.routes[0].geometry, { style: { color: '#00f2fe', weight: 6, opacity: 0.8, dashArray: '5, 10' } }).addTo(map);
+                    map.fitBounds(reqRoute.getBounds(), { padding: [50, 50] });
+                }
+            } catch(e) {}
+        }
+
+        function closeRequestModal() {
+            document.getElementById('ride-request-modal').style.display = 'none';
+            currentRequest = null;
+            if (reqMarker1) { map.removeLayer(reqMarker1); reqMarker1 = null; }
+            if (reqMarker2) { map.removeLayer(reqMarker2); reqMarker2 = null; }
+            if (reqRoute) { map.removeLayer(reqRoute); reqRoute = null; }
+        }
 
         async function acceptRide() {
             if (!currentRequest) return;
             await supabaseClient.from('rides').update({ status: 'accepted', driver_name: driverName, driver_phone: driverPhone }).eq('id', currentRequest.id);
-            document.getElementById('ride-request-modal').style.display = 'none';
+            
+            closeRequestModal();
+            
             document.getElementById('statusSheet').style.display = 'none';
             document.getElementById('active-ride-sheet').style.display = 'block';
             document.getElementById('active-rider-name').innerText = currentRequest.rider_name;
             document.getElementById('active-rider-phone').innerText = currentRequest.rider_phone;
             document.getElementById('call-rider-btn').href = 'tel:' + currentRequest.rider_phone;
+            
             drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng);
         }
 
-        function rejectRide() { document.getElementById('ride-request-modal').style.display = 'none'; currentRequest = null; }
+        function rejectRide() { closeRequestModal(); }
 
         async function drawRouteToRider(destLat, destLng) {
             if (routeLine) map.removeLayer(routeLine);
@@ -189,7 +237,7 @@
 
         function promptStartRide() {
             if (!currentRequest) return;
-            let enteredPin = prompt("برجاء إدخال رمز الـ PIN المكون من 4 أرقام من الراكب لبدء الرحلة:");
+            let enteredPin = prompt("برجاء إدخال رمز الـ PIN من الراكب:");
             
             if (enteredPin === currentRequest.pin_code) {
                 supabaseClient.from('rides').update({ status: 'started' }).eq('id', currentRequest.id).then(() => {
@@ -203,11 +251,10 @@
             }
         }
 
-        // زرار الخروج
         function logout() {
             if(confirm("هل تريد الخروج من التطبيق؟")) {
-                localStorage.removeItem('mosharka_user'); // بيمسح الحساب
-                window.location.href = 'login.html';      // يوجهه للدخول
+                localStorage.removeItem('mosharka_user');
+                window.location.href = 'login.html';
             }
         }
 
