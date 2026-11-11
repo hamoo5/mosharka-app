@@ -179,7 +179,8 @@
                         <h3 id="driver-status-title" style="color: var(--success); font-size: 16px;">تم قبول طلبك!</h3>
                         <p style="font-size: 14px; margin-top: 5px;">الكابتن: <b id="accepted-driver-name" style="color: var(--primary);">...</b></p>
                     </div>
-                    <a href="#" onclick="openCallModal()" style="background: var(--success); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; text-decoration: none; font-size: 20px;">📞</a>
+                    <!-- تم إضافة الـ ID هنا -->
+                    <a href="#" id="call-driver-btn" onclick="openCallModal()" style="background: var(--success); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; text-decoration: none; font-size: 20px;">📞</a>
                 </div>
             </div>
 
@@ -251,6 +252,10 @@
         
         let assignedDriverPhone = null; 
         let driverRouteLine = null; 
+        
+        // ** إضافة متغيرات لحالة الرحلة الحالية **
+        let currentRideStatus = null; 
+        let activeDropoffPoint = null; 
 
         async function checkActiveRide() {
             const { data, error } = await supabaseClient.from('rides')
@@ -267,6 +272,12 @@
                 document.getElementById('ui-ride').style.display = 'block'; 
                 currentStep = 'ride';
                 document.getElementById('pin-code-display').innerText = ride.pin_code;
+                
+                // حفظ الحالة والمكان
+                currentRideStatus = ride.status;
+                pickupPoint = [ride.pickup_lat, ride.pickup_lng];
+                activeDropoffPoint = [ride.dest_lat, ride.dest_lng];
+                assignedDriverPhone = ride.driver_phone;
 
                 if (ride.status === 'pending') {
                     document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن...";
@@ -276,8 +287,6 @@
                     document.getElementById('call-driver-btn').href = 'tel:' + (ride.driver_phone || "01000000000");
                     document.getElementById('ride-status-title').innerText = "الكابتن في الطريق إليك 🚗";
                     document.getElementById('driver-status-title').innerText = "تم قبول طلبك!";
-                    assignedDriverPhone = ride.driver_phone;
-                    pickupPoint = [ride.pickup_lat, ride.pickup_lng];
                 } else if (ride.status === 'arrived') {
                     document.getElementById('driver-info-box').style.display = 'block';
                     document.getElementById('accepted-driver-name').innerText = ride.driver_name || "كابتن";
@@ -285,8 +294,6 @@
                     document.getElementById('ride-status-title').innerText = "وصل الكابتن! 📍";
                     document.getElementById('driver-status-title').innerText = "الكابتن في انتظارك";
                     document.getElementById('wait-timer-box').style.display = 'block';
-                    assignedDriverPhone = ride.driver_phone;
-                    pickupPoint = [ride.pickup_lat, ride.pickup_lng];
                 } else if (ride.status === 'started') {
                     document.getElementById('ride-status-title').innerText = "أنت في الطريق لوجهتك 🚀";
                     document.getElementById('driver-status-title').innerText = "رحلة سعيدة!";
@@ -349,30 +356,27 @@
             if (data) data.forEach(d => { if(!liveDriversMap[d.id]) liveDriversMap[d.id] = L.marker([d.lat, d.lng], { icon: driverIcon() }).addTo(map); });
         }
         
-        // ** التحديث الهام: تتبع الكابتن بسلاسة **
+        // ** التحديث الهام: تتبع الكابتن بذكاء (مسار الراكب أو مسار الوجهة) **
         supabaseClient.channel('live-drivers-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
             const d = payload.new;
             if (d && d.role === 'driver') {
-                // 1. تحديث الكباتن اللي على الخريطة
                 if (d.is_online) {
                     if (liveDriversMap[d.id]) liveDriversMap[d.id].setLatLng([d.lat, d.lng]);
                     else liveDriversMap[d.id] = L.marker([d.lat, d.lng], { icon: driverIcon() }).addTo(map);
                 } else if (liveDriversMap[d.id]) { map.removeLayer(liveDriversMap[d.id]); delete liveDriversMap[d.id]; }
 
-                // 2. تتبع الكابتن الخاص بالراكب (لايف)
+                // تتبع الكابتن الخاص بالراكب
                 if (myActiveRideId && assignedDriverPhone === d.phone) {
+                    if (liveDriversMap[d.id]) liveDriversMap[d.id].setLatLng([d.lat, d.lng]);
                     
-                    // تحديث ماركر الكابتن اللي جاي للراكب
-                    if (liveDriversMap[d.id]) {
-                        liveDriversMap[d.id].setLatLng([d.lat, d.lng]);
-                    }
+                    // تحديد الهدف بناءً على حالة الرحلة
+                    let targetPoint = null;
+                    if (currentRideStatus === 'accepted' || currentRideStatus === 'pending') targetPoint = pickupPoint;
+                    else if (currentRideStatus === 'started') targetPoint = activeDropoffPoint;
 
-                    // رسم خط وهمي بين الكابتن ومكان الراكب (يتحرك مع الكابتن)
-                    if(pickupPoint) {
+                    if (targetPoint) {
                         if (driverRouteLine) map.removeLayer(driverRouteLine);
-                        driverRouteLine = L.polyline([[d.lat, d.lng], pickupPoint], { color: '#fadb14', weight: 6, opacity: 0.8, dashArray: '8, 8' }).addTo(map);
-                        
-                        // هنا السر: بنخلي الخريطة تتبع الكابتن بنعومة
+                        driverRouteLine = L.polyline([[d.lat, d.lng], targetPoint], { color: '#fadb14', weight: 6, opacity: 0.8, dashArray: '8, 8' }).addTo(map);
                         map.panTo([d.lat, d.lng], {animate: true, duration: 1});
                     }
                 }
@@ -382,6 +386,9 @@
         supabaseClient.channel('rider-ride-update').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, payload => {
             const ride = payload.new;
             if (myActiveRideId && ride.id === myActiveRideId) {
+                // تحديث الحالة العامة
+                currentRideStatus = ride.status;
+                
                 if (ride.status === 'accepted') {
                     clearTimeout(requestTimeout); 
                     document.getElementById('driver-info-box').style.display = 'block';
@@ -391,6 +398,7 @@
                     document.getElementById('driver-status-title').innerText = "تم قبول طلبك!";
                     assignedDriverPhone = ride.driver_phone;
                     pickupPoint = [ride.pickup_lat, ride.pickup_lng];
+                    activeDropoffPoint = [ride.dest_lat, ride.dest_lng];
                 } else if (ride.status === 'arrived') {
                     document.getElementById('ride-status-title').innerText = "وصل الكابتن! 📍";
                     document.getElementById('driver-status-title').innerText = "الكابتن في انتظارك";
@@ -580,6 +588,7 @@
             if (error) alert("حدث خطأ: " + error.message);
             else {
                 myActiveRideId = data[0].id;
+                currentRideStatus = 'pending';
                 document.getElementById('ui-vehicle').style.display = 'none'; document.getElementById('ui-ride').style.display = 'block'; currentStep = 'ride';
                 document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن...";
                 
