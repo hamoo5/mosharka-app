@@ -2,118 +2,310 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - تطبيق مشاركة</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1A237E">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>توصيل مشاركة - تسجيل الدخول</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-        body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 85%; max-width: 400px; text-align: center; }
-        .header { color: #1A237E; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
-        input, select { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 16px; }
-        .btn { background-color: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; font-family: 'Cairo', sans-serif; margin-top: 10px; }
-        .toggle-link { color: #007bff; cursor: pointer; margin-top: 15px; display: block; text-decoration: none; }
-        .hidden { display: none; }
+        :root {
+            --bg-color: #05070a;
+            --card-bg: rgba(19, 27, 46, 0.6);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --primary: #00f2fe;
+            --text-main: #ffffff;
+            --text-sub: #94a3b8;
+            --rider-color: #22c55e; /* أخضر للراكب */
+            --driver-color: #fadb14; /* أصفر للكابتن */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- الخلفية الحية (Neon Blobs) --- */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0.5;
+        }
+        .blob-1 {
+            width: 300px; height: 300px;
+            background: #00c6ff;
+            top: -10%; left: -10%;
+            animation: float 8s infinite alternate ease-in-out;
+        }
+        .blob-2 {
+            width: 250px; height: 250px;
+            background: #ff4757;
+            bottom: -10%; right: -10%;
+            animation: float 10s infinite alternate-reverse ease-in-out;
+        }
+        .blob-3 {
+            width: 200px; height: 200px;
+            background: #fadb14;
+            bottom: 20%; left: 10%;
+            animation: float 12s infinite alternate ease-in-out;
+            opacity: 0.2;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 50px) scale(1.2); }
+        }
+
+        /* --- الكارت الزجاجي الرئيسي --- */
+        .login-container {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 400px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
+            padding: 30px 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+            animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- اللوجو والعنوان --- */
+        .logo-section { text-align: center; margin-bottom: 25px; }
+        .logo-icon {
+            width: 70px; height: 70px;
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(0, 114, 255, 0.2));
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            display: flex; justify-content: center; align-items: center;
+            margin: 0 auto 15px auto;
+            font-size: 30px; color: var(--primary);
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+        }
+        .logo-section h1 { font-size: 24px; font-weight: 900; letter-spacing: 1px; margin-bottom: 5px; }
+        .logo-section p { font-size: 13px; color: var(--text-sub); font-weight: 600; }
+
+        /* --- اختيار نوع الحساب --- */
+        .role-selection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .role-card {
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .role-card i { font-size: 28px; margin-bottom: 10px; color: var(--text-sub); transition: 0.3s; }
+        .role-card span { display: block; font-size: 14px; font-weight: 800; color: var(--text-sub); transition: 0.3s; }
+
+        /* تأثيرات لما يتم اختيار الراكب */
+        .role-card.active-rider {
+            border-color: var(--rider-color);
+            background: rgba(34, 197, 94, 0.1);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+        }
+        .role-card.active-rider i, .role-card.active-rider span { color: var(--rider-color); text-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
+
+        /* تأثيرات لما يتم اختيار الكابتن */
+        .role-card.active-driver {
+            border-color: var(--driver-color);
+            background: rgba(250, 219, 20, 0.1);
+            box-shadow: 0 0 20px rgba(250, 219, 20, 0.2);
+        }
+        .role-card.active-driver i, .role-card.active-driver span { color: var(--driver-color); text-shadow: 0 0 10px rgba(250, 219, 20, 0.5); }
+
+        /* --- حقول الإدخال --- */
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            transition: 0.3s;
+        }
+
+        .input-group:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
+            background: rgba(0, 242, 254, 0.05);
+        }
+
+        .input-group i { color: var(--text-sub); font-size: 18px; }
+        .input-group input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 16px 15px;
+            color: var(--text-main);
+            font-size: 16px;
+            font-weight: 700;
+            outline: none;
+            font-family: 'Cairo';
+            direction: ltr; /* عشان الأرقام تطلع صح */
+            text-align: right;
+        }
+        .input-group input::placeholder { color: rgba(255,255,255,0.3); font-family: 'Cairo'; font-weight: 600; direction: rtl; }
+
+        /* --- زرار الدخول --- */
+        .btn-login {
+            width: 100%;
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+            color: #fff;
+            padding: 16px;
+            border-radius: 16px;
+            border: none;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-family: 'Cairo';
+            box-shadow: 0 5px 20px rgba(0, 114, 255, 0.4);
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:active { transform: scale(0.97); }
+
+        /* تأثير لمعة على الزرار */
+        .btn-login::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
     </style>
 </head>
 <body>
 
-    <div class="login-box">
-        <div class="header" id="form-title">تسجيل الدخول</div>
+    <!-- الخلفية الحية -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <!-- كارت تسجيل الدخول -->
+    <div class="login-container">
         
-        <!-- قسم تسجيل الدخول -->
-        <div id="login-form">
-            <input type="tel" id="login-phone" placeholder="رقم الموبايل">
-            <input type="password" id="login-password" placeholder="كلمة المرور">
-            <button class="btn" onclick="login()">دخول</button>
-            <a class="toggle-link" onclick="toggleForm()">ليس لديك حساب؟ سجل الآن</a>
+        <div class="logo-section">
+            <div class="logo-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
+            <h1>توصيل مشاركة</h1>
+            <p>رحلتك القادمة تبدأ من هنا</p>
         </div>
 
-        <!-- قسم إنشاء حساب -->
-        <div id="signup-form" class="hidden">
-            <input type="text" id="signup-name" placeholder="الاسم بالكامل">
-            <input type="tel" id="signup-phone" placeholder="رقم الموبايل">
-            <input type="password" id="signup-password" placeholder="كلمة المرور">
-            <select id="signup-role">
-                <option value="rider">أنا راكب (أطلب مشاوير)</option>
-                <option value="driver">أنا كابتن (أوصل مشاوير)</option>
-            </select>
-            <button class="btn" onclick="signup()">إنشاء حساب</button>
-            <a class="toggle-link" onclick="toggleForm()">لديك حساب بالفعل؟ سجل دخولك</a>
+        <div class="role-selection">
+            <!-- كارت الراكب -->
+            <div class="role-card active-rider" id="card-rider" onclick="selectRole('rider')">
+                <i class="fa-solid fa-user-tie"></i>
+                <span>راكب</span>
+            </div>
+            <!-- كارت الكابتن -->
+            <div class="role-card" id="card-driver" onclick="selectRole('driver')">
+                <i class="fa-solid fa-car-side"></i>
+                <span>كابتن</span>
+            </div>
         </div>
+
+        <div class="input-group">
+            <i class="fa-solid fa-mobile-screen"></i>
+            <input type="tel" id="phoneNumber" placeholder="أدخل رقم الموبايل" maxlength="11" autocomplete="off">
+        </div>
+
+        <button class="btn-login" onclick="handleLogin()">
+            <span>دخول التطبيق</span>
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+
     </div>
 
     <script>
-        const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
-        const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
-        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        let selectedRole = 'rider'; // القيمة الافتراضية
 
-        // التبديل بين تسجيل الدخول وإنشاء حساب
-        function toggleForm() {
-            document.getElementById('login-form').classList.toggle('hidden');
-            document.getElementById('signup-form').classList.toggle('hidden');
-            const title = document.getElementById('form-title');
-            if (title.innerText === 'تسجيل الدخول') {
-                title.innerText = 'إنشاء حساب جديد';
+        // دالة اختيار الرتبة (راكب / كابتن) وتغيير ألوان الكارت
+        function selectRole(role) {
+            selectedRole = role;
+            const riderCard = document.getElementById('card-rider');
+            const driverCard = document.getElementById('card-driver');
+
+            if (role === 'rider') {
+                riderCard.className = 'role-card active-rider';
+                driverCard.className = 'role-card';
             } else {
-                title.innerText = 'تسجيل الدخول';
-            }
-        }
-
-        // دالة إنشاء حساب
-        async function signup() {
-            const name = document.getElementById('signup-name').value;
-            const phone = document.getElementById('signup-phone').value;
-            const pass = document.getElementById('signup-password').value;
-            const role = document.getElementById('signup-role').value;
-
-            if(!name || !phone || !pass) { alert('برجاء ملء جميع البيانات'); return; }
-
-            const { data, error } = await supabaseClient
-                .from('users')
-                .insert([{ name: name, phone: phone, password: pass, role: role }]);
-
-            if (error) {
-                if (error.code === '23505') { // كود خطأ التكرار
-                    alert('رقم الموبايل ده مسجل بالفعل!');
-                } else {
-                    alert('حدث خطأ: ' + error.message);
-                }
-            } else {
-                alert('تم إنشاء الحساب بنجاح! يمكنك تسجيل الدخول الآن.');
-                toggleForm(); // نرجعه لصفحة الدخول
+                driverCard.className = 'role-card active-driver';
+                riderCard.className = 'role-card';
             }
         }
 
         // دالة تسجيل الدخول
-        async function login() {
-            const phone = document.getElementById('login-phone').value;
-            const pass = document.getElementById('login-password').value;
+        function handleLogin() {
+            const phone = document.getElementById('phoneNumber').value.trim();
 
-            if(!phone || !pass) { alert('برجاء كتابة الرقم والباسورد'); return; }
+            if (phone.length < 11) {
+                alert('برجاء إدخال رقم موبايل صحيح (11 رقم)');
+                return;
+            }
 
-            const { data, error } = await supabaseClient
-                .from('users')
-                .select('*')
-                .eq('phone', phone)
-                .eq('password', pass);
+            // هنا بنحفظ بيانات المستخدم في المتصفح (مؤقتاً لحد ما نعمل نظام OTP)
+            const userData = {
+                phone: phone,
+                role: selectedRole,
+                name: selectedRole === 'rider' ? 'راكب جديد' : 'كابتن جديد' // ممكن تتغير بعدين
+            };
 
-            if (error) { alert('حدث خطأ'); return; }
+            localStorage.setItem('mosharka_user', JSON.stringify(userData));
 
-            if (data.length > 0) {
-                // حفظ بيانات المستخدم في المتصفح
-                localStorage.setItem('user', JSON.stringify(data[0]));
-                
-                // التوجيه حسب نوع الحساب
-                if (data[0].role === 'driver') {
-                    window.location.href = 'driver.html';
-                } else {
-                    window.location.href = 'index.html';
-                }
+            // التوجيه حسب نوع الحساب
+            if (selectedRole === 'rider') {
+                window.location.href = 'index.html'; // صفحة الراكب
             } else {
-                alert('رقم الموبايل أو كلمة المرور غير صحيحة');
+                window.location.href = 'driver.html'; // صفحة الكابتن
+            }
+        }
+
+        // خدعة صغيرة عشان لو المستخدم مسجل دخول قبل كده يوجهه على طول
+        window.onload = function() {
+            const user = JSON.parse(localStorage.getItem('mosharka_user'));
+            if (user && user.phone) {
+                if (user.role === 'rider') window.location.href = 'index.html';
+                else if (user.role === 'driver') window.location.href = 'driver.html';
             }
         }
     </script>
