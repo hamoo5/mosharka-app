@@ -74,6 +74,8 @@
     <script>
         const loggedUser = JSON.parse(localStorage.getItem('mosharka_user'));
         if (!loggedUser) { window.location.href = 'login.html'; }
+        // مسح أي رحلة قديمة عشان نبدأ على نظافة
+        localStorage.removeItem('myActiveRideId');
     </script>
 
     <div class="top-nav">
@@ -250,7 +252,6 @@
         let assignedDriverPhone = null; 
         let driverRouteLine = null; 
 
-        // --- الملف الشخصي والسجل ---
         function openProfileModal() {
             document.getElementById('profileName').value = loggedUser.name;
             document.getElementById('profilePhone').value = loggedUser.phone;
@@ -360,13 +361,13 @@
                     document.getElementById('driver-status-title').innerText = "الكابتن في انتظارك";
                     document.getElementById('wait-timer-box').style.display = 'block';
                     startWaitTimer();
-                    if (driverRouteLine) map.removeLayer(driverRouteLine); // مسح مسار الكابتن للانطلاق
+                    if (driverRouteLine) map.removeLayer(driverRouteLine);
                 } else if (ride.status === 'started') {
                     document.getElementById('wait-timer-box').style.display = 'none';
                     clearInterval(waitInterval); 
                     document.getElementById('ride-status-title').innerText = "أنت في الطريق لوجهتك 🚀";
                     document.getElementById('driver-status-title').innerText = "رحلة سعيدة!";
-                    document.getElementById('driver-info-box').style.display = 'none'; // إخفاء البوكس عشان ميبقاش فيه لخبطة
+                    document.getElementById('driver-info-box').style.display = 'none'; 
                 } else if (ride.status === 'completed') {
                     clearInterval(waitInterval);
                     alert("وصلت بسلامة! شكراً لاستخدامك مشاركة.");
@@ -525,6 +526,7 @@
             if (error) alert("حدث خطأ: " + error.message);
             else {
                 myActiveRideId = data[0].id;
+                localStorage.setItem('myActiveRideId', myActiveRideId); // لحفظ الرحلة
                 document.getElementById('ui-vehicle').style.display = 'none'; document.getElementById('ui-ride').style.display = 'block'; currentStep = 'ride';
                 document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن...";
                 
