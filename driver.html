@@ -16,7 +16,7 @@
         #map { flex-grow: 1; width: 100%; height: 100vh; z-index: 1; background-color: #05070a; }
         .dark-tiles { filter: brightness(0.65) invert(1) contrast(1.3) hue-rotate(200deg) saturate(0.4); }
         .top-nav { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1000; display: flex; justify-content: space-between; align-items: center; }
-        .nav-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-main); cursor: pointer; }
+        .nav-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-main); cursor: pointer; font-size: 18px;}
         .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 28px 28px 0 0; padding: 18px; z-index: 1000; text-align: center; transition: 0.3s; }
         .sheet-handle { width: 40px; height: 4px; background: var(--card-border); border-radius: 2px; margin: 0 auto 12px auto; }
         .status-btn { width: 100%; padding: 15px; border-radius: 14px; border: none; font-size: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Cairo'; }
@@ -29,8 +29,8 @@
         .request-info { background: var(--bg-color); border-radius: 14px; padding: 15px; margin: 15px 0; display: flex; justify-content: space-between; text-align: center; }
         .info-value { font-size: 16px; font-weight: 800; color: var(--primary); }
         .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .btn-accept { background: var(--success); color: white; padding: 15px; border-radius: 14px; font-weight: 800; }
-        .btn-reject { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 15px; border-radius: 14px; font-weight: 800; }
+        .btn-accept { background: var(--success); color: white; padding: 15px; border-radius: 14px; font-weight: 800; border: none; font-size: 16px;}
+        .btn-reject { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 15px; border-radius: 14px; font-weight: 800; font-size: 16px;}
 
         #active-ride-sheet { display: none; }
         .rider-info-box { background: var(--bg-color); border-radius: 14px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center; }
@@ -39,10 +39,20 @@
 </head>
 <body>
 
-    <div class="top-nav"><div class="nav-btn" onclick="location.reload()">🚪</div></div>
+    <!-- الحماية: لو مفيش مستخدم مسجل، رجعه لصفحة تسجيل الدخول -->
+    <script>
+        const loggedUser = JSON.parse(localStorage.getItem('mosharka_user'));
+        if (!loggedUser || loggedUser.role !== 'driver') { 
+            window.location.href = 'login.html'; 
+        }
+    </script>
+
+    <div class="top-nav">
+        <div class="nav-btn" onclick="logout()" title="خروج">🚪</div>
+    </div>
+
     <div id="map"></div>
 
-    <!-- 1. حالة الاتصال -->
     <div class="bottom-sheet" id="statusSheet">
         <div class="sheet-handle"></div>
         <h2 id="statusTitle" style="font-size: 18px; font-weight: 800; margin-bottom: 5px;">أنت غير متصل</h2>
@@ -50,7 +60,6 @@
         <button id="toggleBtn" class="status-btn offline" onclick="toggleOnline()">اتصال للعمل</button>
     </div>
 
-    <!-- 2. شاشة الرحلة النشطة -->
     <div class="bottom-sheet" id="active-ride-sheet">
         <div class="sheet-handle"></div>
         <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 10px; color: var(--primary);">أنت في رحلة الآن</h2>
@@ -68,7 +77,6 @@
         <button id="actionBtn3" class="status-btn online" onclick="updateRideStatus('completed')" style="display: none; background: var(--success);">إنهاء الرحلة 🏁</button>
     </div>
 
-    <!-- 3. استقبال الطلبات -->
     <div id="ride-request-modal">
         <div class="request-card">
             <h2 style="color: var(--primary); text-align: center;">طلب رحلة جديد! 🔔</h2>
@@ -89,7 +97,10 @@
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        const driverId = 1; const driverName = "كابتن أحمد";
+        // بناخد رقم الكابتن من اللي سجله في صفحة الدخول
+        const driverPhone = loggedUser.phone; 
+        const driverName = loggedUser.name || "كابتن"; 
+        
         let isOnline = false; let map, driverMarker, routeLine, watchId, currentRequest;
 
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
@@ -104,12 +115,14 @@
                         driverMarker = L.marker([lat, lng], {icon: L.divIcon({ html: `<div style="width: 40px; height: 40px; background: #00f2fe; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #00f2fe; display: flex; justify-content: center; align-items: center; font-size: 20px;">🚗</div>`, iconSize: [40, 40], iconAnchor: [20, 20] })}).addTo(map);
                         map.setView([lat, lng], 16);
                     } else { driverMarker.setLatLng([lat, lng]); }
-                    if (isOnline) updateLocationInDB(lat, lng);
+                    
+                    if (isOnline) {
+                        // تحديث الموقع برقم الموبايل كمعرف
+                        supabaseClient.from('users').update({ lat, lng, is_online: true }).eq('phone', driverPhone);
+                    }
                 }, null, { enableHighAccuracy: true });
             }
         }
-
-        async function updateLocationInDB(lat, lng) { await supabaseClient.from('users').update({ lat, lng, is_online: true }).eq('id', driverId); }
 
         async function toggleOnline() {
             isOnline = !isOnline;
@@ -117,11 +130,11 @@
             if (isOnline) {
                 btn.className = 'status-btn online'; btn.innerText = 'أنت متصل الآن (أونلاين)';
                 document.getElementById('statusTitle').innerText = 'جاري البحث عن رحلات...';
-                if (driverMarker) { const pos = driverMarker.getLatLng(); await updateLocationInDB(pos.lat, pos.lng); }
+                if (driverMarker) { const pos = driverMarker.getLatLng(); await supabaseClient.from('users').update({ lat: pos.lat, lng: pos.lng, is_online: true }).eq('phone', driverPhone); }
             } else {
                 btn.className = 'status-btn offline'; btn.innerText = 'اتصال للعمل';
                 document.getElementById('statusTitle').innerText = 'أنت غير متصل';
-                await supabaseClient.from('users').update({ is_online: false }).eq('id', driverId);
+                await supabaseClient.from('users').update({ is_online: false }).eq('phone', driverPhone);
             }
         }
 
@@ -137,7 +150,7 @@
 
         async function acceptRide() {
             if (!currentRequest) return;
-            await supabaseClient.from('rides').update({ status: 'accepted', driver_name: driverName, driver_phone: "01000000000" }).eq('id', currentRequest.id);
+            await supabaseClient.from('rides').update({ status: 'accepted', driver_name: driverName, driver_phone: driverPhone }).eq('id', currentRequest.id);
             document.getElementById('ride-request-modal').style.display = 'none';
             document.getElementById('statusSheet').style.display = 'none';
             document.getElementById('active-ride-sheet').style.display = 'block';
@@ -174,13 +187,11 @@
             }
         }
 
-        // --- تأكيد الـ PIN لبدء الرحلة ---
         function promptStartRide() {
             if (!currentRequest) return;
             let enteredPin = prompt("برجاء إدخال رمز الـ PIN المكون من 4 أرقام من الراكب لبدء الرحلة:");
             
             if (enteredPin === currentRequest.pin_code) {
-                // الرقم صح، ابدأ الرحلة
                 supabaseClient.from('rides').update({ status: 'started' }).eq('id', currentRequest.id).then(() => {
                     document.getElementById('actionBtn2').style.display = 'none';
                     document.getElementById('actionBtn3').style.display = 'flex';
@@ -188,8 +199,15 @@
                     alert("تم بدء الرحلة بنجاح! 🚀");
                 });
             } else if (enteredPin !== null) {
-                // المستخدم كتب رقم غلط
                 alert("رقم PIN غير صحيح، برجاء التأكد من الراكب.");
+            }
+        }
+
+        // زرار الخروج
+        function logout() {
+            if(confirm("هل تريد الخروج من التطبيق؟")) {
+                localStorage.removeItem('mosharka_user'); // بيمسح الحساب
+                window.location.href = 'login.html';      // يوجهه للدخول
             }
         }
 
