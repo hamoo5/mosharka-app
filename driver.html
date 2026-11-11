@@ -41,10 +41,8 @@
         .rider-info-box { background: var(--bg-color); border-radius: 14px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--card-border); display: flex; justify-content: space-between; align-items: center; }
         .call-btn { background: var(--success); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; text-decoration: none; font-size: 20px; }
 
-        /* شريط بيانات الرحلة (المسافة والوقت) */
         .trip-stats-bar { display: flex; justify-content: space-between; background: var(--bg-color); padding: 10px 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--card-border); font-size: 14px; font-weight: 700; color: var(--primary); }
 
-        /* المودالات */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; }
         .modal-content { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 24px; width: 100%; max-width: 350px; position: relative; text-align: center;}
         .modal-close { position: absolute; top: 15px; left: 15px; color: var(--text-sub); font-size: 20px; cursor: pointer; background: none; border: none; }
@@ -81,14 +79,12 @@
         <button id="toggleBtn" class="status-btn offline" onclick="toggleOnline()">اتصال للعمل</button>
     </div>
 
-    <!-- شاشة الرحلة النشطة -->
     <div class="bottom-sheet" id="active-ride-sheet">
         <div class="sheet-handle"></div>
         
-        <!-- شريط المسافة والوقت -->
         <div class="trip-stats-bar" id="tripStatsBar">
-            <span id="driverTripDistance">0 كم</span>
-            <span id="driverTripTime">0 دقيقة</span>
+            <span id="driverTripDistance">... كم</span>
+            <span id="driverTripTime">... دقيقة</span>
         </div>
 
         <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 10px; color: var(--primary);" id="ridePhaseTitle">أنت في الطريق للراكب</h2>
@@ -106,7 +102,6 @@
         <button id="actionBtn3" class="status-btn online" onclick="updateRideStatus('completed')" style="display: none; background: var(--success);">إنهاء الرحلة 🏁</button>
     </div>
 
-    <!-- شاشة استقبال الطلبات -->
     <div id="ride-request-modal">
         <div class="request-card">
             <h2 style="color: var(--primary); text-align: center;">طلب رحلة جديد! 🔔</h2>
@@ -122,7 +117,6 @@
         </div>
     </div>
 
-    <!-- مودال إدخال الـ PIN -->
     <div id="pinModal" class="modal-overlay">
         <div class="modal-content">
             <button class="modal-close" onclick="closePinModal()">✖</button>
@@ -135,7 +129,6 @@
         </div>
     </div>
 
-    <!-- مودال الملف الشخصي -->
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content" style="text-align: right;">
             <button class="modal-close" onclick="closeProfileModal()">✖</button>
@@ -153,7 +146,6 @@
         </div>
     </div>
 
-    <!-- مودال سجل الرحلات -->
     <div id="historyModal" class="modal-overlay">
         <div class="modal-content">
             <button class="modal-close" onclick="closeHistoryModal()">✖</button>
@@ -162,7 +154,6 @@
         </div>
     </div>
 
-    <!-- مودال الاتصال -->
     <div id="callModal" class="modal-overlay">
         <div class="modal-content">
             <button class="modal-close" onclick="closeCallModal()">✖</button>
@@ -183,15 +174,12 @@
         
         let isOnline = false; let map, driverMarker, watchId, currentRequest;
         let reqMarker1 = null, reqMarker2 = null, reqRoute = null; 
-        
-        // متغيرات للوضع الليلي والنهاري
         let isDark = true;
 
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         document.getElementById('map').classList.add('dark-tiles');
 
-        // --- دالة تغيير الوضع الليلي والنهاري ---
         function toggleTheme() {
             isDark = !isDark;
             const btn = document.getElementById('themeToggle');
@@ -241,7 +229,7 @@
         }
         function closeCallModal() { document.getElementById('callModal').style.display = 'none'; }
 
-        // --- المودال الجديد للـ PIN ---
+        // --- شاشة PIN ---
         function showPinModal() { document.getElementById('pinInput').value = ''; document.getElementById('pinModal').style.display = 'flex'; setTimeout(() => document.getElementById('pinInput').focus(), 100); }
         function closePinModal() { document.getElementById('pinModal').style.display = 'none'; }
         
@@ -277,7 +265,10 @@
                         driverMarker = L.marker([lat, lng], {icon: L.divIcon({ html: `<div style="width: 40px; height: 40px; background: #00f2fe; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #00f2fe; display: flex; justify-content: center; align-items: center; font-size: 20px;">🚗</div>`, iconSize: [40, 40], iconAnchor: [20, 20] })}).addTo(map);
                         map.setView([lat, lng], 16);
                     } else { driverMarker.setLatLng([lat, lng]); }
-                    if (isOnline) { supabaseClient.from('users').update({ lat, lng, is_online: true }).eq('phone', driverPhone); }
+                    
+                    if (isOnline) { 
+                        supabaseClient.from('users').update({ lat, lng, is_online: true }).eq('phone', driverPhone); 
+                    }
                 }, null, { enableHighAccuracy: true });
             }
         }
@@ -364,11 +355,7 @@
             document.getElementById('active-rider-phone').innerText = currentRequest.rider_phone;
             document.getElementById('call-rider-btn').href = 'tel:' + currentRequest.rider_phone;
             
-            // عرض المسافة والوقت
-            document.getElementById('driverTripDistance').innerText = `${currentRequest.distance} كم`;
-            document.getElementById('driverTripTime').innerText = `${Math.round((currentRequest.distance / 30) * 60)} دقيقة`;
-            
-            // رسم خط السير للراكب
+            // رسم خط السير للراكب (من الكابتن للراكب)
             drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng);
         }
 
@@ -381,9 +368,16 @@
             try {
                 const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
                 const data = await res.json();
-                if (data.code === 'Ok') {
+                if (data.code === 'Ok' && data.routes.length > 0) {
                     reqRoute = L.geoJSON(data.routes[0].geometry, { style: { color: '#00f2fe', weight: 8, opacity: 1 } }).addTo(map);
                     map.fitBounds(reqRoute.getBounds(), { paddingTopLeft: [40, 100], paddingBottomRight: [40, window.innerHeight * 0.4] });
+                    
+                    // حساب مسافة ووقت الكابتن للراكب
+                    const route = data.routes[0];
+                    const distKm = parseFloat((route.distance / 1000).toFixed(1));
+                    const timeMin = Math.round(route.duration / 60);
+                    document.getElementById('driverTripDistance').innerText = `${distKm} كم`;
+                    document.getElementById('driverTripTime').innerText = `${timeMin} دقيقة`;
                 }
             } catch (e) {}
         }
@@ -391,14 +385,21 @@
         // دالة رسم المسار للوجهة
         async function drawRouteToDestination(destLat, destLng) {
             if (reqRoute) map.removeLayer(reqRoute);
-            const pos = driverMarker.getLatLng(); // من مكان الكابتن الحالي (أو نقطة الانطلاق)
+            const pos = driverMarker.getLatLng(); 
             const coords = `${pos.lng},${pos.lat};${destLng},${destLat}`;
             try {
                 const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
                 const data = await res.json();
-                if (data.code === 'Ok') {
+                if (data.code === 'Ok' && data.routes.length > 0) {
                     reqRoute = L.geoJSON(data.routes[0].geometry, { style: { color: '#00f2fe', weight: 8, opacity: 1 } }).addTo(map);
                     map.fitBounds(reqRoute.getBounds(), { paddingTopLeft: [40, 100], paddingBottomRight: [40, window.innerHeight * 0.4] });
+                    
+                    // حساب مسافة ووقت الرحلة
+                    const route = data.routes[0];
+                    const distKm = parseFloat((route.distance / 1000).toFixed(1));
+                    const timeMin = Math.round(route.duration / 60);
+                    document.getElementById('driverTripDistance').innerText = `${distKm} كم`;
+                    document.getElementById('driverTripTime').innerText = `${timeMin} دقيقة`;
                 }
             } catch (e) {}
         }
@@ -409,6 +410,7 @@
             if (newStatus === 'arrived') {
                 document.getElementById('actionBtn1').style.display = 'none';
                 document.getElementById('actionBtn2').style.display = 'flex';
+                document.getElementById('ridePhaseTitle').innerText = "أنت في انتظار الراكب";
             } else if (newStatus === 'completed') {
                 alert("تم إنهاء الرحلة بنجاح!"); location.reload();
             }
