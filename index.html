@@ -250,7 +250,7 @@
         let assignedDriverPhone = null; 
         let driverRouteLine = null; 
 
-        // --- دالة استرجاع حالة الرحلة ---
+        // --- استرجاع حالة الرحلة ---
         async function checkActiveRide() {
             const { data, error } = await supabaseClient.from('rides')
                 .select('*')
@@ -287,6 +287,7 @@
                 } else if (ride.status === 'started') {
                     document.getElementById('ride-status-title').innerText = "أنت في الطريق لوجهتك 🚀";
                     document.getElementById('driver-status-title').innerText = "رحلة سعيدة!";
+                    document.getElementById('driver-info-box').style.display = 'none';
                 }
             }
         }
@@ -591,9 +592,8 @@
             }
         }
 
-        // تشغيل استرجاع الحالة أول ما الصفحة تفتح
         window.onload = function() {
-            checkActiveRide();
+            setTimeout(() => { checkActiveRide(); }, 1000);
         };
     </script>
 </body>
