@@ -21,7 +21,7 @@
 
         .top-nav { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1000; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
         .nav-left, .nav-right { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
-        .nav-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-main); cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .nav-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-main); cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 18px;}
         .mode-badge { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--primary); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 6px; }
 
         #map { flex-grow: 1; width: 100%; height: 100vh; z-index: 1; background-color: #05070a; }
@@ -46,7 +46,6 @@
         .search-btn { background: var(--card-border); color: var(--text-main); border: none; padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; }
         .my-location-btn { width: 100%; background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px dashed var(--success); padding: 8px; border-radius: 10px; font-weight: 700; font-size: 13px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
         
-        /* زرار الطلب تم رفعه شوية */
         .btn-main { width: 100%; background: var(--primary-gradient); color: #ffffff; padding: 15px; border-radius: 14px; border: none; font-size: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3); }
         
         .route-summary-box { background: var(--bg-color); border: 1px solid var(--card-border); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
@@ -54,7 +53,6 @@
         .dot-icon { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
         .dot-green { background: var(--success); } .dot-red { background: var(--danger); }
 
-        /* كروت السيارات */
         .vehicles-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
         .vehicle-card { flex: 0 0 120px; background: var(--bg-color); border: 1px solid var(--card-border); border-radius: 14px; padding: 12px 8px; text-align: center; cursor: pointer; transition: 0.3s; }
         .vehicle-card.selected { border: 2px solid var(--primary); background: rgba(0,242,254,0.1); }
@@ -63,15 +61,21 @@
         .vehicle-desc { font-size: 10px; color: var(--text-sub); margin-bottom: 4px; }
         .vehicle-price { font-size: 15px; font-weight: 800; color: var(--primary); }
 
-        /* عداد الانتظار */
         .wait-timer-box { display: none; background: rgba(255, 71, 87, 0.1); border: 1px solid var(--danger); border-radius: 14px; padding: 15px; text-align: center; margin-bottom: 15px; }
         .wait-timer-text { font-size: 24px; font-weight: 800; color: var(--danger); margin-top: 5px; }
     </style>
 </head>
 <body>
 
+    <!-- الحماية: لو مفيش مستخدم مسجل، رجعه لصفحة تسجيل الدخول -->
+    <script>
+        const loggedUser = JSON.parse(localStorage.getItem('mosharka_user'));
+        if (!loggedUser) { window.location.href = 'login.html'; }
+    </script>
+
     <div class="top-nav">
         <div class="nav-right">
+            <!-- زرار الخروج بيتمسح بياناته وبيرجع لصفحة الدخول -->
             <a href="#" onclick="logout()" class="nav-btn">🚪</a>
             <div class="mode-badge"><div class="mode-dot"></div> <span id="mode-text">الليلي</span></div>
         </div>
@@ -92,7 +96,6 @@
     <div class="bottom-sheet">
         <div class="sheet-handle"></div>
         
-        <!-- 1. الانطلاق -->
         <div id="ui-pickup">
             <h2 class="title"><span style="color: #22c55e;">🟢</span> من أين تبدأ رحلتك؟</h2>
             <div class="input-group">
@@ -106,7 +109,6 @@
             <button class="btn-main" onclick="confirmPickup()">تأكيد نقطة الانطلاق ⚡</button>
         </div>
 
-        <!-- 2. الوصول -->
         <div id="ui-dropoff" style="display: none;">
             <button style="background: transparent; border:none; color: var(--text-sub); margin-bottom: 8px; cursor: pointer;" onclick="goBackToPickup()">← رجوع</button>
             <h2 class="title"><span style="color: var(--danger);">📍</span> إلى أين وجهتك القادمة؟</h2>
@@ -123,7 +125,6 @@
             <button class="btn-main" onclick="confirmDropoff()">اعرض مسار الرحلة 🗺️</button>
         </div>
 
-        <!-- 3. اختيار المركبة -->
         <div id="ui-vehicle" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <button style="background: transparent; border:none; color: var(--text-sub); cursor: pointer;" onclick="goBackToDropoff()">← تعديل المسار</button>
@@ -155,7 +156,6 @@
             <button class="btn-main" onclick="requestRideNow()">اطلب الرحلة الآن 🚀</button>
         </div>
 
-        <!-- 4. تتبع الرحلة -->
         <div id="ui-ride" style="display: none;">
             <h2 class="title" style="color: var(--primary);" id="ride-status-title">جاري البحث عن كابتن...</h2>
             
@@ -164,7 +164,6 @@
                 <div style="font-size: 26px; font-weight: 800; color: var(--primary); letter-spacing: 5px;" id="pin-code-display">----</div>
             </div>
 
-            <!-- عداد الانتظار (يظهر لما الكابتن يوصل) -->
             <div id="wait-timer-box" class="wait-timer-box">
                 <div style="font-size: 13px; font-weight: 700;">الكابتن في انتظارك</div>
                 <div style="font-size: 11px; color: var(--text-sub);">(3 دقائق مجانية، ثم 1 جنيه/دقيقة)</div>
@@ -209,10 +208,9 @@
         var startMarker = null, destMarker = null, userMarker = null, moveEndTimeout, routeLine = null;
         let liveDriversMap = {}; 
         let myActiveRideId = null;
-        let requestTimeout = null; // مؤقت الـ 5 دقايق
-        let waitInterval = null; // مؤقت الانتظار
+        let requestTimeout = null; 
+        let waitInterval = null; 
 
-        // --- تصميم الماركرات ---
         const driverIcon = () => L.divIcon({
             className: 'custom-driver-marker',
             html: `<div class="driver-marker-container"><div class="driver-avatar-box"><img src="https://i.pravatar.cc/100?img=11"><div class="driver-rating-badge">4.9★</div></div></div>`,
@@ -222,7 +220,6 @@
         const carMarkerIcon = L.divIcon({ html: `<div style="width: 18px; height: 18px; background: #22c55e; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px #22c55e;"></div>`, iconSize: [18,18], iconAnchor: [9,9] });
         const destMarkerIcon = L.divIcon({ html: `<div style="width: 18px; height: 18px; background: #ff4757; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 12px #ff4757;"></div>`, iconSize: [18,18], iconAnchor: [9,9] });
 
-        // --- استقبال الكباتن اللايف ---
         async function fetchInitialDrivers() {
             const { data } = await supabaseClient.from('users').select('*').eq('role', 'driver').eq('is_online', true);
             if (data) data.forEach(d => { if(!liveDriversMap[d.id]) liveDriversMap[d.id] = L.marker([d.lat, d.lng], { icon: driverIcon() }).addTo(map); });
@@ -238,12 +235,11 @@
             }
         }).subscribe();
 
-        // --- الاستماع لتحديثات الرحلة ---
         supabaseClient.channel('rider-ride-update').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, payload => {
             const ride = payload.new;
             if (myActiveRideId && ride.id === myActiveRideId) {
                 if (ride.status === 'accepted') {
-                    clearTimeout(requestTimeout); // إلغاء مؤقت الـ 5 دقايق
+                    clearTimeout(requestTimeout); 
                     document.getElementById('driver-info-box').style.display = 'block';
                     document.getElementById('accepted-driver-name').innerText = ride.driver_name;
                     document.getElementById('call-driver-btn').href = 'tel:' + ride.driver_phone;
@@ -251,10 +247,10 @@
                 } else if (ride.status === 'arrived') {
                     document.getElementById('ride-status-title').innerText = "وصل الكابتن! 📍";
                     document.getElementById('wait-timer-box').style.display = 'block';
-                    startWaitTimer(ride.created_at);
+                    startWaitTimer();
                 } else if (ride.status === 'started') {
                     document.getElementById('wait-timer-box').style.display = 'none';
-                    clearInterval(waitInterval); // إيقاف العداد
+                    clearInterval(waitInterval); 
                     document.getElementById('ride-status-title').innerText = "أنت في الطريق لوجهتك 🚀";
                 } else if (ride.status === 'completed') {
                     clearInterval(waitInterval);
@@ -267,7 +263,6 @@
             }
         }).subscribe();
 
-        // --- عداد الـ 3 دقايق ---
         function startWaitTimer() {
             let seconds = 0;
             document.getElementById('wait-timer-text').innerText = "00:00";
@@ -286,7 +281,6 @@
             }, 1000);
         }
 
-        // --- الخريطة والبحث ---
         function goToMyLocation() {
             if (navigator.geolocation) {
                 document.getElementById('pickup-address').innerText = "جاري تحديد موقعك...";
@@ -378,7 +372,6 @@
                 const data = await res.json();
                 if (data.code === 'Ok' && data.routes.length > 0) {
                     const route = data.routes[0];
-                    // تحسين شكل خط السير
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#00f2fe', weight: 8, opacity: 1, lineCap: 'round', lineJoin: 'round' } }).addTo(map);
                     currentDistance = parseFloat((route.distance / 1000).toFixed(1)); currentDuration = Math.round(route.duration / 60);
                 } else { throw new Error(); }
@@ -393,7 +386,7 @@
 
         function updatePrices() {
             let carP = Math.round(baseCalculatedPrice);
-            let scooterP = Math.round(baseCalculatedPrice * 0.6); // السكوتر أرخص
+            let scooterP = Math.round(baseCalculatedPrice * 0.6); 
 
             document.getElementById('price-car').innerText = carP + " ج.م";
             document.getElementById('price-scooter').innerText = scooterP + " ج.م";
@@ -407,7 +400,6 @@
             selectedVehicleType = type; updatePrices();
         }
 
-        // --- طلب الرحلة (مع مؤقت 5 دقايق) ---
         async function requestRideNow() {
             const pin = Math.floor(1000 + Math.random() * 9000).toString();
             document.getElementById('pin-code-display').innerText = pin;
@@ -415,7 +407,7 @@
             
             const { data, error } = await supabaseClient.from('rides').insert([{
                 pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1],
-                price: finalPrice, distance: currentDistance, rider_name: "أحمد الراكب", rider_phone: "01000000000", status: "pending", pin_code: pin
+                price: finalPrice, distance: currentDistance, rider_name: loggedUser.name || "راكب", rider_phone: loggedUser.phone, status: "pending", pin_code: pin
             }]).select();
             
             if (error) alert("حدث خطأ: " + error.message);
@@ -424,13 +416,11 @@
                 document.getElementById('ui-vehicle').style.display = 'none'; document.getElementById('ui-ride').style.display = 'block'; currentStep = 'ride';
                 document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن... (5 دقائق كحد أقصى)";
                 
-                // بدء مؤقت الـ 5 دقائق
                 requestTimeout = setTimeout(async () => {
-                    // لو لسه pending بعد 5 دقايق
                     await supabaseClient.from('rides').update({ status: 'cancelled' }).eq('id', myActiveRideId);
                     alert("عذراً، لم نجد كابتن متاح في الوقت الحالي. سيتم إلغاء الطلب.");
                     location.reload();
-                }, 5 * 60 * 1000); // 5 دقائق
+                }, 5 * 60 * 1000); 
             }
         }
 
@@ -443,7 +433,13 @@
             }
         }
 
-        function logout() { if(confirm("هل تريد الخروج؟")) location.reload(); }
+        // زرار الخروج
+        function logout() {
+            if(confirm("هل تريد الخروج من التطبيق؟")) {
+                localStorage.removeItem('mosharka_user'); // بيمسح الحساب
+                window.location.href = 'login.html';      // يوجهه للدخول
+            }
+        }
     </script>
 </body>
 </html>
