@@ -75,7 +75,6 @@
 
     <div class="top-nav">
         <div class="nav-right">
-            <!-- زرار الخروج بيتمسح بياناته وبيرجع لصفحة الدخول -->
             <a href="#" onclick="logout()" class="nav-btn">🚪</a>
             <div class="mode-badge"><div class="mode-dot"></div> <span id="mode-text">الليلي</span></div>
         </div>
@@ -157,6 +156,7 @@
         </div>
 
         <div id="ui-ride" style="display: none;">
+            <!-- تم شيل جملة 5 دقائق -->
             <h2 class="title" style="color: var(--primary);" id="ride-status-title">جاري البحث عن كابتن...</h2>
             
             <div class="route-summary-box" style="text-align: center;">
@@ -407,18 +407,19 @@
             
             const { data, error } = await supabaseClient.from('rides').insert([{
                 pickup_lat: pickupPoint[0], pickup_lng: pickupPoint[1], dest_lat: dropoffPoint[0], dest_lng: dropoffPoint[1],
-                price: finalPrice, distance: currentDistance, rider_name: loggedUser.name || "راكب", rider_phone: loggedUser.phone, status: "pending", pin_code: pin
+                price: finalPrice, distance: currentDistance, rider_name: loggedUser.name || "راكب جديد", rider_phone: loggedUser.phone, status: "pending", pin_code: pin
             }]).select();
             
             if (error) alert("حدث خطأ: " + error.message);
             else {
                 myActiveRideId = data[0].id;
                 document.getElementById('ui-vehicle').style.display = 'none'; document.getElementById('ui-ride').style.display = 'block'; currentStep = 'ride';
-                document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن... (5 دقائق كحد أقصى)";
+                // شيلنا جملة 5 دقائق
+                document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن...";
                 
                 requestTimeout = setTimeout(async () => {
                     await supabaseClient.from('rides').update({ status: 'cancelled' }).eq('id', myActiveRideId);
-                    alert("عذراً، لم نجد كابتن متاح في الوقت الحالي. سيتم إلغاء الطلب.");
+                    alert("عذراً، لم نجد كابتن متاح. سيتم إلغاء الطلب.");
                     location.reload();
                 }, 5 * 60 * 1000); 
             }
@@ -433,11 +434,10 @@
             }
         }
 
-        // زرار الخروج
         function logout() {
             if(confirm("هل تريد الخروج من التطبيق؟")) {
-                localStorage.removeItem('mosharka_user'); // بيمسح الحساب
-                window.location.href = 'login.html';      // يوجهه للدخول
+                localStorage.removeItem('mosharka_user');
+                window.location.href = 'login.html';
             }
         }
     </script>
