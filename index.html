@@ -185,6 +185,7 @@
         </div>
     </div>
 
+    <!-- Modals -->
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
             <button class="modal-close" onclick="closeProfileModal()">✖</button>
@@ -276,6 +277,7 @@
                     document.getElementById('ride-status-title').innerText = "الكابتن في الطريق إليك 🚗";
                     document.getElementById('driver-status-title').innerText = "تم قبول طلبك!";
                     assignedDriverPhone = ride.driver_phone;
+                    pickupPoint = [ride.pickup_lat, ride.pickup_lng];
                 } else if (ride.status === 'arrived') {
                     document.getElementById('driver-info-box').style.display = 'block';
                     document.getElementById('accepted-driver-name').innerText = ride.driver_name;
@@ -284,6 +286,7 @@
                     document.getElementById('driver-status-title').innerText = "الكابتن في انتظارك";
                     document.getElementById('wait-timer-box').style.display = 'block';
                     assignedDriverPhone = ride.driver_phone;
+                    pickupPoint = [ride.pickup_lat, ride.pickup_lng];
                 } else if (ride.status === 'started') {
                     document.getElementById('ride-status-title').innerText = "أنت في الطريق لوجهتك 🚀";
                     document.getElementById('driver-status-title').innerText = "رحلة سعيدة!";
@@ -292,6 +295,7 @@
             }
         }
 
+        // --- الملف الشخصي والسجل ---
         function openProfileModal() {
             document.getElementById('profileName').value = loggedUser.name;
             document.getElementById('profilePhone').value = loggedUser.phone;
@@ -302,44 +306,23 @@
         async function updateProfile() {
             const newName = document.getElementById('profileName').value.trim();
             if (!newName) return alert("الاسم لا يمكن أن يكون فارغاً");
-            
             const { error } = await supabaseClient.from('users').update({ name: newName }).eq('id', loggedUser.id);
             if (!error) {
                 loggedUser.name = newName;
                 localStorage.setItem('mosharka_user', JSON.stringify(loggedUser));
-                alert("تم الحفظ بنجاح!");
-                closeProfileModal();
+                alert("تم الحفظ بنجاح!"); closeProfileModal();
             } else { alert("حدث خطأ أثناء الحفظ"); }
         }
 
         async function openHistoryModal() {
-            closeProfileModal();
-            document.getElementById('historyModal').style.display = 'flex';
+            closeProfileModal(); document.getElementById('historyModal').style.display = 'flex';
             const list = document.getElementById('historyList');
             list.innerHTML = '<p style="text-align: center; color: var(--text-sub);">جاري التحميل...</p>';
-
-            const { data, error } = await supabaseClient.from('rides')
-                .select('*')
-                .eq('rider_phone', loggedUser.phone)
-                .eq('status', 'completed')
-                .order('created_at', { ascending: false });
-
-            if (error || !data || data.length === 0) {
-                list.innerHTML = '<p style="text-align: center; color: var(--text-sub);">لا توجد رحلات سابقة.</p>';
-                return;
-            }
-
+            const { data, error } = await supabaseClient.from('rides').select('*').eq('rider_phone', loggedUser.phone).eq('status', 'completed').order('created_at', { ascending: false });
+            if (error || !data || data.length === 0) { list.innerHTML = '<p style="text-align: center; color: var(--text-sub);">لا توجد رحلات سابقة.</p>'; return; }
             list.innerHTML = '';
             data.forEach(ride => {
-                list.innerHTML += `
-                    <div class="history-item">
-                        <div style="text-align: right;">
-                            <div style="font-size: 14px; font-weight: 800;">رحلة (${ride.vehicle_type || 'ملاكي'})</div>
-                            <div style="font-size: 12px; color: var(--text-sub);">${ride.distance} كم</div>
-                        </div>
-                        <div style="font-weight: 800; color: var(--primary);">${ride.price} ج.م</div>
-                    </div>
-                `;
+                list.innerHTML += `<div class="history-item"><div style="text-align: right;"><div style="font-size: 14px; font-weight: 800;">رحلة (${ride.vehicle_type || 'ملاكي'})</div><div style="font-size: 12px; color: var(--text-sub);">${ride.distance} كم</div></div><div style="font-weight: 800; color: var(--primary);">${ride.price} ج.م</div></div>`;
             });
         }
         function closeHistoryModal() { document.getElementById('historyModal').style.display = 'none'; }
@@ -353,6 +336,7 @@
         }
         function closeCallModal() { document.getElementById('callModal').style.display = 'none'; }
 
+        // --- الخريطة واللايف ---
         const driverIcon = () => L.divIcon({
             className: 'custom-driver-marker',
             html: `<div class="driver-marker-container"><div class="driver-avatar-box"><img src="https://i.pravatar.cc/100?img=11"><div class="driver-rating-badge">4.9★</div></div></div>`,
@@ -370,16 +354,20 @@
         supabaseClient.channel('live-drivers-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
             const d = payload.new;
             if (d && d.role === 'driver') {
+                // 1. تحديث كل الكباتن
                 if (d.is_online) {
                     if (liveDriversMap[d.id]) liveDriversMap[d.id].setLatLng([d.lat, d.lng]);
                     else liveDriversMap[d.id] = L.marker([d.lat, d.lng], { icon: driverIcon() }).addTo(map);
                 } else if (liveDriversMap[d.id]) { map.removeLayer(liveDriversMap[d.id]); delete liveDriversMap[d.id]; }
 
-                if (myActiveRideId && assignedDriverPhone === d.phone) {
+                // 2. لو ده الكابتن بتاعنا، نرسم مساره
+                if (myActiveRideId && assignedDriverPhone === d.phone && currentStep === 'ride') {
                     if (driverRouteLine) map.removeLayer(driverRouteLine);
-                    driverRouteLine = L.polyline([[d.lat, d.lng], pickupPoint], { color: '#fadb14', weight: 6, opacity: 0.8, dashArray: '8, 8' }).addTo(map);
-                    const bounds = L.latLngBounds([[d.lat, d.lng], pickupPoint]);
-                    map.fitBounds(bounds, { paddingTopLeft: [40, 40], paddingBottomRight: [40, window.innerHeight * 0.65] });
+                    if(pickupPoint) {
+                        driverRouteLine = L.polyline([[d.lat, d.lng], pickupPoint], { color: '#fadb14', weight: 6, opacity: 0.8, dashArray: '8, 8' }).addTo(map);
+                        const bounds = L.latLngBounds([[d.lat, d.lng], pickupPoint]);
+                        map.fitBounds(bounds, { paddingTopLeft: [40, 40], paddingBottomRight: [40, window.innerHeight * 0.65] });
+                    }
                 }
             }
         }).subscribe();
@@ -395,6 +383,7 @@
                     document.getElementById('ride-status-title').innerText = "الكابتن في الطريق إليك 🚗";
                     document.getElementById('driver-status-title').innerText = "تم قبول طلبك!";
                     assignedDriverPhone = ride.driver_phone;
+                    pickupPoint = [ride.pickup_lat, ride.pickup_lng];
                 } else if (ride.status === 'arrived') {
                     document.getElementById('ride-status-title').innerText = "وصل الكابتن! 📍";
                     document.getElementById('driver-status-title').innerText = "الكابتن في انتظارك";
@@ -426,7 +415,6 @@
                 let mins = Math.floor(seconds / 60);
                 let secs = seconds % 60;
                 let display = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                
                 let extraFee = 0;
                 if (seconds > 180) { extraFee = Math.floor((seconds - 180) / 60) + 1; display += ` (+${extraFee} ج.م)`; }
                 document.getElementById('wait-timer-text').innerText = display;
@@ -539,10 +527,8 @@
         function updatePrices() {
             let carP = Math.round(baseCalculatedPrice);
             let scooterP = Math.round(baseCalculatedPrice * 0.6); 
-
             document.getElementById('price-car').innerText = carP + " ج.م";
             document.getElementById('price-scooter').innerText = scooterP + " ج.م";
-
             let final = carP; if (selectedVehicleType === 'scooter') final = scooterP;
             document.getElementById('total-price-display').innerText = final + " جنيه";
         }
