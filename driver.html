@@ -188,7 +188,6 @@
             else { mapDiv.classList.remove('dark-tiles'); mapDiv.classList.add('light-tiles'); btn.textContent = '☀️'; }
         }
 
-        // --- الملف الشخصي والسجل ---
         function openProfileModal() {
             document.getElementById('profileName').value = loggedUser.name;
             document.getElementById('profilePhone').value = loggedUser.phone;
@@ -229,7 +228,6 @@
         }
         function closeCallModal() { document.getElementById('callModal').style.display = 'none'; }
 
-        // --- شاشة PIN ---
         function showPinModal() { document.getElementById('pinInput').value = ''; document.getElementById('pinModal').style.display = 'flex'; setTimeout(() => document.getElementById('pinInput').focus(), 100); }
         function closePinModal() { document.getElementById('pinModal').style.display = 'none'; }
         
@@ -243,20 +241,15 @@
                     document.getElementById('actionBtn3').style.display = 'flex';
                     document.getElementById('ridePhaseTitle').innerText = "أنت في الطريق للوجهة";
                     
-                    // رسم خط السير من مكان الراكب للوجهة
+                    // مسح ماركر الراكب (الأخضر) وإضافة ماركر الوجهة (الأحمر)
+                    if (reqMarker1) { map.removeLayer(reqMarker1); reqMarker1 = null; }
                     drawRouteToDestination(currentRequest.dest_lat, currentRequest.dest_lng);
-                    
-                    // مسح ماركر الراكب القديم وإضافة ماركر الوجهة
-                    if (reqMarker1) map.removeLayer(reqMarker1); 
-                    const destIcon = L.divIcon({ html: `<div style="width: 24px; height: 24px; background: #ff4757; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #ff4757;"></div>`, iconSize: [24,24], iconAnchor: [12,12] });
-                    reqMarker1 = L.marker([currentRequest.dest_lat, currentRequest.dest_lng], {icon: destIcon}).addTo(map);
                     
                     alert("تم بدء الرحلة بنجاح! 🚀");
                 });
             } else { alert("رقم PIN غير صحيح، برجاء التأكد من الراكب."); }
         }
 
-        // --- الخريطة والطلبات ---
         function startTracking() {
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition(pos => {
@@ -265,10 +258,7 @@
                         driverMarker = L.marker([lat, lng], {icon: L.divIcon({ html: `<div style="width: 40px; height: 40px; background: #00f2fe; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #00f2fe; display: flex; justify-content: center; align-items: center; font-size: 20px;">🚗</div>`, iconSize: [40, 40], iconAnchor: [20, 20] })}).addTo(map);
                         map.setView([lat, lng], 16);
                     } else { driverMarker.setLatLng([lat, lng]); }
-                    
-                    if (isOnline) { 
-                        supabaseClient.from('users').update({ lat, lng, is_online: true }).eq('phone', driverPhone); 
-                    }
+                    if (isOnline) { supabaseClient.from('users').update({ lat, lng, is_online: true }).eq('phone', driverPhone); }
                 }, null, { enableHighAccuracy: true });
             }
         }
@@ -354,8 +344,12 @@
             document.getElementById('active-rider-name').innerText = currentRequest.rider_name;
             document.getElementById('active-rider-phone').innerText = currentRequest.rider_phone;
             document.getElementById('call-rider-btn').href = 'tel:' + currentRequest.rider_phone;
+            document.getElementById('ridePhaseTitle').innerText = "أنت في الطريق للراكب";
             
-            // رسم خط السير للراكب (من الكابتن للراكب)
+            // مسح ماركر الوجهة (الأحمر) عشان الكابتن ميتوهش
+            if (reqMarker2) { map.removeLayer(reqMarker2); reqMarker2 = null; }
+            
+            // رسم خط السير للراكب
             drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng);
         }
 
@@ -363,7 +357,8 @@
 
         async function drawRouteToRider(destLat, destLng) {
             if (reqRoute) map.removeLayer(reqRoute);
-            const pos = driverMarker.getLatLng();
+            // لو الكابتن لسه مجبش موقعه، نستخدم مكان البداية
+            const pos = driverMarker ? driverMarker.getLatLng() : { lat: currentRequest.pickup_lat, lng: currentRequest.pickup_lng };
             const coords = `${pos.lng},${pos.lat};${destLng},${destLat}`;
             try {
                 const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
@@ -372,20 +367,25 @@
                     reqRoute = L.geoJSON(data.routes[0].geometry, { style: { color: '#00f2fe', weight: 8, opacity: 1 } }).addTo(map);
                     map.fitBounds(reqRoute.getBounds(), { paddingTopLeft: [40, 100], paddingBottomRight: [40, window.innerHeight * 0.4] });
                     
-                    // حساب مسافة ووقت الكابتن للراكب
                     const route = data.routes[0];
                     const distKm = parseFloat((route.distance / 1000).toFixed(1));
                     const timeMin = Math.round(route.duration / 60);
                     document.getElementById('driverTripDistance').innerText = `${distKm} كم`;
                     document.getElementById('driverTripTime').innerText = `${timeMin} دقيقة`;
-                }
-            } catch (e) {}
+                } else { throw new Error(); }
+            } catch (e) {
+                // حل بديل لو السيرفر وقع
+                const distKm = (map.distance([pos.lat, pos.lng], [destLat, destLng]) / 1000).toFixed(1);
+                document.getElementById('driverTripDistance').innerText = `${distKm} كم`;
+                document.getElementById('driverTripTime').innerText = `${Math.round((distKm/30)*60)} دقيقة`;
+                reqRoute = L.polyline([[pos.lat, pos.lng], [destLat, destLng]], {color: '#00f2fe', weight: 8}).addTo(map);
+            }
         }
 
-        // دالة رسم المسار للوجهة
         async function drawRouteToDestination(destLat, destLng) {
             if (reqRoute) map.removeLayer(reqRoute);
-            const pos = driverMarker.getLatLng(); 
+            // هنا بنعتمد على مكان الراكب اللي هو مكان الكابتن حالياً
+            const pos = driverMarker ? driverMarker.getLatLng() : { lat: currentRequest.pickup_lat, lng: currentRequest.pickup_lng };
             const coords = `${pos.lng},${pos.lat};${destLng},${destLat}`;
             try {
                 const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
@@ -394,14 +394,18 @@
                     reqRoute = L.geoJSON(data.routes[0].geometry, { style: { color: '#00f2fe', weight: 8, opacity: 1 } }).addTo(map);
                     map.fitBounds(reqRoute.getBounds(), { paddingTopLeft: [40, 100], paddingBottomRight: [40, window.innerHeight * 0.4] });
                     
-                    // حساب مسافة ووقت الرحلة
                     const route = data.routes[0];
                     const distKm = parseFloat((route.distance / 1000).toFixed(1));
                     const timeMin = Math.round(route.duration / 60);
                     document.getElementById('driverTripDistance').innerText = `${distKm} كم`;
                     document.getElementById('driverTripTime').innerText = `${timeMin} دقيقة`;
-                }
-            } catch (e) {}
+                } else { throw new Error(); }
+            } catch (e) {
+                const distKm = (map.distance([pos.lat, pos.lng], [destLat, destLng]) / 1000).toFixed(1);
+                document.getElementById('driverTripDistance').innerText = `${distKm} كم`;
+                document.getElementById('driverTripTime').innerText = `${Math.round((distKm/30)*60)} دقيقة`;
+                reqRoute = L.polyline([[pos.lat, pos.lng], [destLat, destLng]], {color: '#00f2fe', weight: 8}).addTo(map);
+            }
         }
 
         async function updateRideStatus(newStatus) {
