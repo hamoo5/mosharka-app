@@ -74,8 +74,6 @@
     <script>
         const loggedUser = JSON.parse(localStorage.getItem('mosharka_user'));
         if (!loggedUser) { window.location.href = 'login.html'; }
-        // مسح أي رحلة قديمة عشان نبدأ على نظافة
-        localStorage.removeItem('myActiveRideId');
     </script>
 
     <div class="top-nav">
@@ -252,6 +250,47 @@
         let assignedDriverPhone = null; 
         let driverRouteLine = null; 
 
+        // --- دالة استرجاع حالة الرحلة ---
+        async function checkActiveRide() {
+            const { data, error } = await supabaseClient.from('rides')
+                .select('*')
+                .eq('rider_phone', loggedUser.phone)
+                .in('status', ['pending', 'accepted', 'arrived', 'started'])
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (data && data.length > 0) {
+                const ride = data[0];
+                myActiveRideId = ride.id;
+                document.getElementById('ui-pickup').style.display = 'none'; 
+                document.getElementById('ui-ride').style.display = 'block'; 
+                currentStep = 'ride';
+                document.getElementById('pin-code-display').innerText = ride.pin_code;
+
+                if (ride.status === 'pending') {
+                    document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن...";
+                } else if (ride.status === 'accepted') {
+                    document.getElementById('driver-info-box').style.display = 'block';
+                    document.getElementById('accepted-driver-name').innerText = ride.driver_name;
+                    document.getElementById('call-driver-btn').href = 'tel:' + ride.driver_phone;
+                    document.getElementById('ride-status-title').innerText = "الكابتن في الطريق إليك 🚗";
+                    document.getElementById('driver-status-title').innerText = "تم قبول طلبك!";
+                    assignedDriverPhone = ride.driver_phone;
+                } else if (ride.status === 'arrived') {
+                    document.getElementById('driver-info-box').style.display = 'block';
+                    document.getElementById('accepted-driver-name').innerText = ride.driver_name;
+                    document.getElementById('call-driver-btn').href = 'tel:' + ride.driver_phone;
+                    document.getElementById('ride-status-title').innerText = "وصل الكابتن! 📍";
+                    document.getElementById('driver-status-title').innerText = "الكابتن في انتظارك";
+                    document.getElementById('wait-timer-box').style.display = 'block';
+                    assignedDriverPhone = ride.driver_phone;
+                } else if (ride.status === 'started') {
+                    document.getElementById('ride-status-title').innerText = "أنت في الطريق لوجهتك 🚀";
+                    document.getElementById('driver-status-title').innerText = "رحلة سعيدة!";
+                }
+            }
+        }
+
         function openProfileModal() {
             document.getElementById('profileName').value = loggedUser.name;
             document.getElementById('profilePhone').value = loggedUser.phone;
@@ -354,7 +393,6 @@
                     document.getElementById('call-driver-btn').href = 'tel:' + ride.driver_phone;
                     document.getElementById('ride-status-title').innerText = "الكابتن في الطريق إليك 🚗";
                     document.getElementById('driver-status-title').innerText = "تم قبول طلبك!";
-                    
                     assignedDriverPhone = ride.driver_phone;
                 } else if (ride.status === 'arrived') {
                     document.getElementById('ride-status-title').innerText = "وصل الكابتن! 📍";
@@ -526,7 +564,6 @@
             if (error) alert("حدث خطأ: " + error.message);
             else {
                 myActiveRideId = data[0].id;
-                localStorage.setItem('myActiveRideId', myActiveRideId); // لحفظ الرحلة
                 document.getElementById('ui-vehicle').style.display = 'none'; document.getElementById('ui-ride').style.display = 'block'; currentStep = 'ride';
                 document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن...";
                 
@@ -553,6 +590,11 @@
                 window.location.href = 'login.html';
             }
         }
+
+        // تشغيل استرجاع الحالة أول ما الصفحة تفتح
+        window.onload = function() {
+            checkActiveRide();
+        };
     </script>
 </body>
 </html>
