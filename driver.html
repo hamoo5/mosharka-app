@@ -102,7 +102,8 @@
                 <div style="font-size: 16px; font-weight: 800;" id="active-rider-name">الراكب</div>
                 <div style="font-size: 12px; color: var(--text-sub);" id="active-rider-phone">الرقم</div>
             </div>
-            <a href="#" onclick="openCallModal()" class="call-btn">📞</a>
+            <!-- تم إضافة الـ ID هنا -->
+            <a href="#" id="call-rider-btn" onclick="openCallModal()" class="call-btn">📞</a>
         </div>
         <button id="actionBtn1" class="status-btn online" onclick="updateRideStatus('arrived')" style="margin-bottom: 10px;">وصلت لنقطة الانطلاق 📍</button>
         <button id="actionBtn2" class="status-btn online" onclick="showPinModal()" style="display: none; margin-bottom: 10px;">بدء الرحلة 🚀</button>
@@ -172,7 +173,7 @@
         
         let reqMarker1 = null, reqMarker2 = null, reqRoute = null; 
         let isDark = true;
-        let locationInterval = null; // متغير عشان نبعت الموقع كل فترة
+        let locationInterval = null;
 
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -186,7 +187,6 @@
             else { mapDiv.classList.remove('dark-tiles'); mapDiv.classList.add('light-tiles'); btn.textContent = '☀️'; }
         }
 
-        // ** تحديث الموقع بشكل دوري للسيرفر **
         function startTracking() {
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition(pos => {
@@ -207,14 +207,12 @@
             }
         }
 
-        // ** دالة إرسال الموقع للسيرفر كل 3 ثواني **
         function syncLocationToServer() {
             if (locationInterval) clearInterval(locationInterval);
             locationInterval = setInterval(async () => {
                 if (isOnline && driverMarker) {
                     const pos = driverMarker.getLatLng();
                     await supabaseClient.from('users').update({ lat: pos.lat, lng: pos.lng, is_online: true }).eq('phone', driverPhone);
-                    
                     if(availableRides.length > 0 && !currentRequest && !selectedRequest) fetchAvailableRides();
                 }
             }, 3000);
@@ -233,7 +231,7 @@
                 
                 if (driverMarker) { const pos = driverMarker.getLatLng(); await supabaseClient.from('users').update({ lat: pos.lat, lng: pos.lng, is_online: true }).eq('phone', driverPhone); }
                 fetchAvailableRides();
-                syncLocationToServer(); // بدء إرسال الموقع
+                syncLocationToServer();
             } else {
                 btn.className = 'status-btn online'; btn.innerText = 'اتصال للعمل';
                 document.getElementById('statusTitle').innerText = 'أنت غير متصل';
@@ -241,7 +239,7 @@
                 listBtn.style.display = 'none';
                 closeRidesList();
                 await supabaseClient.from('users').update({ is_online: false }).eq('phone', driverPhone);
-                if (locationInterval) clearInterval(locationInterval); // إيقاف إرسال الموقع
+                if (locationInterval) clearInterval(locationInterval);
             }
         }
 
@@ -343,33 +341,37 @@
             } catch(e) { console.log(e); }
         }
 
+        // ** التعديل المهم: منع القبول المزدوج **
         async function acceptSelectedRide() {
             if (!selectedRequest) return;
             
-            const { error } = await supabaseClient.from('rides')
+            const { data, error } = await supabaseClient.from('rides')
                 .update({ status: 'accepted', driver_name: driverName, driver_phone: driverPhone })
-                .eq('id', selectedRequest.id);
+                .eq('id', selectedRequest.id)
+                .eq('status', 'pending') // شرط مهم جداً عشان نمنع كابتنين يقبلوا نفس الرحلة
+                .select();
                 
-            if (!error) {
-                currentRequest = selectedRequest;
-                selectedRequest = null;
-                
-                document.getElementById('ride-detail-sheet').style.display = 'none';
-                document.getElementById('statusSheet').style.display = 'none';
-                document.getElementById('active-ride-sheet').style.display = 'block';
-                
-                document.getElementById('active-rider-name').innerText = currentRequest.rider_name || 'راكب جديد';
-                document.getElementById('active-rider-phone').innerText = currentRequest.rider_phone || '01000000000';
-                document.getElementById('call-rider-btn').href = 'tel:' + (currentRequest.rider_phone || '01000000000');
-                document.getElementById('ridePhaseTitle').innerText = "أنت في الطريق للراكب";
-                
-                if (reqMarker2) { map.removeLayer(reqMarker2); reqMarker2 = null; } 
-                drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng);
-                
-            } else {
-                alert("حدث خطأ أثناء القبول، ربما تم قبول الرحلة من كابتن آخر.");
+            if (error || !data || data.length === 0) {
+                alert("عذراً، هذه الرحلة تم قبولها من كابتن آخر.");
                 closeRideDetail();
+                return;
             }
+            
+            // لو وصلنا هنا، يبقى إحنا أول واحد قبلها
+            currentRequest = data[0];
+            selectedRequest = null;
+            
+            document.getElementById('ride-detail-sheet').style.display = 'none';
+            document.getElementById('statusSheet').style.display = 'none';
+            document.getElementById('active-ride-sheet').style.display = 'block';
+            
+            document.getElementById('active-rider-name').innerText = currentRequest.rider_name || 'راكب جديد';
+            document.getElementById('active-rider-phone').innerText = currentRequest.rider_phone || '01000000000';
+            document.getElementById('call-rider-btn').href = 'tel:' + (currentRequest.rider_phone || '01000000000');
+            document.getElementById('ridePhaseTitle').innerText = "أنت في الطريق للراكب";
+            
+            if (reqMarker2) { map.removeLayer(reqMarker2); reqMarker2 = null; } 
+            drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng);
         }
 
         function openCallModal() {
@@ -493,7 +495,6 @@
             }
         }
 
-        // --- الاستماع للتحديثات (إلغاء الراكب أو قبول كابتن آخر) ---
         supabaseClient.channel('driver-rides-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, payload => {
             if (payload.eventType === 'INSERT') {
                 if (payload.new.status === 'pending' && isOnline && !currentRequest) {
@@ -546,7 +547,7 @@
                     document.getElementById('actionBtn3').style.display = 'block';
                     setTimeout(() => { drawRouteToDestination(currentRequest.dest_lat, currentRequest.dest_lng); }, 1500);
                 }
-                syncLocationToServer(); // تشغيل إرسال الموقع لو كان في رحلة نشطة
+                syncLocationToServer();
             }
         }
 
@@ -560,7 +561,6 @@
         window.onload = function() {
             startTracking();
             setTimeout(() => { checkDriverActiveRide(); }, 2000); 
-            // لو الكابتن كان أونلاين قبل ما يعمل ريفريش، نرجع نشغل إرسال الموقع
             setTimeout(() => {
                 if (isOnline) syncLocationToServer();
             }, 2500);
