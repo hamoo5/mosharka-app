@@ -63,11 +63,10 @@
         .wait-timer-box { display: none; background: rgba(255, 71, 87, 0.1); border: 1px solid var(--danger); border-radius: 14px; padding: 15px; text-align: center; margin-bottom: 15px; }
         .wait-timer-text { font-size: 24px; font-weight: 800; color: var(--danger); margin-top: 5px; }
 
-        /* المودالات (البروفايل والاتصال) */
+        /* المودالات */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px; }
         .modal-content { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 24px; width: 100%; max-width: 350px; position: relative; }
         .modal-close { position: absolute; top: 15px; left: 15px; color: var(--text-sub); font-size: 20px; cursor: pointer; background: none; border: none; }
-
         .history-item { background: var(--bg-color); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
@@ -168,16 +167,17 @@
                 <div style="font-size: 26px; font-weight: 800; color: var(--primary); letter-spacing: 5px;" id="pin-code-display">----</div>
             </div>
 
+            <!-- عداد الانتظار (تم شيل جملة 3 دقائق) -->
             <div id="wait-timer-box" class="wait-timer-box">
                 <div style="font-size: 13px; font-weight: 700;">الكابتن في انتظارك</div>
-                <div style="font-size: 11px; color: var(--text-sub);">(3 دقائق مجانية، ثم 1 جنيه/دقيقة)</div>
-                <div class="wait-timer-text" id="wait-timer-text">00:00</div>
+                <div class="wait-timer-text" id="wait-timer-text" style="margin-top: 10px;">00:00</div>
             </div>
             
             <div id="driver-info-box" style="display: none; background: var(--bg-color); border: 1px solid var(--success); border-radius: 14px; padding: 15px; margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h3 style="color: var(--success); font-size: 16px;">تم قبول طلبك! 🎉</h3>
+                        <!-- تم شيل الإيموجي -->
+                        <h3 style="color: var(--success); font-size: 16px;">تم قبول طلبك!</h3>
                         <p style="font-size: 14px; margin-top: 5px;">الكابتن: <b id="accepted-driver-name" style="color: var(--primary);">...</b></p>
                     </div>
                     <a href="#" onclick="openCallModal()" style="background: var(--success); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; text-decoration: none; font-size: 20px;">📞</a>
@@ -193,21 +193,14 @@
         <div class="modal-content">
             <button class="modal-close" onclick="closeProfileModal()">✖</button>
             <h2 style="text-align: center; font-size: 20px; margin-bottom: 20px; color: var(--primary);">الملف الشخصي</h2>
-            
             <div style="margin-bottom: 15px;">
                 <label style="font-size: 12px; color: var(--text-sub); font-weight: 700;">الاسم</label>
-                <div class="input-group" style="margin-top: 5px;">
-                    <input type="text" id="profileName" value="">
-                </div>
+                <div class="input-group" style="margin-top: 5px;"><input type="text" id="profileName" value=""></div>
             </div>
-
             <div style="margin-bottom: 20px;">
                 <label style="font-size: 12px; color: var(--text-sub); font-weight: 700;">رقم الموبايل</label>
-                <div class="input-group" style="margin-top: 5px; opacity: 0.7;">
-                    <input type="text" id="profilePhone" value="" disabled>
-                </div>
+                <div class="input-group" style="margin-top: 5px; opacity: 0.7;"><input type="text" id="profilePhone" value="" disabled></div>
             </div>
-
             <button class="btn-main" style="margin-bottom: 10px; padding: 12px;" onclick="updateProfile()">حفظ التعديلات</button>
             <button class="btn-main" style="background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 12px;" onclick="openHistoryModal()">سجل رحلاتي 🕒</button>
         </div>
@@ -218,9 +211,7 @@
         <div class="modal-content">
             <button class="modal-close" onclick="closeHistoryModal()">✖</button>
             <h2 style="text-align: center; font-size: 20px; margin-bottom: 20px; color: var(--primary);">سجل الرحلات</h2>
-            <div id="historyList" style="max-height: 300px; overflow-y: auto;">
-                <p style="text-align: center; color: var(--text-sub);">جاري التحميل...</p>
-            </div>
+            <div id="historyList" style="max-height: 300px; overflow-y: auto;"><p style="text-align: center; color: var(--text-sub);">جاري التحميل...</p></div>
         </div>
     </div>
 
@@ -231,7 +222,6 @@
             <div style="width: 80px; height: 80px; background: rgba(34, 197, 94, 0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 15px auto; font-size: 35px;">📞</div>
             <h2 style="font-size: 20px; margin-bottom: 5px;">جاري الاتصال...</h2>
             <p id="callDriverName" style="color: var(--text-sub); margin-bottom: 25px;">بالكابتن</p>
-            
             <a href="#" id="confirmCallBtn" class="btn-main" style="background: var(--success); text-decoration: none; display: flex;">بدء الاتصال</a>
         </div>
     </div>
@@ -262,6 +252,10 @@
         let myActiveRideId = null;
         let requestTimeout = null; 
         let waitInterval = null; 
+        
+        // متغيرات لتتبع الكابتن
+        let assignedDriverPhone = null; 
+        let driverRouteLine = null; 
 
         // --- الملف الشخصي والسجل ---
         function openProfileModal() {
@@ -281,9 +275,7 @@
                 localStorage.setItem('mosharka_user', JSON.stringify(loggedUser));
                 alert("تم الحفظ بنجاح!");
                 closeProfileModal();
-            } else {
-                alert("حدث خطأ أثناء الحفظ");
-            }
+            } else { alert("حدث خطأ أثناء الحفظ"); }
         }
 
         async function openHistoryModal() {
@@ -327,7 +319,7 @@
         }
         function closeCallModal() { document.getElementById('callModal').style.display = 'none'; }
 
-        // --- الخريطة والطلب (زي ما هو) ---
+        // --- الخريطة والطلب ---
         const driverIcon = () => L.divIcon({
             className: 'custom-driver-marker',
             html: `<div class="driver-marker-container"><div class="driver-avatar-box"><img src="https://i.pravatar.cc/100?img=11"><div class="driver-rating-badge">4.9★</div></div></div>`,
@@ -342,16 +334,30 @@
             if (data) data.forEach(d => { if(!liveDriversMap[d.id]) liveDriversMap[d.id] = L.marker([d.lat, d.lng], { icon: driverIcon() }).addTo(map); });
         }
         
+        // --- تحديث حركة الكباتن لايف ---
         supabaseClient.channel('live-drivers-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
             const d = payload.new;
             if (d && d.role === 'driver') {
+                // 1. تحديث كل الكباتن على الخريطة
                 if (d.is_online) {
                     if (liveDriversMap[d.id]) liveDriversMap[d.id].setLatLng([d.lat, d.lng]);
                     else liveDriversMap[d.id] = L.marker([d.lat, d.lng], { icon: driverIcon() }).addTo(map);
                 } else if (liveDriversMap[d.id]) { map.removeLayer(liveDriversMap[d.id]); delete liveDriversMap[d.id]; }
+
+                // 2. لو ده الكابتن اللي قبل الرحلة، نرسم مساره ونحرك الخريطة معاه
+                if (myActiveRideId && assignedDriverPhone === d.phone) {
+                    if (driverRouteLine) map.removeLayer(driverRouteLine);
+                    // خط أصفر بين الكابتن ونقطة الانطلاق
+                    driverRouteLine = L.polyline([[d.lat, d.lng], pickupPoint], { color: '#fadb14', weight: 6, opacity: 0.8, dashArray: '8, 8' }).addTo(map);
+
+                    // نظبط الزوم عشان يبان الكابتن ومكان الانطلاق
+                    const bounds = L.latLngBounds([[d.lat, d.lng], pickupPoint]);
+                    map.fitBounds(bounds, { paddingTopLeft: [40, 40], paddingBottomRight: [40, window.innerHeight * 0.65] });
+                }
             }
         }).subscribe();
 
+        // --- تحديثات الرحلة ---
         supabaseClient.channel('rider-ride-update').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, payload => {
             const ride = payload.new;
             if (myActiveRideId && ride.id === myActiveRideId) {
@@ -361,6 +367,9 @@
                     document.getElementById('accepted-driver-name').innerText = ride.driver_name;
                     document.getElementById('call-driver-btn').href = 'tel:' + ride.driver_phone;
                     document.getElementById('ride-status-title').innerText = "الكابتن في الطريق إليك 🚗";
+                    
+                    // تفعيل تتبع الكابتن
+                    assignedDriverPhone = ride.driver_phone;
                 } else if (ride.status === 'arrived') {
                     document.getElementById('ride-status-title').innerText = "وصل الكابتن! 📍";
                     document.getElementById('wait-timer-box').style.display = 'block';
@@ -368,6 +377,7 @@
                 } else if (ride.status === 'started') {
                     document.getElementById('wait-timer-box').style.display = 'none';
                     clearInterval(waitInterval); 
+                    if (driverRouteLine) map.removeLayer(driverRouteLine); // مسح مسار الكابتن للانطلاق
                     document.getElementById('ride-status-title').innerText = "أنت في الطريق لوجهتك 🚀";
                 } else if (ride.status === 'completed') {
                     clearInterval(waitInterval);
