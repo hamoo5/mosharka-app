@@ -6,109 +6,78 @@
     <title>توصيل مشاركة - تسجيل الدخول</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
         :root {
-            --bg-color: #05070a;
-            --card-bg: rgba(19, 27, 46, 0.6);
-            --card-border: rgba(255, 255, 255, 0.1);
-            --primary: #00f2fe;
-            --text-main: #ffffff;
-            --text-sub: #94a3b8;
-            --rider-color: #22c55e;
-            --driver-color: #fadb14;
+            --bg-color: #05070a; --card-bg: rgba(19, 27, 46, 0.6); --card-border: rgba(255, 255, 255, 0.1);
+            --primary: #00f2fe; --text-main: #ffffff; --text-sub: #94a3b8;
+            --rider-color: #22c55e; --driver-color: #fadb14;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            background-color: var(--bg-color); 
-            color: var(--text-main); 
-            height: 100vh; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            overflow: hidden;
-            position: relative;
-        }
+        body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
 
-        /* --- الخلفية الحية --- */
+        /* الخلفية الحية */
         .blob { position: absolute; border-radius: 50%; filter: blur(80px); z-index: 0; opacity: 0.5; }
         .blob-1 { width: 300px; height: 300px; background: #00c6ff; top: -10%; left: -10%; animation: float 8s infinite alternate ease-in-out; }
         .blob-2 { width: 250px; height: 250px; background: #ff4757; bottom: -10%; right: -10%; animation: float 10s infinite alternate-reverse ease-in-out; }
         .blob-3 { width: 200px; height: 200px; background: #fadb14; bottom: 20%; left: 10%; animation: float 12s infinite alternate ease-in-out; opacity: 0.2; }
+        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(50px, 50px) scale(1.2); } }
 
-        @keyframes float {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(50px, 50px) scale(1.2); }
-        }
-
-        /* --- الكارت الزجاجي --- */
         .login-container {
             position: relative; z-index: 10; width: 90%; max-width: 400px;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--card-border);
-            border-radius: 30px; padding: 30px 20px;
+            background: var(--card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border); border-radius: 30px; padding: 30px 20px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
             animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
-
         @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- اللوجو --- */
         .logo-section { text-align: center; margin-bottom: 25px; }
         .logo-icon {
-            width: 70px; height: 70px;
-            background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(0, 114, 255, 0.2));
-            border: 2px solid var(--primary); border-radius: 20px;
-            display: flex; justify-content: center; align-items: center;
-            margin: 0 auto 15px auto; font-size: 30px; color: var(--primary);
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+            width: 70px; height: 70px; background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(0, 114, 255, 0.2));
+            border: 2px solid var(--primary); border-radius: 20px; display: flex; justify-content: center; align-items: center;
+            margin: 0 auto 15px auto; font-size: 30px; color: var(--primary); box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
         }
         .logo-section h1 { font-size: 24px; font-weight: 900; letter-spacing: 1px; margin-bottom: 5px; }
         .logo-section p { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 
-        /* --- اختيار نوع الحساب --- */
-        .role-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        /* اختيار نوع الحساب */
+        .role-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .role-card {
             background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05);
-            border-radius: 20px; padding: 15px 10px; text-align: center;
-            cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden;
+            border-radius: 20px; padding: 15px 10px; text-align: center; cursor: pointer; transition: all 0.3s ease;
         }
         .role-card i { font-size: 28px; margin-bottom: 10px; color: var(--text-sub); transition: 0.3s; }
         .role-card span { display: block; font-size: 14px; font-weight: 800; color: var(--text-sub); transition: 0.3s; }
-
         .role-card.active-rider { border-color: var(--rider-color); background: rgba(34, 197, 94, 0.1); box-shadow: 0 0 20px rgba(34, 197, 94, 0.2); }
         .role-card.active-rider i, .role-card.active-rider span { color: var(--rider-color); text-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
-
         .role-card.active-driver { border-color: var(--driver-color); background: rgba(250, 219, 20, 0.1); box-shadow: 0 0 20px rgba(250, 219, 20, 0.2); }
         .role-card.active-driver i, .role-card.active-driver span { color: var(--driver-color); text-shadow: 0 0 10px rgba(250, 219, 20, 0.5); }
 
-        /* --- حقول الإدخال --- */
+        /* حقول الإدخال */
         .input-group {
-            position: relative; margin-bottom: 20px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            position: relative; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 16px; display: flex; align-items: center; padding: 0 15px; transition: 0.3s;
         }
         .input-group:focus-within { border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 242, 254, 0.15); background: rgba(0, 242, 254, 0.05); }
         .input-group i { color: var(--text-sub); font-size: 18px; }
         .input-group input {
-            width: 100%; background: transparent; border: none; padding: 16px 15px;
-            color: var(--text-main); font-size: 16px; font-weight: 700; outline: none; font-family: 'Cairo';
-            direction: ltr; text-align: right;
+            width: 100%; background: transparent; border: none; padding: 16px 15px; color: var(--text-main);
+            font-size: 16px; font-weight: 700; outline: none; font-family: 'Cairo'; direction: ltr; text-align: right;
         }
         .input-group input::placeholder { color: rgba(255,255,255,0.3); font-family: 'Cairo'; font-weight: 600; direction: rtl; }
 
-        /* --- زرار الدخول --- */
         .btn-login {
             width: 100%; background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
-            color: #fff; padding: 16px; border-radius: 16px; border: none;
-            font-size: 16px; font-weight: 800; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Cairo';
-            box-shadow: 0 5px 20px rgba(0, 114, 255, 0.4); transition: 0.3s; position: relative; overflow: hidden;
+            color: #fff; padding: 16px; border-radius: 16px; border: none; font-size: 16px; font-weight: 800;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Cairo';
+            box-shadow: 0 5px 20px rgba(0, 114, 255, 0.4); transition: 0.3s; margin-top: 10px;
         }
         .btn-login:active { transform: scale(0.97); }
+        
+        .error-msg { color: var(--danger); font-size: 12px; text-align: center; margin-bottom: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -122,7 +91,7 @@
         <div class="logo-section">
             <div class="logo-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
             <h1>توصيل مشاركة</h1>
-            <p>رحلتك القادمة تبدأ من هنا</p>
+            <p>سجل حسابك أو ادخل لحسابك</p>
         </div>
 
         <div class="role-selection">
@@ -136,19 +105,30 @@
             </div>
         </div>
 
+        <div class="error-msg" id="errorMsg"></div>
+
         <div class="input-group">
             <i class="fa-solid fa-mobile-screen"></i>
-            <input type="tel" id="phoneNumber" placeholder="أدخل رقم الموبايل" maxlength="11" autocomplete="off">
+            <input type="tel" id="phoneNumber" placeholder="رقم الموبايل" maxlength="11" autocomplete="off">
+        </div>
+        
+        <div class="input-group">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="password" placeholder="كلمة المرور" autocomplete="off">
         </div>
 
-        <button class="btn-login" onclick="handleLogin()">
-            <span>دخول التطبيق</span>
+        <button class="btn-login" id="submitBtn" onclick="handleAuth()">
+            <span id="btnText">دخول / إنشاء حساب</span>
             <i class="fa-solid fa-arrow-left"></i>
         </button>
 
     </div>
 
     <script>
+        const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
+        const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
         let selectedRole = 'rider'; 
 
         function selectRole(role) {
@@ -165,32 +145,86 @@
             }
         }
 
-        function handleLogin() {
+        async function handleAuth() {
             const phone = document.getElementById('phoneNumber').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
 
-            if (phone.length < 11) {
-                alert('برجاء إدخال رقم موبايل صحيح (11 رقم)');
+            errorMsg.style.display = 'none';
+
+            if (phone.length < 11 || password.length < 4) {
+                errorMsg.innerText = "برجاء إدخال رقم موبايل صحيح وكلمة مرور (4 أرقام على الأقل).";
+                errorMsg.style.display = 'block';
                 return;
             }
 
-            // هنا بنحفظ بيانات المستخدم في المتصفح مع الاسم الافتراضي الصح
-            const userData = {
-                phone: phone,
-                role: selectedRole,
-                name: selectedRole === 'rider' ? 'أحمد الراكب' : 'كابتن محمد' 
-            };
+            btnText.innerText = "جاري التحميل...";
+            btn.disabled = true;
 
-            localStorage.setItem('mosharka_user', JSON.stringify(userData));
+            try {
+                // 1. البحث عن المستخدم برقم الموبايل
+                const { data: users, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('phone', phone);
 
-            // التوجيه حسب نوع الحساب
-            if (selectedRole === 'rider') {
-                window.location.href = 'index.html'; 
-            } else {
-                window.location.href = 'driver.html'; 
+                if (error) throw error;
+
+                if (users && users.length > 0) {
+                    // 2. المستخدم موجود -> التأكد من الباسورد
+                    const user = users[0];
+                    if (user.password === password) {
+                        // نجاح الدخول
+                        loginSuccess(user);
+                    } else {
+                        errorMsg.innerText = "كلمة المرور غير صحيحة.";
+                        errorMsg.style.display = 'block';
+                        btnText.innerText = "دخول / إنشاء حساب";
+                        btn.disabled = false;
+                    }
+                } else {
+                    // 3. المستخدم غير موجود -> إنشاء حساب جديد
+                    const newName = selectedRole === 'rider' ? 'راكب جديد' : 'كابتن جديد';
+                    
+                    const { data: newUser, error: insertError } = await supabaseClient
+                        .from('users')
+                        .insert([{ 
+                            name: newName, 
+                            phone: phone, 
+                            password: password, 
+                            role: selectedRole 
+                        }])
+                        .select();
+
+                    if (insertError) throw insertError;
+
+                    // نجاح التسجيل والدخول فوراً
+                    loginSuccess(newUser[0]);
+                }
+            } catch (err) {
+                errorMsg.innerText = "حدث خطأ في الاتصال، برجاء المحاولة مرة أخرى.";
+                errorMsg.style.display = 'block';
+                console.error(err);
+                btnText.innerText = "دخول / إنشاء حساب";
+                btn.disabled = false;
             }
         }
 
-        // التوجيه التلقائي لو المستخدم مسجل دخول بالفعل
+        function loginSuccess(user) {
+            // حفظ بيانات المستخدم في المتصفح
+            localStorage.setItem('mosharka_user', JSON.stringify(user));
+            
+            // التوجيه حسب الرتبة
+            if (user.role === 'rider') {
+                window.location.href = 'index.html';
+            } else {
+                window.location.href = 'driver.html';
+            }
+        }
+
+        // لو المستخدم مسجل دخول بالفعل، يوجهه على طول
         window.onload = function() {
             const user = JSON.parse(localStorage.getItem('mosharka_user'));
             if (user && user.phone) {
