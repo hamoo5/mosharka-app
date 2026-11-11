@@ -102,7 +102,6 @@
                 <div style="font-size: 16px; font-weight: 800;" id="active-rider-name">الراكب</div>
                 <div style="font-size: 12px; color: var(--text-sub);" id="active-rider-phone">الرقم</div>
             </div>
-            <!-- تم إضافة الـ ID هنا -->
             <a href="#" id="call-rider-btn" onclick="openCallModal()" class="call-btn">📞</a>
         </div>
         <button id="actionBtn1" class="status-btn online" onclick="updateRideStatus('arrived')" style="margin-bottom: 10px;">وصلت لنقطة الانطلاق 📍</button>
@@ -174,6 +173,7 @@
         let reqMarker1 = null, reqMarker2 = null, reqRoute = null; 
         let isDark = true;
         let locationInterval = null;
+        let lastSent = 0; 
 
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -189,7 +189,7 @@
 
         function startTracking() {
             if (navigator.geolocation) {
-                watchId = navigator.geolocation.watchPosition(pos => {
+                watchId = navigator.geolocation.watchPosition(async pos => {
                     const lat = pos.coords.latitude, lng = pos.coords.longitude;
                     if (!driverMarker) {
                         driverMarker = L.marker([lat, lng], {icon: L.divIcon({ html: `<div style="width: 40px; height: 40px; background: #00f2fe; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #00f2fe; display: flex; justify-content: center; align-items: center; font-size: 20px;">🚗</div>`, iconSize: [40, 40], iconAnchor: [20, 20] })}).addTo(map);
@@ -202,7 +202,17 @@
                                 drawRouteToDestination(currentRequest.dest_lat, currentRequest.dest_lng);
                             }
                         }
-                    } else { driverMarker.setLatLng([lat, lng]); }
+                    } else { 
+                        driverMarker.setLatLng([lat, lng]); 
+                    }
+
+                    if (isOnline && Date.now() - lastSent > 2000) {
+                        lastSent = Date.now();
+                        await supabaseClient.from('users').update({ 
+                            lat, lng, is_online: true, 
+                            last_seen: new Date().toISOString() 
+                        }).eq('phone', driverPhone);
+                    }
                 }, null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
             }
         }
@@ -212,10 +222,16 @@
             locationInterval = setInterval(async () => {
                 if (isOnline && driverMarker) {
                     const pos = driverMarker.getLatLng();
-                    await supabaseClient.from('users').update({ lat: pos.lat, lng: pos.lng, is_online: true }).eq('phone', driverPhone);
-                    if(availableRides.length > 0 && !currentRequest && !selectedRequest) fetchAvailableRides();
+                    await supabaseClient.from('users').update({ 
+                        lat: pos.lat, 
+                        lng: pos.lng, 
+                        is_online: true,
+                        last_seen: new Date().toISOString() 
+                    }).eq('phone', driverPhone);
+                    
+                    if(!currentRequest && !selectedRequest) fetchAvailableRides();
                 }
-            }, 3000);
+            }, 5000); 
         }
 
         async function toggleOnline() {
@@ -229,7 +245,10 @@
                 document.getElementById('statusSubtitle').innerText = 'اضغط لعرض الطلبات المتاحة';
                 listBtn.style.display = 'flex';
                 
-                if (driverMarker) { const pos = driverMarker.getLatLng(); await supabaseClient.from('users').update({ lat: pos.lat, lng: pos.lng, is_online: true }).eq('phone', driverPhone); }
+                if (driverMarker) { 
+                    const pos = driverMarker.getLatLng(); 
+                    await supabaseClient.from('users').update({ lat: pos.lat, lng: pos.lng, is_online: true, last_seen: new Date().toISOString() }).eq('phone', driverPhone); 
+                }
                 fetchAvailableRides();
                 syncLocationToServer();
             } else {
@@ -244,11 +263,13 @@
         }
 
         async function fetchAvailableRides() {
+            const fiveMinsAgo = new Date(Date.now() - 5 * 60000).toISOString();
             const { data, error } = await supabaseClient
                 .from('rides')
                 .select('*')
                 .eq('status', 'pending')
-                .order('created_at', { ascending: true });
+                .gte('created_at', fiveMinsAgo)
+                .order('created_at', { ascending: false });
                 
             if (!error && data) {
                 availableRides = data;
@@ -341,23 +362,21 @@
             } catch(e) { console.log(e); }
         }
 
-        // ** التعديل المهم: منع القبول المزدوج **
         async function acceptSelectedRide() {
             if (!selectedRequest) return;
             
             const { data, error } = await supabaseClient.from('rides')
                 .update({ status: 'accepted', driver_name: driverName, driver_phone: driverPhone })
                 .eq('id', selectedRequest.id)
-                .eq('status', 'pending') // شرط مهم جداً عشان نمنع كابتنين يقبلوا نفس الرحلة
+                .eq('status', 'pending')
                 .select();
                 
             if (error || !data || data.length === 0) {
-                alert("عذراً، هذه الرحلة تم قبولها من كابتن آخر.");
+                alert("عذراً، هذه الرحلة تم قبولها من كابتن آخر أو انتهت صلاحيتها.");
                 closeRideDetail();
                 return;
             }
             
-            // لو وصلنا هنا، يبقى إحنا أول واحد قبلها
             currentRequest = data[0];
             selectedRequest = null;
             
@@ -414,6 +433,8 @@
 
         function resetDriverUI() {
             currentRequest = null;
+            isOnline = true; 
+            
             document.getElementById('active-ride-sheet').style.display = 'none';
             document.getElementById('statusSheet').style.display = 'block';
             document.getElementById('toggleBtn').className = 'status-btn offline'; 
@@ -431,18 +452,31 @@
             if (reqMarker2) { map.removeLayer(reqMarker2); reqMarker2 = null; }
             if (reqRoute) { map.removeLayer(reqRoute); reqRoute = null; }
             
+            if (driverMarker) {
+                const pos = driverMarker.getLatLng();
+                supabaseClient.from('users').update({ lat: pos.lat, lng: pos.lng, is_online: true, last_seen: new Date().toISOString() }).eq('phone', driverPhone);
+            }
+            
             fetchAvailableRides();
         }
 
         async function updateRideStatus(newStatus) {
             if (!currentRequest) return;
-            await supabaseClient.from('rides').update({ status: newStatus }).eq('id', currentRequest.id);
+            
+            let updateData = { status: newStatus };
+            if (newStatus === 'arrived') {
+                updateData.arrived_at = new Date().toISOString();
+            }
+            
+            await supabaseClient.from('rides').update(updateData).eq('id', currentRequest.id);
+            
             if (newStatus === 'arrived') {
                 document.getElementById('actionBtn1').style.display = 'none';
                 document.getElementById('actionBtn2').style.display = 'flex';
                 document.getElementById('ridePhaseTitle').innerText = "أنت في انتظار الراكب";
             } else if (newStatus === 'completed') {
-                alert("تم إنهاء الرحلة بنجاح!"); location.reload();
+                alert("تم إنهاء الرحلة بنجاح! جاري استقبال طلبات جديدة."); 
+                resetDriverUI();
             }
         }
 
@@ -484,7 +518,7 @@
             try {
                 const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
                 const data = await res.json();
-                if (data.code === 'Ok' && data.routes.length > 0) {
+                if (data.code === 'Ok' && data.routes.length > 0) { 
                     const route = data.routes[0];
                     updateTripStats(parseFloat((route.distance / 1000).toFixed(1)), Math.round(route.duration / 60));
                     reqRoute = L.geoJSON(route.geometry, { style: { color: '#00f2fe', weight: 8, opacity: 1 } }).addTo(map);
@@ -523,6 +557,12 @@
                 currentRequest = data[0];
                 isOnline = true; 
                 
+                document.getElementById('statusTitle').innerText = 'أنت متصل الآن';
+                document.getElementById('statusSubtitle').innerText = 'لديك رحلة نشطة';
+                document.getElementById('toggleBtn').className = 'status-btn offline';
+                document.getElementById('toggleBtn').innerText = 'إيقاف العمل (أوفلاين)';
+                document.getElementById('showListBtn').style.display = 'flex';
+
                 document.getElementById('statusSheet').style.display = 'none';
                 document.getElementById('active-ride-sheet').style.display = 'block';
                 document.getElementById('active-rider-name').innerText = currentRequest.rider_name || 'راكب جديد';
@@ -548,6 +588,15 @@
                     setTimeout(() => { drawRouteToDestination(currentRequest.dest_lat, currentRequest.dest_lng); }, 1500);
                 }
                 syncLocationToServer();
+            } else {
+                isOnline = false;
+                await supabaseClient.from('users').update({ is_online: false }).eq('phone', driverPhone);
+                
+                document.getElementById('statusTitle').innerText = 'أنت غير متصل';
+                document.getElementById('statusSubtitle').innerText = 'اضغط على الزر لبدء استقبال الطلبات';
+                document.getElementById('toggleBtn').className = 'status-btn online';
+                document.getElementById('toggleBtn').innerText = 'اتصال للعمل';
+                document.getElementById('showListBtn').style.display = 'none';
             }
         }
 
