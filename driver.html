@@ -30,12 +30,26 @@
         .top-nav { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1000; display: flex; justify-content: space-between; align-items: center; }
         .nav-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-main); text-decoration: none; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
 
-        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 28px 28px 0 0; padding: 18px; z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.6); border-top: 1px solid var(--card-border); text-align: center; }
+        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: var(--card-bg); border-radius: 28px 28px 0 0; padding: 18px; z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.6); border-top: 1px solid var(--card-border); text-align: center; transition: 0.3s; }
         .sheet-handle { width: 40px; height: 4px; background: var(--card-border); border-radius: 2px; margin: 0 auto 12px auto; }
         
         .status-btn { width: 100%; padding: 15px; border-radius: 14px; border: none; font-size: 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; font-family: 'Cairo'; }
         .status-btn.offline { background: var(--card-border); color: var(--text-sub); }
         .status-btn.online { background: var(--primary-gradient); color: #fff; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
+
+        /* شاشة طلب الرحلة الجديد (Popup) */
+        #ride-request-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 2000; display: none; flex-direction: column; justify-content: flex-end; }
+        .request-card { background: var(--card-bg); border-radius: 28px 28px 0 0; padding: 24px; border-top: 2px solid var(--primary); text-align: center; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .request-info { background: var(--bg-color); border-radius: 14px; padding: 15px; margin: 15px 0; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--card-border); }
+        .info-col { text-align: center; }
+        .info-title { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; }
+        .info-value { font-size: 15px; font-weight: 800; color: var(--primary); }
+
+        .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn-accept { background: var(--success); color: white; padding: 15px; border-radius: 14px; border: none; font-weight: 800; font-size: 16px; cursor: pointer; }
+        .btn-reject { background: rgba(255, 71, 87, 0.1); color: var(--danger); border: 1px solid var(--danger); padding: 15px; border-radius: 14px; font-weight: 800; font-size: 16px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -47,7 +61,8 @@
 
     <div id="map"></div>
 
-    <div class="bottom-sheet">
+    <!-- الشاشة السفلية (حالة الاتصال) -->
+    <div class="bottom-sheet" id="statusSheet">
         <div class="sheet-handle"></div>
         <h2 id="statusTitle" style="font-size: 18px; font-weight: 800; margin-bottom: 5px;">أنت غير متصل</h2>
         <p id="statusSubtitle" style="font-size: 13px; color: var(--text-sub); margin-bottom: 15px;">اضغط على الزر لبدء استقبال الطلبات</p>
@@ -57,28 +72,56 @@
         </button>
     </div>
 
+    <!-- شاشة استقبال الطلبات -->
+    <div id="ride-request-modal">
+        <div class="request-card">
+            <h2 style="color: var(--primary); font-size: 20px; margin-bottom: 5px;">طلب رحلة جديد! 🔔</h2>
+            <p style="color: var(--text-sub); font-size: 13px;">لديك راكب يطلب رحلة الآن</p>
+
+            <div class="request-info">
+                <div class="info-col">
+                    <div class="info-title">الراكب</div>
+                    <div class="info-value" id="req-rider-name">أحمد</div>
+                </div>
+                <div class="info-col">
+                    <div class="info-title">المسافة</div>
+                    <div class="info-value" id="req-distance">5.2 كم</div>
+                </div>
+                <div class="info-col">
+                    <div class="info-title">السعر</div>
+                    <div class="info-value" id="req-price">45 ج.م</div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-reject" onclick="rejectRide()">رفض</button>
+                <button class="btn-accept" onclick="acceptRide()">قبول الرحلة</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 1. إعدادات Supabase
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // --- بيانات الكابتن (مؤقتة لحد ما نعمل شاشة تسجيل الدخول) ---
-        // لازم الـ ID ده يكون موجود فعلاً في جدول users في Supabase عشان يتحدث
-        const driverId = 1; // غير الرقم ده لـ ID كابتن حقيقي عندك في الداتابيز
+        // --- بيانات الكابتن (مؤقتة) ---
+        const driverId = 1; // لازم يتطابق مع ID في جدول users
         const driverName = "كابتن أحمد";
-        // --------------------------------------------------------
+        // -----------------------------
 
         let isOnline = false;
         let map, driverMarker;
         let watchId = null;
+        let currentRequestId = null; // لحفظ ID الطلب الحالي
 
-        // 2. إعداد الخريطة
+        // إعداد الخريطة
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         document.getElementById('map').classList.add('dark-tiles');
 
-        // 3. تتبع موقع الكابتن
+        // تتبع الموقع
         function startTracking() {
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition(pos => {
@@ -95,7 +138,6 @@
                         driverMarker.setLatLng([lat, lng]);
                     }
 
-                    // لو الكابتن أونلاين، بنبعت الموقع للسيرفر (في جدول users)
                     if (isOnline) {
                         updateLocationInDB(lat, lng);
                     }
@@ -103,17 +145,11 @@
             }
         }
 
-        // 4. تحديث الموقع في الداتابيز
         async function updateLocationInDB(lat, lng) {
-            const { error } = await supabaseClient
-                .from('users')
-                .update({ lat: lat, lng: lng, is_online: true })
-                .eq('id', driverId);
-            
-            if (error) console.log("خطأ في تحديث الموقع:", error);
+            await supabaseClient.from('users').update({ lat: lat, lng: lng, is_online: true }).eq('id', driverId);
         }
 
-        // 5. زرار الأونلاين والأوفلاين
+        // زرار الأونلاين
         async function toggleOnline() {
             isOnline = !isOnline;
             const btn = document.getElementById('toggleBtn');
@@ -143,11 +179,64 @@
             }
         }
 
+        // ==========================================
+        // استقبال الطلبات (Realtime Rides)
+        // ==========================================
+        supabaseClient.channel('driver-rides-channel')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides' }, payload => {
+                const ride = payload.new;
+                // لو الطلب جديد وحالته pending
+                if (ride.status === 'pending' && isOnline) {
+                    showRideRequest(ride);
+                }
+            }).subscribe();
+
+        function showRideRequest(ride) {
+            currentRequestId = ride.id;
+            
+            // عرض البيانات في الشاشة
+            document.getElementById('req-rider-name').innerText = ride.rider_name;
+            document.getElementById('req-distance').innerText = `${ride.distance} كم`;
+            document.getElementById('req-price').innerText = `${ride.price} ج.م`;
+            
+            // إظهار الشاشة
+            document.getElementById('ride-request-modal').style.display = 'flex';
+        }
+
+        // قبول الطلب
+        async function acceptRide() {
+            if (!currentRequestId) return;
+            
+            const { error } = await supabaseClient
+                .from('rides')
+                .update({ 
+                    status: 'accepted',
+                    driver_name: driverName,
+                    driver_phone: "01000000000" // يفضل تجيب رقم الكابتن الحقيقي
+                })
+                .eq('id', currentRequestId);
+
+            if (error) {
+                alert("حدث خطأ أثناء القبول");
+            } else {
+                // إخفاء الشاشة وإظهار حالة الرحلة
+                document.getElementById('ride-request-modal').style.display = 'none';
+                document.getElementById('statusTitle').innerText = 'أنت في رحلة الآن!';
+                document.getElementById('statusSubtitle').innerText = `أنت متجه لاستلام: ${document.getElementById('req-rider-name').innerText}`;
+                document.getElementById('statusSheet').style.background = 'var(--success)';
+            }
+        }
+
+        // رفض الطلب
+        function rejectRide() {
+            document.getElementById('ride-request-modal').style.display = 'none';
+            currentRequestId = null;
+        }
+
         function logout() {
             if(confirm("خروج؟")) location.reload();
         }
 
-        // تشغيل
         window.onload = startTracking;
     </script>
 </body>
