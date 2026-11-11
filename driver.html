@@ -99,8 +99,9 @@
         const driverPhone = loggedUser.phone; 
         const driverName = loggedUser.name || "كابتن"; 
         
-        let isOnline = false; let map, driverMarker, routeLine, watchId, currentRequest;
-        let reqMarker1 = null, reqMarker2 = null, reqRoute = null; // عشان نرسم مسار الطلب
+        let isOnline = false; 
+        let map, driverMarker, routeLine, watchId, currentRequest;
+        let reqMarker1 = null, reqMarker2 = null, reqRoute = null; 
 
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -136,17 +137,18 @@
             }
         }
 
-        // الاستماع للطلبات الجديدة وإلغاء الطلبات
+        // الاستماع للطلبات والإلغاءات
         supabaseClient.channel('driver-rides-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, payload => {
             if (payload.eventType === 'INSERT') {
-                if (payload.new.status === 'pending' && isOnline) {
+                // الكابتن يستقبل الطلب فقط لو أونلاين ومش في رحلة حالياً
+                if (payload.new.status === 'pending' && isOnline && !currentRequest) {
                     showRideRequest(payload.new);
                 }
             } else if (payload.eventType === 'UPDATE') {
-                // لو الراكب لغى الطلب وهو لسه بيظهر عند الكابتن
+                // لو الراكب لغى الطلب والكابتن كان مستلمه
                 if (currentRequest && payload.new.id === currentRequest.id && payload.new.status === 'cancelled') {
-                    closeRequestModal();
-                    alert("قام الراكب بإلغاء الطلب.");
+                    alert("قام الراكب بإلغاء الرحلة.");
+                    resetDriverUI();
                 }
             }
         }).subscribe();
@@ -158,11 +160,9 @@
             document.getElementById('req-price').innerText = `${ride.price} ج.م`;
             document.getElementById('ride-request-modal').style.display = 'flex';
             
-            // رسم مكان الراكب ومكان النزول على الخريطة
             drawRequestOnMap(ride);
         }
 
-        // دالة رسم المسار للطلب
         async function drawRequestOnMap(ride) {
             if (reqMarker1) map.removeLayer(reqMarker1);
             if (reqMarker2) map.removeLayer(reqMarker2);
@@ -185,12 +185,25 @@
             } catch(e) {}
         }
 
-        function closeRequestModal() {
-            document.getElementById('ride-request-modal').style.display = 'none';
+        function resetDriverUI() {
             currentRequest = null;
+            document.getElementById('active-ride-sheet').style.display = 'none';
+            document.getElementById('statusSheet').style.display = 'block';
+            document.getElementById('toggleBtn').className = 'status-btn online';
+            document.getElementById('toggleBtn').innerText = 'أنت متصل الآن (أونلاين)';
+            document.getElementById('statusTitle').innerText = 'جاري البحث عن رحلات...';
+            document.getElementById('actionBtn1').style.display = 'block';
+            document.getElementById('actionBtn2').style.display = 'none';
+            document.getElementById('actionBtn3').style.display = 'none';
+
             if (reqMarker1) { map.removeLayer(reqMarker1); reqMarker1 = null; }
             if (reqMarker2) { map.removeLayer(reqMarker2); reqMarker2 = null; }
             if (reqRoute) { map.removeLayer(reqRoute); reqRoute = null; }
+            if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+        }
+
+        function closeRequestModal() {
+            document.getElementById('ride-request-modal').style.display = 'none';
         }
 
         async function acceptRide() {
@@ -205,10 +218,19 @@
             document.getElementById('active-rider-phone').innerText = currentRequest.rider_phone;
             document.getElementById('call-rider-btn').href = 'tel:' + currentRequest.rider_phone;
             
+            // رسم خط السير للراكب
             drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng);
+            
+            // وضع ماركر أخضر لمكان الراكب
+            if (reqMarker1) map.removeLayer(reqMarker1);
+            const pickupIcon = L.divIcon({ html: `<div style="width: 24px; height: 24px; background: #22c55e; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #22c55e;"></div>`, iconSize: [24,24], iconAnchor: [12,12] });
+            reqMarker1 = L.marker([currentRequest.pickup_lat, currentRequest.pickup_lng], {icon: pickupIcon}).addTo(map);
         }
 
-        function rejectRide() { closeRequestModal(); }
+        function rejectRide() { 
+            closeRequestModal(); 
+            resetDriverUI();
+        }
 
         async function drawRouteToRider(destLat, destLng) {
             if (routeLine) map.removeLayer(routeLine);
@@ -244,6 +266,7 @@
                     document.getElementById('actionBtn2').style.display = 'none';
                     document.getElementById('actionBtn3').style.display = 'flex';
                     if (routeLine) map.removeLayer(routeLine);
+                    if (reqMarker2) map.removeLayer(reqMarker2); // مسح ماركر الوجهة القديم
                     alert("تم بدء الرحلة بنجاح! 🚀");
                 });
             } else if (enteredPin !== null) {
