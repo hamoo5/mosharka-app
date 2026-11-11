@@ -52,7 +52,7 @@
         .pin-icon { width: 42px; height: 42px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4)); animation: float-pin 2s ease-in-out infinite; }
         @keyframes float-pin { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
-        /* تصميم سيارات الكباتن اللايف */
+        /* تصميم سيارة الكابتن */
         .driver-marker-container { display: flex; flex-direction: column; align-items: center; }
         .driver-avatar-box { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--success); background: #000; box-shadow: 0 0 15px rgba(34, 197, 94, 0.6); display: flex; justify-content: center; align-items: center; }
         .driver-avatar-box img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
@@ -72,7 +72,7 @@
         .dot-icon { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
         .dot-green { background: var(--success); } .dot-red { background: var(--danger); }
 
-        /* تصميم اختيار المركبة */
+        /* اختيار المركبة */
         .vehicles-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
         .vehicles-scroll::-webkit-scrollbar { display: none; }
         .vehicle-card { flex: 0 0 100px; background: var(--bg-color); border: 1px solid var(--card-border); border-radius: 14px; padding: 10px 8px; text-align: center; cursor: pointer; transition: 0.3s; }
@@ -143,7 +143,7 @@
             <button class="btn-main" onclick="confirmDropoff()">اعرض مسار الرحلة 🗺️</button>
         </div>
 
-        <!-- 3. اختيار المركبة (اللي كانت ناقصة) -->
+        <!-- 3. اختيار المركبة -->
         <div id="ui-vehicle" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <button class="btn-back" onclick="goBackToDropoff()" style="margin: 0;">← تعديل المسار</button>
@@ -197,17 +197,21 @@
                 <div style="font-size: 12px; color: var(--text-sub); margin-bottom: 4px;">رمز الأمان السري (PIN)</div>
                 <div style="font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: 4px;" id="pin-code-display">----</div>
             </div>
+            
+            <div id="driver-info-box" style="display: none; background: var(--bg-color); border: 1px solid var(--success); border-radius: 14px; padding: 15px; margin-bottom: 15px; text-align: center;">
+                <h3 style="color: var(--success); font-size: 16px; margin-bottom: 5px;">تم قبول طلبك! 🎉</h3>
+                <p style="font-size: 13px; color: var(--text-main);">الكابتن <b id="accepted-driver-name" style="color: var(--primary);">...</b> في الطريق إليك</p>
+            </div>
+
             <button class="btn-main" style="background: transparent; border: 1px solid var(--danger); color: var(--danger); box-shadow: none;" onclick="location.reload()">إلغاء الطلب</button>
         </div>
     </div>
 
     <script>
-        // === إعدادات Supabase ===
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // === إعداد الخريطة ===
         var map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         let tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         document.getElementById('map').classList.add('dark-tiles');
@@ -239,8 +243,9 @@
         var currentStep = 'pickup', selectedVehicleType = 'car'; 
         var startMarker = null, destMarker = null, userMarker = null, moveEndTimeout, routeLine = null;
         let liveDriversMap = {}; 
+        let myActiveRideId = null; // لحفظ ID الرحلة الحالية
 
-        // === تصميم سيارة الكابتن ===
+        // تصميم سيارة الكابتن
         const driverIcon = (name, rating) => L.divIcon({
             className: 'custom-driver-marker',
             html: `
@@ -254,7 +259,6 @@
             iconSize: [40, 40], iconAnchor: [20, 20]
         });
 
-        // === استقبال الكباتن اللايف من جدول users ===
         function updateDriverOnMap(driver) {
             if (liveDriversMap[driver.id]) {
                 liveDriversMap[driver.id].setLatLng([driver.lat, driver.lng]);
@@ -289,7 +293,18 @@
                 }
             }).subscribe();
 
-        // === تحديد موقع الراكب ===
+        // --- الاستماع لتحديثات الرحلة (عشان يعرف الكابتن قبل) ---
+        supabaseClient.channel('rider-ride-update')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, payload => {
+                const ride = payload.new;
+                if (myActiveRideId && ride.id === myActiveRideId && ride.status === 'accepted') {
+                    // الكابتن قبل الرحلة!
+                    document.getElementById('driver-info-box').style.display = 'block';
+                    document.getElementById('accepted-driver-name').innerText = ride.driver_name;
+                    document.querySelector('#ui-ride h2').innerText = "الكابتن في الطريق إليك 🚗";
+                }
+            }).subscribe();
+
         function goToMyLocation() {
             if (navigator.geolocation) {
                 document.getElementById('pickup-address').innerText = "جاري تحديد موقعك...";
@@ -317,7 +332,6 @@
         setTimeout(goToMyLocation, 500);
         setTimeout(fetchInitialDrivers, 1500);
 
-        // === جلب اسم الشارع ===
         async function getAddress(lat, lng) {
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=ar`);
@@ -405,7 +419,6 @@
             if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
         }
 
-        // === حساب ورسم المسار ===
         async function confirmDropoff() {
             const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.27]);
             if (!dropoffPoint) dropoffPoint = [center.lat, center.lng];
@@ -441,7 +454,6 @@
                 routeLine = L.polyline([pickupPoint, dropoffPoint], {color: isDark ? '#00f2fe' : '#0284c7', weight: 6, opacity: 0.95}).addTo(map);
             }
 
-            // عمل مساحة تحت عشان المسار يبان فوق الشاشة السفلية
             map.fitBounds(routeLine.getBounds(), { 
                 paddingTopLeft: [40, 40], 
                 paddingBottomRight: [40, window.innerHeight * 0.65] 
@@ -488,13 +500,38 @@
             updatePrices();
         }
 
-        function requestRideNow() {
+        // ==========================================
+        // إرسال الطلب للسيرفر (عشان الكابتن يشوفه)
+        // ==========================================
+        async function requestRideNow() {
             const pin = Math.floor(1000 + Math.random() * 9000).toString();
             document.getElementById('pin-code-display').innerText = pin;
-            document.getElementById('ui-vehicle').style.display = 'none';
-            document.getElementById('ui-ride').style.display = 'block';
-            currentStep = 'ride';
-            // هنا بعدين هنبعت الطلب للسيرفر
+            
+            // السعر النهائي
+            let finalPrice = parseInt(document.getElementById('total-price-display').innerText);
+
+            // بنبعت الطلب لجدول rides
+            const { data, error } = await supabaseClient.from('rides').insert([{
+                pickup_lat: pickupPoint[0],
+                pickup_lng: pickupPoint[1],
+                dest_lat: dropoffPoint[0],
+                dest_lng: dropoffPoint[1],
+                price: finalPrice,
+                distance: currentDistance,
+                rider_name: "أحمد الراكب", // يفضل تجيبها من بيانات اليوزر
+                rider_phone: "01000000000",
+                status: "pending",
+                pin_code: pin
+            }]).select();
+
+            if (error) {
+                alert("حدث خطأ في إرسال الطلب: " + error.message);
+            } else {
+                myActiveRideId = data[0].id; // حفظ رقم الرحلة
+                document.getElementById('ui-vehicle').style.display = 'none';
+                document.getElementById('ui-ride').style.display = 'block';
+                currentStep = 'ride';
+            }
         }
 
         function logout() {
