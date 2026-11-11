@@ -196,10 +196,11 @@
                         driverMarker = L.marker([lat, lng], {icon: L.divIcon({ html: `<div style="width: 40px; height: 40px; background: #00f2fe; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px #00f2fe; display: flex; justify-content: center; align-items: center; font-size: 20px;">🚗</div>`, iconSize: [40, 40], iconAnchor: [20, 20] })}).addTo(map);
                         map.setView([lat, lng], 16);
                         
-                        // لو الرحلة لسه مبدءتش، نحسب المسافة
                         if (currentRequest) {
                             if(currentRequest.status === 'accepted' || currentRequest.status === 'pending') {
                                 drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng);
+                            } else if (currentRequest.status === 'started') {
+                                drawRouteToDestination(currentRequest.dest_lat, currentRequest.dest_lng);
                             }
                         }
                     } else { driverMarker.setLatLng([lat, lng]); }
@@ -299,7 +300,6 @@
 
         async function drawRouteToRider(destLat, destLng) {
             if (reqRoute) map.removeLayer(reqRoute);
-            // لو الكابتن لسه مجبش موقعه، نستخدم مكان البداية
             const pos = driverMarker ? driverMarker.getLatLng() : { lat: currentRequest.pickup_lat, lng: currentRequest.pickup_lng };
             const coords = `${pos.lng},${pos.lat};${destLng},${destLat}`;
             try {
@@ -316,7 +316,6 @@
                     document.getElementById('driverTripTime').innerText = `${timeMin} دقيقة`;
                 } else { throw new Error(); }
             } catch (e) {
-                // fallback لو السيرفر وقع
                 const distKm = (map.distance([pos.lat, pos.lng], [destLat, destLng]) / 1000).toFixed(1);
                 document.getElementById('driverTripDistance').innerText = `${distKm} كم`;
                 document.getElementById('driverTripTime').innerText = `${Math.round((distKm/30)*60)} دقيقة`;
@@ -368,7 +367,51 @@
             }
         }
 
-        window.onload = startTracking;
+        // --- دالة استرجاع حالة الكابتن لو عمل Refresh ---
+        async function checkDriverActiveRide() {
+            const { data, error } = await supabaseClient.from('rides')
+                .select('*')
+                .eq('driver_phone', loggedUser.phone)
+                .in('status', ['accepted', 'arrived', 'started'])
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (data && data.length > 0) {
+                currentRequest = data[0];
+                isOnline = true; 
+                
+                document.getElementById('statusSheet').style.display = 'none';
+                document.getElementById('active-ride-sheet').style.display = 'block';
+                document.getElementById('active-rider-name').innerText = currentRequest.rider_name;
+                document.getElementById('active-rider-phone').innerText = currentRequest.rider_phone;
+                document.getElementById('call-rider-btn').href = 'tel:' + currentRequest.rider_phone;
+
+                if (currentRequest.status === 'accepted') {
+                    document.getElementById('ridePhaseTitle').innerText = "أنت في الطريق للراكب";
+                    document.getElementById('actionBtn1').style.display = 'block';
+                    document.getElementById('actionBtn2').style.display = 'none';
+                    document.getElementById('actionBtn3').style.display = 'none';
+                    setTimeout(() => { drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng); }, 1500);
+                } else if (currentRequest.status === 'arrived') {
+                    document.getElementById('ridePhaseTitle').innerText = "أنت في انتظار الراكب";
+                    document.getElementById('actionBtn1').style.display = 'none';
+                    document.getElementById('actionBtn2').style.display = 'block';
+                    document.getElementById('actionBtn3').style.display = 'none';
+                    setTimeout(() => { drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng); }, 1500);
+                } else if (currentRequest.status === 'started') {
+                    document.getElementById('ridePhaseTitle').innerText = "أنت في الطريق للوجهة";
+                    document.getElementById('actionBtn1').style.display = 'none';
+                    document.getElementById('actionBtn2').style.display = 'none';
+                    document.getElementById('actionBtn3').style.display = 'block';
+                    setTimeout(() => { drawRouteToDestination(currentRequest.dest_lat, currentRequest.dest_lng); }, 1500);
+                }
+            }
+        }
+
+        window.onload = function() {
+            startTracking();
+            setTimeout(() => { checkDriverActiveRide(); }, 2000); 
+        };
     </script>
 </body>
 </html>
