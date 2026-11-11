@@ -367,7 +367,6 @@
             }
         }
 
-        // --- دالة استرجاع حالة الكابتن لو عمل Refresh ---
         async function checkDriverActiveRide() {
             const { data, error } = await supabaseClient.from('rides')
                 .select('*')
@@ -397,7 +396,6 @@
                     document.getElementById('actionBtn1').style.display = 'none';
                     document.getElementById('actionBtn2').style.display = 'block';
                     document.getElementById('actionBtn3').style.display = 'none';
-                    setTimeout(() => { drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng); }, 1500);
                 } else if (currentRequest.status === 'started') {
                     document.getElementById('ridePhaseTitle').innerText = "أنت في الطريق للوجهة";
                     document.getElementById('actionBtn1').style.display = 'none';
