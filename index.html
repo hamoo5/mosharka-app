@@ -74,6 +74,8 @@
     <script>
         const loggedUser = JSON.parse(localStorage.getItem('mosharka_user'));
         if (!loggedUser) { window.location.href = 'login.html'; }
+        if (!loggedUser.name || loggedUser.name.trim() === '') loggedUser.name = "راكب جديد";
+        if (!loggedUser.phone || loggedUser.phone.trim() === '') loggedUser.phone = "01000000000";
     </script>
 
     <div class="top-nav">
@@ -185,7 +187,6 @@
         </div>
     </div>
 
-    <!-- Modals -->
     <div id="profileModal" class="modal-overlay">
         <div class="modal-content">
             <button class="modal-close" onclick="closeProfileModal()">✖</button>
@@ -251,7 +252,6 @@
         let assignedDriverPhone = null; 
         let driverRouteLine = null; 
 
-        // --- استرجاع حالة الرحلة ---
         async function checkActiveRide() {
             const { data, error } = await supabaseClient.from('rides')
                 .select('*')
@@ -272,16 +272,16 @@
                     document.getElementById('ride-status-title').innerText = "جاري البحث عن كابتن...";
                 } else if (ride.status === 'accepted') {
                     document.getElementById('driver-info-box').style.display = 'block';
-                    document.getElementById('accepted-driver-name').innerText = ride.driver_name;
-                    document.getElementById('call-driver-btn').href = 'tel:' + ride.driver_phone;
+                    document.getElementById('accepted-driver-name').innerText = ride.driver_name || "كابتن";
+                    document.getElementById('call-driver-btn').href = 'tel:' + (ride.driver_phone || "01000000000");
                     document.getElementById('ride-status-title').innerText = "الكابتن في الطريق إليك 🚗";
                     document.getElementById('driver-status-title').innerText = "تم قبول طلبك!";
                     assignedDriverPhone = ride.driver_phone;
                     pickupPoint = [ride.pickup_lat, ride.pickup_lng];
                 } else if (ride.status === 'arrived') {
                     document.getElementById('driver-info-box').style.display = 'block';
-                    document.getElementById('accepted-driver-name').innerText = ride.driver_name;
-                    document.getElementById('call-driver-btn').href = 'tel:' + ride.driver_phone;
+                    document.getElementById('accepted-driver-name').innerText = ride.driver_name || "كابتن";
+                    document.getElementById('call-driver-btn').href = 'tel:' + (ride.driver_phone || "01000000000");
                     document.getElementById('ride-status-title').innerText = "وصل الكابتن! 📍";
                     document.getElementById('driver-status-title').innerText = "الكابتن في انتظارك";
                     document.getElementById('wait-timer-box').style.display = 'block';
@@ -295,7 +295,6 @@
             }
         }
 
-        // --- الملف الشخصي والسجل ---
         function openProfileModal() {
             document.getElementById('profileName').value = loggedUser.name;
             document.getElementById('profilePhone').value = loggedUser.phone;
@@ -336,7 +335,6 @@
         }
         function closeCallModal() { document.getElementById('callModal').style.display = 'none'; }
 
-        // --- الخريطة واللايف ---
         const driverIcon = () => L.divIcon({
             className: 'custom-driver-marker',
             html: `<div class="driver-marker-container"><div class="driver-avatar-box"><img src="https://i.pravatar.cc/100?img=11"><div class="driver-rating-badge">4.9★</div></div></div>`,
@@ -351,22 +349,31 @@
             if (data) data.forEach(d => { if(!liveDriversMap[d.id]) liveDriversMap[d.id] = L.marker([d.lat, d.lng], { icon: driverIcon() }).addTo(map); });
         }
         
+        // ** التحديث الهام: تتبع الكابتن بسلاسة **
         supabaseClient.channel('live-drivers-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
             const d = payload.new;
             if (d && d.role === 'driver') {
-                // 1. تحديث كل الكباتن
+                // 1. تحديث الكباتن اللي على الخريطة
                 if (d.is_online) {
                     if (liveDriversMap[d.id]) liveDriversMap[d.id].setLatLng([d.lat, d.lng]);
                     else liveDriversMap[d.id] = L.marker([d.lat, d.lng], { icon: driverIcon() }).addTo(map);
                 } else if (liveDriversMap[d.id]) { map.removeLayer(liveDriversMap[d.id]); delete liveDriversMap[d.id]; }
 
-                // 2. لو ده الكابتن بتاعنا، نرسم مساره
-                if (myActiveRideId && assignedDriverPhone === d.phone && currentStep === 'ride') {
-                    if (driverRouteLine) map.removeLayer(driverRouteLine);
+                // 2. تتبع الكابتن الخاص بالراكب (لايف)
+                if (myActiveRideId && assignedDriverPhone === d.phone) {
+                    
+                    // تحديث ماركر الكابتن اللي جاي للراكب
+                    if (liveDriversMap[d.id]) {
+                        liveDriversMap[d.id].setLatLng([d.lat, d.lng]);
+                    }
+
+                    // رسم خط وهمي بين الكابتن ومكان الراكب (يتحرك مع الكابتن)
                     if(pickupPoint) {
+                        if (driverRouteLine) map.removeLayer(driverRouteLine);
                         driverRouteLine = L.polyline([[d.lat, d.lng], pickupPoint], { color: '#fadb14', weight: 6, opacity: 0.8, dashArray: '8, 8' }).addTo(map);
-                        const bounds = L.latLngBounds([[d.lat, d.lng], pickupPoint]);
-                        map.fitBounds(bounds, { paddingTopLeft: [40, 40], paddingBottomRight: [40, window.innerHeight * 0.65] });
+                        
+                        // هنا السر: بنخلي الخريطة تتبع الكابتن بنعومة
+                        map.panTo([d.lat, d.lng], {animate: true, duration: 1});
                     }
                 }
             }
@@ -378,8 +385,8 @@
                 if (ride.status === 'accepted') {
                     clearTimeout(requestTimeout); 
                     document.getElementById('driver-info-box').style.display = 'block';
-                    document.getElementById('accepted-driver-name').innerText = ride.driver_name;
-                    document.getElementById('call-driver-btn').href = 'tel:' + ride.driver_phone;
+                    document.getElementById('accepted-driver-name').innerText = ride.driver_name || "كابتن";
+                    document.getElementById('call-driver-btn').href = 'tel:' + (ride.driver_phone || "01000000000");
                     document.getElementById('ride-status-title').innerText = "الكابتن في الطريق إليك 🚗";
                     document.getElementById('driver-status-title').innerText = "تم قبول طلبك!";
                     assignedDriverPhone = ride.driver_phone;
@@ -424,15 +431,25 @@
         function goToMyLocation() {
             if (navigator.geolocation) {
                 document.getElementById('pickup-address').innerText = "جاري تحديد موقعك...";
-                navigator.geolocation.getCurrentPosition(pos => {
-                    const lat = pos.coords.latitude, lng = pos.coords.longitude;
-                    if (!userMarker) userMarker = L.circleMarker([lat, lng], { radius: 9, fillColor: "#22c55e", color: "#ffffff", weight: 3, fillOpacity: 1 }).addTo(map);
-                    else userMarker.setLatLng([lat, lng]);
-                    const targetPoint = map.project([lat, lng], 15);
-                    const newCenterPoint = L.point(targetPoint.x, targetPoint.y + (0.5 - 0.27) * map.getSize().y);
-                    map.flyTo(map.unproject(newCenterPoint, 15), 15, { animate: true, duration: 1.5 });
-                    setTimeout(() => { map.fire('moveend'); }, 1600);
-                }, () => { alert("تأكد من تشغيل الـ GPS."); });
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+                        if (!userMarker) userMarker = L.circleMarker([lat, lng], { radius: 9, fillColor: "#22c55e", color: "#ffffff", weight: 3, fillOpacity: 1 }).addTo(map);
+                        else userMarker.setLatLng([lat, lng]);
+                        const targetPoint = map.project([lat, lng], 15);
+                        const newCenterPoint = L.point(targetPoint.x, targetPoint.y + (0.5 - 0.27) * map.getSize().y);
+                        map.flyTo(map.unproject(newCenterPoint, 15), 15, { animate: true, duration: 1.5 });
+                        setTimeout(() => { map.fire('moveend'); }, 1600);
+                    }, 
+                    err => {
+                        alert("تعذر الحصول على موقعك الحقيقي. يرجى تفعيل الـ GPS.");
+                        const lat = 30.0444, lng = 31.2357;
+                        if (!userMarker) userMarker = L.circleMarker([lat, lng], { radius: 9, fillColor: "#22c55e", color: "#ffffff", weight: 3, fillOpacity: 1 }).addTo(map);
+                        map.setView([lat, lng], 15);
+                        setTimeout(() => { map.fire('moveend'); }, 500);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
             }
         }
         setTimeout(goToMyLocation, 500); setTimeout(fetchInitialDrivers, 1500);
@@ -497,7 +514,14 @@
 
         async function confirmDropoff() {
             const center = map.containerPointToLatLng([map.getSize().x / 2, map.getSize().y * 0.27]);
-            if (!dropoffPoint) dropoffPoint = [center.lat, center.lng]; currentStep = 'vehicle';
+            if (!dropoffPoint) dropoffPoint = [center.lat, center.lng];
+            
+            if (pickupPoint && map.distance(pickupPoint, dropoffPoint) < 100) {
+                alert("الرجاء تحريك الخريطة لتحديد وجهة مختلفة عن نقطة الانطلاق.");
+                return;
+            }
+
+            currentStep = 'vehicle';
             if (destMarker) map.removeLayer(destMarker);
             destMarker = L.marker(dropoffPoint, {icon: destMarkerIcon}).addTo(map);
             document.getElementById('center-pin').style.display = 'none'; document.getElementById('ui-dropoff').style.display = 'none'; document.getElementById('ui-vehicle').style.display = 'block';
@@ -507,6 +531,12 @@
         async function drawRoute() {
             if (!pickupPoint || !dropoffPoint) return; if (routeLine) map.removeLayer(routeLine);
             const coords = `${pickupPoint[1]},${pickupPoint[0]};${dropoffPoint[1]},${dropoffPoint[0]}`;
+            
+            currentDistance = parseFloat((map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(1)); 
+            currentDuration = Math.round((currentDistance / 30) * 60);
+            document.getElementById('trip-stats').innerText = `${currentDistance} كم • ${currentDuration} دقيقة`;
+            baseCalculatedPrice = 15 + (currentDistance * 6); updatePrices();
+
             try {
                 const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
                 const data = await res.json();
@@ -514,14 +544,13 @@
                     const route = data.routes[0];
                     routeLine = L.geoJSON(route.geometry, { style: { color: '#00f2fe', weight: 8, opacity: 1, lineCap: 'round', lineJoin: 'round' } }).addTo(map);
                     currentDistance = parseFloat((route.distance / 1000).toFixed(1)); currentDuration = Math.round(route.duration / 60);
+                    document.getElementById('trip-stats').innerText = `${currentDistance} كم • ${currentDuration} دقيقة`;
+                    baseCalculatedPrice = 15 + (currentDistance * 6); updatePrices();
                 } else { throw new Error(); }
             } catch (e) {
-                currentDistance = parseFloat((map.distance(pickupPoint, dropoffPoint) / 1000).toFixed(1)); currentDuration = Math.round((currentDistance / 30) * 60);
                 routeLine = L.polyline([pickupPoint, dropoffPoint], {color: '#00f2fe', weight: 8, opacity: 1}).addTo(map);
             }
             map.fitBounds(routeLine.getBounds(), { paddingTopLeft: [40, 40], paddingBottomRight: [40, window.innerHeight * 0.65] });
-            document.getElementById('trip-stats').innerText = `${currentDistance} كم • ${currentDuration} دقيقة`;
-            baseCalculatedPrice = 15 + (currentDistance * 6); updatePrices();
         }
 
         function updatePrices() {
