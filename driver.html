@@ -50,6 +50,14 @@
         .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .btn-accept { background: var(--success); color: white; padding: 15px; border-radius: 14px; border: none; font-weight: 800; font-size: 16px; cursor: pointer; }
         .btn-reject { background: rgba(255, 71, 87, 0.1); color: var(--danger); border: 1px solid var(--danger); padding: 15px; border-radius: 14px; font-weight: 800; font-size: 16px; cursor: pointer; }
+
+        /* شاشة الرحلة النشطة للكابتن */
+        #active-ride-sheet { display: none; }
+        .rider-info-box { background: var(--bg-color); border-radius: 14px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; }
+        .rider-details { text-align: right; }
+        .rider-name { font-size: 16px; font-weight: 800; color: var(--text-main); }
+        .rider-phone { font-size: 12px; color: var(--text-sub); }
+        .call-btn { width: 45px; height: 45px; border-radius: 50%; background: var(--success); color: white; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; }
     </style>
 </head>
 <body>
@@ -61,7 +69,7 @@
 
     <div id="map"></div>
 
-    <!-- الشاشة السفلية (حالة الاتصال) -->
+    <!-- 1. شاشة حالة الاتصال (قبل استلام أي طلب) -->
     <div class="bottom-sheet" id="statusSheet">
         <div class="sheet-handle"></div>
         <h2 id="statusTitle" style="font-size: 18px; font-weight: 800; margin-bottom: 5px;">أنت غير متصل</h2>
@@ -72,7 +80,26 @@
         </button>
     </div>
 
-    <!-- شاشة استقبال الطلبات -->
+    <!-- 2. شاشة الرحلة النشطة (بعد القبول) -->
+    <div class="bottom-sheet" id="active-ride-sheet">
+        <div class="sheet-handle"></div>
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 10px; color: var(--primary);">أنت في رحلة الآن</h2>
+        
+        <div class="rider-info-box">
+            <div class="rider-details">
+                <div class="rider-name" id="active-rider-name">اسم الراكب</div>
+                <div class="rider-phone" id="active-rider-phone">رقم الراكب</div>
+            </div>
+            <a href="#" id="call-rider-btn" class="call-btn">📞</a>
+        </div>
+
+        <!-- أزرار التحكم في الرحلة -->
+        <button id="actionBtn1" class="status-btn online" onclick="updateRideStatus('arrived')" style="margin-bottom: 10px;">وصلت لنقطة الانطلاق 📍</button>
+        <button id="actionBtn2" class="status-btn online" onclick="updateRideStatus('started')" style="display: none; margin-bottom: 10px;">بدء الرحلة 🚀</button>
+        <button id="actionBtn3" class="status-btn online" onclick="updateRideStatus('completed')" style="display: none; background: var(--success);">إنهاء الرحلة والوصول 🏁</button>
+    </div>
+
+    <!-- 3. شاشة استقبال الطلبات (Popup) -->
     <div id="ride-request-modal">
         <div class="request-card">
             <h2 style="color: var(--primary); font-size: 20px; margin-bottom: 5px;">طلب رحلة جديد! 🔔</h2>
@@ -101,27 +128,22 @@
     </div>
 
     <script>
-        // 1. إعدادات Supabase
         const supabaseUrl = 'https://xvnejwdobnzakpkamwdf.supabase.co'; 
         const supabaseKey = 'sb_publishable_onumEqReO_VO6tZPp4iNgg_iUsc6zTL';
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // --- بيانات الكابتن (مؤقتة) ---
-        const driverId = 1; // لازم يتطابق مع ID في جدول users
+        const driverId = 1; 
         const driverName = "كابتن أحمد";
-        // -----------------------------
-
+        
         let isOnline = false;
-        let map, driverMarker;
+        let map, driverMarker, routeLine;
         let watchId = null;
-        let currentRequestId = null; // لحفظ ID الطلب الحالي
+        let currentRequest = null; 
 
-        // إعداد الخريطة
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         document.getElementById('map').classList.add('dark-tiles');
 
-        // تتبع الموقع
         function startTracking() {
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition(pos => {
@@ -138,9 +160,7 @@
                         driverMarker.setLatLng([lat, lng]);
                     }
 
-                    if (isOnline) {
-                        updateLocationInDB(lat, lng);
-                    }
+                    if (isOnline) updateLocationInDB(lat, lng);
                 }, null, { enableHighAccuracy: true });
             }
         }
@@ -149,7 +169,6 @@
             await supabaseClient.from('users').update({ lat: lat, lng: lng, is_online: true }).eq('id', driverId);
         }
 
-        // زرار الأونلاين
         async function toggleOnline() {
             isOnline = !isOnline;
             const btn = document.getElementById('toggleBtn');
@@ -174,63 +193,87 @@
                 btnIcon.innerText = '💤';
                 title.innerText = 'أنت غير متصل';
                 subtitle.innerText = 'اضغط على الزر لبدء استقبال الطلبات';
-                
                 await supabaseClient.from('users').update({ is_online: false }).eq('id', driverId);
             }
         }
 
-        // ==========================================
-        // استقبال الطلبات (Realtime Rides)
-        // ==========================================
+        // استقبال الطلبات
         supabaseClient.channel('driver-rides-channel')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides' }, payload => {
                 const ride = payload.new;
-                // لو الطلب جديد وحالته pending
-                if (ride.status === 'pending' && isOnline) {
-                    showRideRequest(ride);
-                }
+                if (ride.status === 'pending' && isOnline) showRideRequest(ride);
             }).subscribe();
 
         function showRideRequest(ride) {
-            currentRequestId = ride.id;
-            
-            // عرض البيانات في الشاشة
+            currentRequest = ride;
             document.getElementById('req-rider-name').innerText = ride.rider_name;
             document.getElementById('req-distance').innerText = `${ride.distance} كم`;
             document.getElementById('req-price').innerText = `${ride.price} ج.م`;
-            
-            // إظهار الشاشة
             document.getElementById('ride-request-modal').style.display = 'flex';
         }
 
-        // قبول الطلب
         async function acceptRide() {
-            if (!currentRequestId) return;
+            if (!currentRequest) return;
             
-            const { error } = await supabaseClient
-                .from('rides')
-                .update({ 
-                    status: 'accepted',
-                    driver_name: driverName,
-                    driver_phone: "01000000000" // يفضل تجيب رقم الكابتن الحقيقي
-                })
-                .eq('id', currentRequestId);
+            const { error } = await supabaseClient.from('rides').update({ 
+                status: 'accepted',
+                driver_name: driverName,
+                driver_phone: "01000000000"
+            }).eq('id', currentRequest.id);
 
-            if (error) {
-                alert("حدث خطأ أثناء القبول");
-            } else {
-                // إخفاء الشاشة وإظهار حالة الرحلة
+            if (!error) {
                 document.getElementById('ride-request-modal').style.display = 'none';
-                document.getElementById('statusTitle').innerText = 'أنت في رحلة الآن!';
-                document.getElementById('statusSubtitle').innerText = `أنت متجه لاستلام: ${document.getElementById('req-rider-name').innerText}`;
-                document.getElementById('statusSheet').style.background = 'var(--success)';
+                document.getElementById('statusSheet').style.display = 'none';
+                document.getElementById('active-ride-sheet').style.display = 'block';
+                
+                // عرض بيانات الراكب
+                document.getElementById('active-rider-name').innerText = currentRequest.rider_name;
+                document.getElementById('active-rider-phone').innerText = currentRequest.rider_phone;
+                document.getElementById('call-rider-btn').href = 'tel:' + currentRequest.rider_phone;
+
+                // رسم المسار للراكب
+                drawRouteToRider(currentRequest.pickup_lat, currentRequest.pickup_lng);
             }
         }
 
-        // رفض الطلب
         function rejectRide() {
             document.getElementById('ride-request-modal').style.display = 'none';
-            currentRequestId = null;
+            currentRequest = null;
+        }
+
+        // رسم مسار الكابتن للراكب
+        async function drawRouteToRider(destLat, destLng) {
+            if (routeLine) map.removeLayer(routeLine);
+            const pos = driverMarker.getLatLng();
+            const coords = `${pos.lng},${pos.lat};${destLng},${destLat}`;
+
+            try {
+                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+                const data = await res.json();
+                if (data.code === 'Ok') {
+                    routeLine = L.geoJSON(data.routes[0].geometry, { style: { color: '#00f2fe', weight: 5 } }).addTo(map);
+                    map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+                }
+            } catch (e) { console.log(e); }
+        }
+
+        // تحديث حالة الرحلة (وصلت -> بدأت -> انتهت)
+        async function updateRideStatus(newStatus) {
+            if (!currentRequest) return;
+
+            await supabaseClient.from('rides').update({ status: newStatus }).eq('id', currentRequest.id);
+
+            if (newStatus === 'arrived') {
+                document.getElementById('actionBtn1').style.display = 'none';
+                document.getElementById('actionBtn2').style.display = 'flex';
+            } else if (newStatus === 'started') {
+                document.getElementById('actionBtn2').style.display = 'none';
+                document.getElementById('actionBtn3').style.display = 'flex';
+                if (routeLine) map.removeLayer(routeLine); // مسح المسار القديم
+            } else if (newStatus === 'completed') {
+                alert("تم إنهاء الرحلة بنجاح!");
+                location.reload();
+            }
         }
 
         function logout() {
