@@ -12,13 +12,12 @@
         :root {
             --bg-color: #05070a; --card-bg: rgba(19, 27, 46, 0.6); --card-border: rgba(255, 255, 255, 0.1);
             --primary: #00f2fe; --text-main: #ffffff; --text-sub: #94a3b8;
-            --rider-color: #22c55e; --driver-color: #fadb14;
+            --rider-color: #22c55e; --driver-color: #fadb14; --danger: #ff4757;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
 
-        /* الخلفية الحية */
         .blob { position: absolute; border-radius: 50%; filter: blur(80px); z-index: 0; opacity: 0.5; }
         .blob-1 { width: 300px; height: 300px; background: #00c6ff; top: -10%; left: -10%; animation: float 8s infinite alternate ease-in-out; }
         .blob-2 { width: 250px; height: 250px; background: #ff4757; bottom: -10%; right: -10%; animation: float 10s infinite alternate-reverse ease-in-out; }
@@ -43,7 +42,6 @@
         .logo-section h1 { font-size: 24px; font-weight: 900; letter-spacing: 1px; margin-bottom: 5px; }
         .logo-section p { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 
-        /* اختيار نوع الحساب */
         .role-selection { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .role-card {
             background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05);
@@ -51,12 +49,12 @@
         }
         .role-card i { font-size: 28px; margin-bottom: 10px; color: var(--text-sub); transition: 0.3s; }
         .role-card span { display: block; font-size: 14px; font-weight: 800; color: var(--text-sub); transition: 0.3s; }
+        
         .role-card.active-rider { border-color: var(--rider-color); background: rgba(34, 197, 94, 0.1); box-shadow: 0 0 20px rgba(34, 197, 94, 0.2); }
         .role-card.active-rider i, .role-card.active-rider span { color: var(--rider-color); text-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
         .role-card.active-driver { border-color: var(--driver-color); background: rgba(250, 219, 20, 0.1); box-shadow: 0 0 20px rgba(250, 219, 20, 0.2); }
         .role-card.active-driver i, .role-card.active-driver span { color: var(--driver-color); text-shadow: 0 0 10px rgba(250, 219, 20, 0.5); }
 
-        /* حقول الإدخال */
         .input-group {
             position: relative; margin-bottom: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 16px; display: flex; align-items: center; padding: 0 15px; transition: 0.3s;
@@ -91,7 +89,7 @@
         <div class="logo-section">
             <div class="logo-icon"><i class="fa-solid fa-location-crosshairs"></i></div>
             <h1>توصيل مشاركة</h1>
-            <p>سجل حسابك أو ادخل لحسابك</p>
+            <p>سجل دخولك برقم الموبايل</p>
         </div>
 
         <div class="role-selection">
@@ -112,13 +110,14 @@
             <input type="tel" id="phoneNumber" placeholder="رقم الموبايل" maxlength="11" autocomplete="off">
         </div>
         
-        <div class="input-group">
+        <!-- خانة الباسورد (مخفية في البداية وتظهر بس لو المستخدم جديد) -->
+        <div class="input-group" id="passwordGroup" style="display: none;">
             <i class="fa-solid fa-lock"></i>
-            <input type="password" id="password" placeholder="كلمة المرور" autocomplete="off">
+            <input type="password" id="password" placeholder="أنشئ كلمة مرور (4 أرقام على الأقل)" autocomplete="off">
         </div>
 
         <button class="btn-login" id="submitBtn" onclick="handleAuth()">
-            <span id="btnText">دخول / إنشاء حساب</span>
+            <span id="btnText">متابعة</span>
             <i class="fa-solid fa-arrow-left"></i>
         </button>
 
@@ -130,6 +129,7 @@
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         let selectedRole = 'rider'; 
+        let isNewUser = false; // متغير عشان نعرف إحنا في مرحلة إنشاء حساب ولا لأ
 
         function selectRole(role) {
             selectedRole = role;
@@ -151,20 +151,21 @@
             const errorMsg = document.getElementById('errorMsg');
             const btn = document.getElementById('submitBtn');
             const btnText = document.getElementById('btnText');
+            const passwordGroup = document.getElementById('passwordGroup');
 
             errorMsg.style.display = 'none';
 
-            if (phone.length < 11 || password.length < 4) {
-                errorMsg.innerText = "برجاء إدخال رقم موبايل صحيح وكلمة مرور (4 أرقام على الأقل).";
+            if (phone.length < 11) {
+                errorMsg.innerText = "برجاء إدخال رقم موبايل صحيح (11 رقم).";
                 errorMsg.style.display = 'block';
                 return;
             }
 
-            btnText.innerText = "جاري التحميل...";
+            btnText.innerText = "جاري التحقق...";
             btn.disabled = true;
 
             try {
-                // 1. البحث عن المستخدم برقم الموبايل
+                // البحث عن المستخدم برقم الموبايل
                 const { data: users, error } = await supabaseClient
                     .from('users')
                     .select('*')
@@ -172,20 +173,28 @@
 
                 if (error) throw error;
 
-                if (users && users.length > 0) {
-                    // 2. المستخدم موجود -> التأكد من الباسورد
-                    const user = users[0];
-                    if (user.password === password) {
-                        // نجاح الدخول
-                        loginSuccess(user);
+                if (!isNewUser) {
+                    // الخطوة الأولى: لو الرقم موجود في الداتابيز
+                    if (users && users.length > 0) {
+                        // الرقم مسجل قبل كده -> يدخله علطول من غير باسورد
+                        loginSuccess(users[0]);
                     } else {
-                        errorMsg.innerText = "كلمة المرور غير صحيحة.";
-                        errorMsg.style.display = 'block';
-                        btnText.innerText = "دخول / إنشاء حساب";
+                        // الرقم جديد -> نظهر خانة الباسورد ونغير الزرار
+                        isNewUser = true;
+                        passwordGroup.style.display = 'flex';
+                        btnText.innerText = "إنشاء الحساب والدخول";
                         btn.disabled = false;
                     }
                 } else {
-                    // 3. المستخدم غير موجود -> إنشاء حساب جديد
+                    // الخطوة التانية (المستخدم جديد وبيكتب الباسورد)
+                    if (password.length < 4) {
+                        errorMsg.innerText = "كلمة المرور لازم تكون 4 أرقام أو حروف على الأقل.";
+                        errorMsg.style.display = 'block';
+                        btnText.innerText = "إنشاء الحساب والدخول";
+                        btn.disabled = false;
+                        return;
+                    }
+
                     const newName = selectedRole === 'rider' ? 'راكب جديد' : 'كابتن جديد';
                     
                     const { data: newUser, error: insertError } = await supabaseClient
@@ -200,14 +209,14 @@
 
                     if (insertError) throw insertError;
 
-                    // نجاح التسجيل والدخول فوراً
+                    // تم إنشاء الحساب بنجاح
                     loginSuccess(newUser[0]);
                 }
             } catch (err) {
                 errorMsg.innerText = "حدث خطأ في الاتصال، برجاء المحاولة مرة أخرى.";
                 errorMsg.style.display = 'block';
                 console.error(err);
-                btnText.innerText = "دخول / إنشاء حساب";
+                btnText.innerText = isNewUser ? "إنشاء الحساب والدخول" : "متابعة";
                 btn.disabled = false;
             }
         }
