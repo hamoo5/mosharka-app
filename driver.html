@@ -177,6 +177,8 @@
 
         map = L.map('map', { zoomControl: false }).setView([30.0444, 31.2357], 15); 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        var path = ['traffic', 'map', '4', 'tile', 'flow', 'relative0', '{z}', '{x}', '{y}.png'].join('/');
+L.tileLayer('https://api.tomtom.com' + path + '?key=k6gNkPDrp0t3WjGfYYomSHFkEFN13jSM', { maxZoom: 19, opacity: 0.75 }).addTo(map)
         document.getElementById('map').classList.add('dark-tiles');
 
         function toggleTheme() {
